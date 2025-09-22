@@ -3,9 +3,10 @@ package ollama
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/baudii/floe-ai/internal/llm"
+	"github.com/baudii/ada-ai/internal/llm"
 )
 
 type Ollama struct {
@@ -17,6 +18,7 @@ type Ollama struct {
 const defaultOllamaURL = "http://localhost:11434/api/chat"
 
 func init() {
+	fmt.Println("Registering ollama")
 	llm.Register("ollama", func(cfg map[string]any) (llm.LLM, error) {
 		url, ok := cfg["url"].(string)
 		if url == "" || !ok {
@@ -43,9 +45,12 @@ func init() {
 
 func (ol Ollama) SendMessage(prompt string) (*llm.Response, error) {
 	ollamaReq := llm.Request{
-		Model:    ol.model,
-		Messages: nil,
-		Stream:   ol.stream,
+		Model: ol.model,
+		Messages: []llm.Message{{
+			Role:    llm.RoleUser,
+			Content: prompt,
+		}},
+		Stream: ol.stream,
 	}
 	js, err := json.Marshal(&ollamaReq)
 	if err != nil {
