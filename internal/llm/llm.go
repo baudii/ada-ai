@@ -1,6 +1,19 @@
-package ollama
+package llm
 
 import "time"
+
+const (
+	RoleSystem Role = "system"
+	RoleUser   Role = "user"
+	RoleAsst   Role = "assistant"
+	RoleTool   Role = "tool"
+)
+
+type Role string
+
+type LLM interface {
+	SendMessage(string) (*Response, error)
+}
 
 type Request struct {
 	Model    string    `json:"model"`
@@ -9,7 +22,7 @@ type Request struct {
 }
 
 type Message struct {
-	Role    string `json:"role"`
+	Role    Role   `json:"role"`
 	Content string `json:"content"`
 }
 
