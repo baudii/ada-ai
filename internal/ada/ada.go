@@ -3,19 +3,31 @@ package ada
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal"
 	"github.com/baudii/ada-ai/internal/llm"
 )
 
+type config struct {
+	ProjRoot string `json:"projRoot"`
+	UserName string `json:"userName"`
+	ProjName string `json:"projName"`
+}
+
+var cfg config
+var cfgPath string
 var Debug bool = false
 var ai llm.LLM
 var step1 string
 
 func Run() {
-	cfg := internal.ParseJsonFile[llm.Config]("cfg/llm.json")
+	relativePath := filepath.Join("cfg", "ada.json")
+	cfgPath = internal.GetAbsolutePath(relativePath)
+	cfg = internal.ParseJsonFile[config](cfgPath)
+
 	var err error
-	ai, err = llm.Resolve(cfg)
+	ai, err = llm.Resolve()
 	if err != nil {
 		panic(err)
 	}
