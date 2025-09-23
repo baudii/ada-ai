@@ -3,7 +3,6 @@ package ollama
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/baudii/ada-ai/internal/llm"
@@ -17,8 +16,7 @@ type Ollama struct {
 
 const defaultOllamaURL = "http://localhost:11434/api/chat"
 
-func init() {
-	fmt.Println("Registering ollama")
+func Init() {
 	llm.Register("ollama", func(cfg map[string]any) (llm.LLM, error) {
 		url, ok := cfg["url"].(string)
 		if url == "" || !ok {
@@ -30,10 +28,7 @@ func init() {
 			model = "gemma3:4b"
 		}
 
-		stream, ok := cfg["stream"].(bool)
-		if !stream || !ok {
-			stream = false
-		}
+		stream, _ := cfg["stream"].(bool)
 
 		return &Ollama{
 			url:    url,

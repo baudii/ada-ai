@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+type Config struct {
+	Provider string         `json:"provider" yaml:"provider"`
+	Options  map[string]any `json:"options"  yaml:"options"`
+}
+
 type ProviderBuilder func(cfg map[string]any) (LLM, error)
 
 var registry = map[string]ProviderBuilder{}

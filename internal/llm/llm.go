@@ -3,13 +3,13 @@ package llm
 import "time"
 
 const (
-	RoleSystem Role = "system"
-	RoleUser   Role = "user"
-	RoleAsst   Role = "assistant"
-	RoleTool   Role = "tool"
+	RoleSystem role = "system"
+	RoleUser   role = "user"
+	RoleAsst   role = "assistant"
+	RoleTool   role = "tool"
 )
 
-type Role string
+type role string
 
 type LLM interface {
 	SendMessage(string) (*Response, error)
@@ -22,7 +22,7 @@ type Request struct {
 }
 
 type Message struct {
-	Role    Role   `json:"role"`
+	Role    role   `json:"role"`
 	Content string `json:"content"`
 }
 
