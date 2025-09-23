@@ -38,7 +38,11 @@ copy:
 	$(call COPY,$(CONF_SRC),$(CONF_DST))
 	$(call COPY,$(PRMPT_SRC),$(PRMPT_DST))
 
-run: all
+debug: build
+	@echo Running [debug] $(EXECUTABLE)...
+	@$(EXECUTABLE) -debug
+
+run:
 	@echo Running $(EXECUTABLE)...
 	@$(EXECUTABLE)
 
@@ -47,3 +51,5 @@ clean:
 	$(call RMDIR,$(BUILD_DIR))
 	@go clean
 
+br: build run
+bcd: build copy debug
