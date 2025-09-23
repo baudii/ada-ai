@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"flag"
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/llm/providers/ollama"
 )
 
 func main() {
-	start := time.Now()
+	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
+	flag.Parse()
+	ada.Debug = *dbg
 	ollama.Init()
 	ada.Run()
-	fmt.Printf("Completed in %v", time.Since(start))
 }

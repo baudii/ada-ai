@@ -8,6 +8,7 @@ import (
 	"github.com/baudii/ada-ai/internal/llm"
 )
 
+var Debug bool = false
 var ai llm.LLM
 var step1 string
 
