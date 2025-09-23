@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-func ReadInput() string {
-	fmt.Print("Enter message:\n > ")
+func ReadInput(msg string) string {
+	fmt.Printf("%v > ", msg)
 	scanner := bufio.NewScanner(os.Stdin)
 	var line string
 	if scanner.Scan() {

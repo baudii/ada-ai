@@ -2,10 +2,10 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 )
+
 func GetAbsolutePath(relativePath string) string {
 	exe, err := os.Executable()
 	if err != nil {
@@ -16,15 +16,28 @@ func GetAbsolutePath(relativePath string) string {
 	return filepath.Join(base, relativePath)
 }
 
-func ParseJsonFile[T any](filePath string) T {
-	var cfg T
-	path, err := filepath.Abs(filePath)
-	if err == nil {
-		fmt.Printf("Reading file %v\n", path)
+func PathExist(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func SaveJsonToFile(content any, filePath string) error {
+	_, err := os.Stat(filePath)
+	if err != nil {
+		return err
 	}
 
-	file, err := os.ReadFile(filePath)
+	data, err := json.MarshalIndent(content, "", "\t")
+	if err != nil {
+		return err
+	}
 
+	return os.WriteFile(filePath, data, 0)
+}
+
+func ParseJsonFile[T any](filePath string) T {
+	var cfg T
+	file, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(err)
 	}

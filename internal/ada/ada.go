@@ -19,7 +19,6 @@ var cfg config
 var cfgPath string
 var Debug bool = false
 var ai llm.LLM
-var step1 string
 
 func Run() {
 	relativePath := filepath.Join("cfg", "ada.json")
@@ -34,7 +33,29 @@ func Run() {
 
 	var input string
 	for {
-		input = internal.ReadInput()
+		if cfg.UserName == "" {
+			cfg.UserName = internal.ReadInput("Provide nickname")
+			internal.SaveJsonToFile(cfg, cfgPath)
+		}
+
+		if cfg.ProjName == "" {
+			cfg.ProjName = internal.ReadInput("Provide project name")
+			internal.SaveJsonToFile(cfg, cfgPath)
+		}
+		createDirectory()
+		if projectExist() {
+			err := parseStructure()
+			if err != nil {
+				fmt.Println(err)
+			}
+			internal.ReadInput("Press any key to continue...")
+			continue
+		}
+
+		input = internal.ReadInput("Provide project description")
+		if input == "" && Debug {
+			input = "Build a web application that can automatically scan vacancies and send job applications to employers"
+		}
 		err = processInput(input)
 		if err != nil {
 			fmt.Printf("Something went wrong when processing the request: %v\n", err)
@@ -43,27 +64,36 @@ func Run() {
 }
 
 func processInput(input string) error {
-	template, err := getTemplate(1)
+	response, err := sendReqWithTemplate(input, 1)
 	if err != nil {
 		return err
 	}
 
-	prompt := fmt.Sprintf(template, input)
-	res, err := ai.SendMessage(prompt)
+	err = saveProjectStructure(response.Message.Content)
 	if err != nil {
-		return err
+		fmt.Println(err)
 	}
 
-	fmt.Println(res)
+	err = parseStructure()
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	return nil
 }
 
-func getTemplate(step int) (string, error) {
+func sendReqWithTemplate(input string, step int) (*llm.Response, error) {
 	fileName := fmt.Sprintf("prompts/step%v-template.txt", step)
 	template, err := os.ReadFile(fileName)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse a file %v", fileName)
+		return nil, fmt.Errorf("failed to parse a file %v", fileName)
 	}
 
-	return string(template), nil
+	prompt := fmt.Sprintf(string(template), input)
+	res, err := ai.SendMessage(prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
