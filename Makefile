@@ -31,21 +31,21 @@ all: build copy
 
 build:
 	@echo Building $(APP)...
-	$(call MKDIR,$(ARTIFACTS))
-	$(call MKDIR,$(BUILD_DIR))
-	go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
+	@$(call MKDIR,$(ARTIFACTS))
+	@$(call MKDIR,$(BUILD_DIR))
+	@go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
 
 copy:
 	@echo Copying data...
-	$(call RMDIR,$(CONF_DST))
-	$(call RMDIR,$(PRMPT_DST))
-	$(call COPY,$(CONF_SRC),$(CONF_DST))
-	$(call COPY,$(PRMPT_SRC),$(PRMPT_DST))
+	@$(call RMDIR,$(CONF_DST))
+	@$(call RMDIR,$(PRMPT_DST))
+	@$(call COPY,$(CONF_SRC),$(CONF_DST))
+	@$(call COPY,$(PRMPT_SRC),$(PRMPT_DST))
 
 debug: build copy
 	@echo Running [debug] $(EXECUTABLE)...
-	$(call RMDIR,$(DBG_DST))
-	$(call COPY,$(DBG_SRC),$(DBG_DST))
+	@$(call RMDIR,$(DBG_DST))
+	@$(call COPY,$(DBG_SRC),$(DBG_DST))
 	@$(EXECUTABLE) -debug
 
 run:
@@ -54,8 +54,8 @@ run:
 
 clean:
 	@echo Cleaning...
-	$(call RMDIR,$(BUILD_DIR))
-	go clean
+	@$(call RMDIR,$(BUILD_DIR))
+	@go clean
 
 br: build run
 bcd: build copy debug
