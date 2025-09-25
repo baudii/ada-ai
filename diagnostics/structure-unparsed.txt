@@ -1,0 +1,88 @@
+```json
+{
+  "name": "airline-price-analyzer",
+  "type": "folder",
+  "children": [
+    {
+      "name": "docs",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "name": "src",
+      "type": "folder",
+      "children": [
+        {
+          "name": "api",
+          "type": "folder",
+          "children": [
+            {
+              "name": "airline_api.py",
+              "type": "file",
+              "children": []
+            },
+            {
+              "name": "price_aggregator.py",
+              "type": "file",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "cli",
+          "type": "folder",
+          "children": [
+            {
+              "name": "main.py",
+              "type": "file",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "models",
+          "type": "folder",
+          "children": [
+            {
+              "name": "airline.py",
+              "type": "file",
+              "children": []
+            },
+            {
+              "name": "flight.py",
+              "type": "file",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tests",
+      "type": "folder",
+      "children": [
+        {
+          "name": "test_airline_api.py",
+          "type": "file",
+          "children": []
+        },
+        {
+          "name": "test_price_aggregator.py",
+          "type": "file",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "requirements.txt",
+      "type": "file",
+      "children": []
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "children": []
+    }
+  ]
+}
+```

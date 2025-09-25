@@ -1,40 +1,22 @@
-Prompt Template
-
 Instruction:
 You are an AI software architect. A user will describe an application idea. Your task is to design the initial project folder structure for this idea.
 
-Step 1:
-Create a YAML file representing the project’s folder structure. This YAML should:
-* Include the root project folder (name derived from the app idea).
-* Show standard subfolders (e.g., src, tests, docs, config, assets) depending on the project type.
-* Inside src, include appropriate submodules or packages related to the user’s application.
+Create a JSON document representing the project’s folder structure. This JSON should:
+* Include the root project folder (name derived from the project's name: %v; make it filesystem-safe kebab-case).
+* Show standard subfolders depending on the project type.
+* Inside "src", include appropriate submodules or packages related to the user’s application.
 * Keep the structure clear, minimal, and extendable.
-Formatting Requirements:
-* Output only a valid YAML structure.
-* Use indentation for hierarchy.
-* Do not add explanations outside the YAML.
 
-Example Input (user request):
-I want to build a stock monitoring desktop application.
+JSON Output Rules:
+* Output only a single valid JSON value (no extra text before or after).
+* Use this schema for every node:
+  - "name": string (folder or file name)
+  - "type": "folder" | "file"
+  - "children": [] (required for "folder"; omit for "file")
+* DO NOT include comments or trailing commas.
+* Order children with folders first (alphabetical), then files (alphabetical).
+* Include representative config/build/test files where standard for the project type, but do not include file contents.
+* If a folder would be empty initially, include it with "children": [].
 
-Example Output:
-stock-monitoring-app/
-  src/
-    ui/
-    data/
-    services/
-    utils/
-  tests/
-    unit/
-    integration/
-  config/
-    settings.yml
-  docs/
-  assets/
-    icons/
-    styles/
-  README.md
-  requirements.txt
-
-Now use the following user request as input and generate the YAML folder structure:
+Now use the following user request as input and generate the JSON folder structure:
 %v

@@ -1,6 +1,7 @@
 package ada
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,56 +18,48 @@ type config struct {
 
 var cfg config
 var cfgPath string
-var Debug bool = false
 var ai llm.LLM
 
-func Run() {
+func Run(debugMode bool) {
+	if debugMode {
+		debugProjectStructure()
+		return
+	}
+
 	relativePath := filepath.Join("cfg", "ada.json")
 	cfgPath = internal.GetAbsolutePath(relativePath)
 	cfg = internal.ParseJsonFile[config](cfgPath)
 
 	var err error
-	ai, err = llm.Resolve()
-	if err != nil {
+	if ai, err = llm.Resolve(); err != nil {
 		panic(err)
 	}
 
-	var input string
-	for {
-		if cfg.UserName == "" {
-			cfg.UserName = internal.ReadInput("Provide nickname")
-			internal.SaveJsonToFile(cfg, cfgPath)
-		}
+	if cfg.UserName == "" {
+		cfg.UserName = internal.ReadInput("Provide nickname")
+		internal.SaveJsonToFile(cfg, cfgPath)
+	}
 
-		if cfg.ProjName == "" {
-			cfg.ProjName = internal.ReadInput("Provide project name")
-			internal.SaveJsonToFile(cfg, cfgPath)
-		}
-		createDirectory()
-		if projectExist() {
-			err := parseStructure()
-			if err != nil {
-				fmt.Println(err)
-			}
-			internal.ReadInput("Press any key to continue...")
-			continue
-		}
+	if cfg.ProjName == "" {
+		cfg.ProjName = internal.ReadInput("Provide project name")
+		internal.SaveJsonToFile(cfg, cfgPath)
+	}
 
-		input = internal.ReadInput("Provide project description")
-		if input == "" && Debug {
-			input = "Build a web application that can automatically scan vacancies and send job applications to employers"
-		}
-		err = processInput(input)
-		if err != nil {
-			fmt.Printf("Something went wrong when processing the request: %v\n", err)
-		}
+	input := internal.ReadInput("Provide project description")
+	if err = processInput(input); err != nil {
+		fmt.Printf("Something went wrong when processing the request: %v\n", err)
 	}
 }
 
 func processInput(input string) error {
-	response, err := sendReqWithTemplate(input, 1)
+	response, err := sendReqWithTemplate(1, cfg.ProjName, input)
 	if err != nil {
 		return err
+	}
+
+	data := string(response.Message.Content)
+	if data, err = tidy(data); err != nil {
+		panic(err)
 	}
 
 	err = saveProjectStructure(response.Message.Content)
@@ -74,26 +67,61 @@ func processInput(input string) error {
 		fmt.Println(err)
 	}
 
-	err = parseStructure()
+	node, err := unmarshalStructure(data)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
+	node.printTree()
 	return nil
 }
 
-func sendReqWithTemplate(input string, step int) (*llm.Response, error) {
+func sendReqWithTemplate(step int, input ...string) (*llm.Response, error) {
 	fileName := fmt.Sprintf("prompts/step%v-template.txt", step)
 	template, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse a file %v", fileName)
 	}
 
-	prompt := fmt.Sprintf(string(template), input)
+	prompt := fmt.Sprintf(string(template), internal.ToAnySlice(input)...)
+	fmt.Println(prompt)
 	res, err := ai.SendMessage(prompt)
 	if err != nil {
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func debugProjectStructure() {
+	r := filepath.Join("diagnostics", "structure-unparsed.txt")
+	cfg.ProjName = "airline-price-analyzer"
+	cfg.UserName = "baudii"
+	cfg.ProjRoot = ".projects"
+	path := internal.GetAbsolutePath(r)
+	f, err := os.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	data := string(f)
+	if data, err = tidy(data); err != nil {
+		panic(err)
+	}
+
+	if err = saveProjectStructure(data); err != nil {
+		var nfErr *projExist
+		if !errors.As(err, nfErr) {
+			panic(err)
+		}
+	}
+
+	node, err := unmarshalStructure(data)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(projRoot)
+	node.printTree()
+	node.materialize(projRoot)
 }

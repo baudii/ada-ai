@@ -1,12 +1,11 @@
 package ada
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/baudii/ada-ai/internal"
 )
@@ -14,86 +13,109 @@ import (
 var projDescrFile string
 var projRoot string
 
-func projectExist() bool {
-	path := filepath.Join(cfg.ProjRoot, cfg.UserName, cfg.ProjName, "project-structure.yml")
-	exist := internal.PathExist(path)
-	if exist {
-		projDescrFile = path
-		projRoot = filepath.Dir(path)
-	}
-	return exist
+type Node struct {
+	Name     string  `json:"name"`
+	Type     string  `json:"type"`
+	Children []*Node `json:"-"`
 }
 
-func parseStructure() error {
-	file, err := os.Open(projDescrFile)
-	if err != nil {
-		return err
+type nodeAlias struct {
+	Name     string             `json:"name"`
+	Type     string             `json:"type"`
+	Children []*json.RawMessage `json:"children"`
+	Contents []*json.RawMessage `json:"contents"`
+}
+
+func tidy(data string) (string, error) {
+	start := strings.IndexByte(data, '{')
+	end := strings.LastIndexByte(data, '}')
+	if start == -1 || end == -1 {
+		return "", fmt.Errorf("not a valid json")
+	}
+	return data[start : end+1], nil
+}
+
+func unmarshalStructure(data string) (n *Node, err error) {
+	return parseNode([]byte(data))
+}
+
+func parseNode(b []byte) (*Node, error) {
+	var a nodeAlias
+	if err := json.Unmarshal(b, &a); err != nil {
+		return nil, err
 	}
 
-	scanner := bufio.NewScanner(file)
-	prevIndent := 0
-	curPath := ""
-	folder := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		indent, err := getIndent(line, 2)
-		if err != nil || indent-prevIndent > 1 {
-			return fmt.Errorf("incorrect indent provided")
-		}
+	n := &Node{
+		Name: a.Name,
+		Type: a.Type,
+	}
 
-		for indent != prevIndent {
-			if indent < prevIndent {
-				curPath = filepath.Dir(curPath)
-				prevIndent--
-			} else if indent > prevIndent {
-				curPath = filepath.Join(curPath, folder)
-				prevIndent++
-				if prevIndent != indent {
-					return fmt.Errorf("incorrect indent provided")
-				}
-				break
+	raws := make([]*json.RawMessage, 0, len(a.Children)+len(a.Contents))
+	raws = append(raws, a.Children...)
+	raws = append(raws, a.Contents...)
+
+	for _, r := range raws {
+		if r == nil {
+			continue
+		}
+		child, err := parseNode(*r) // <- recurse with alias again
+		if err != nil {
+			return nil, err
+		}
+		n.Children = append(n.Children, child)
+	}
+	return n, nil
+}
+
+func (n *Node) printTree() {
+	printTree(n, "", true)
+}
+
+func printTree(n *Node, prefix string, isLast bool) {
+	conn := "├── "
+	nextPrefix := prefix + "│   "
+	if isLast {
+		conn = "└── "
+		nextPrefix = prefix + "    "
+	}
+	fmt.Printf("%s%s%s\n", prefix, conn, n.Name)
+	for i, c := range n.Children {
+		printTree(c, nextPrefix, i == len(n.Children)-1)
+	}
+}
+
+func (n *Node) materialize(base string) error {
+	path := filepath.Join(base, n.Name)
+	switch n.Type {
+	case "folder":
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return err
+		}
+		for _, c := range n.Children {
+			if err := c.materialize(path); err != nil {
+				return err
 			}
 		}
-
-		line = strings.TrimSpace(line)
-		f := filepath.Join(projRoot, curPath, line)
-		if line[len(line)-1] == '/' {
-			folder = filepath.Dir(line)
-			os.MkdirAll(f, 0o755)
-		} else {
-			os.Create(f)
+	case "file":
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			f, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 		}
-
-		fmt.Println(f)
+	default:
+		fmt.Println("Invalid json was provided, but can continue...")
 	}
-
 	return nil
 }
 
-func getIndent(line string, size int) (int, error) {
-	indent := 0
-	flag := 0
-	for _, c := range line {
-		if unicode.IsSpace(c) {
-			if flag == size-1 {
-				indent++
-			}
-			flag = (flag + 1) % size
-		} else {
-			break
-		}
-	}
-	if flag != 0 {
-		return 0, fmt.Errorf("invalid indentation")
-	}
-	return indent, nil
-}
-
 func createDirectory() error {
-	path := filepath.Join(cfg.ProjRoot, cfg.UserName, cfg.ProjName)
+	path := filepath.Join(internal.Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
 	_, err := os.Stat(path)
 	if err == nil {
-		return fmt.Errorf("project already exists with the same name %v", path)
+		projRoot = path
+		return &projExist{Path: path}
 	}
 
 	if !os.IsNotExist(err) {
@@ -109,7 +131,10 @@ func createDirectory() error {
 	return nil
 }
 
-func saveProjectStructure(yml string) error {
-	projDescrFile = filepath.Join(projRoot, "project-structure.yml")
-	return os.WriteFile(projDescrFile, []byte(yml), 0644)
+func saveProjectStructure(content string) (err error) {
+	if err := createDirectory(); err != nil {
+		return err
+	}
+	projDescrFile = filepath.Join(projRoot, "project-structure.json")
+	return os.WriteFile(projDescrFile, []byte(content), 0644)
 }

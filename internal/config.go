@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+const Artifacts string = "artifacts"
+
 func GetAbsolutePath(relativePath string) string {
 	exe, err := os.Executable()
 	if err != nil {
@@ -48,4 +50,12 @@ func ParseJsonFile[T any](filePath string) T {
 	}
 
 	return cfg
+}
+
+func ToAnySlice(ss []string) []any {
+	res := make([]any, len(ss))
+	for i, v := range ss {
+		res[i] = v
+	}
+	return res
 }

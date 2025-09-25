@@ -1,14 +1,17 @@
 APP          := ada-ai
 PKG          := ./cmd/$(APP)
-BUILD_DIR    := builds
+ARTIFACTS    := artifacts
+BUILD_DIR    := $(ARTIFACTS)/builds
 CONF_SRC     := cfg
 PRMPT_SRC    := prompts
+DBG_SRC      := diagnostics
 CONF_DST     := $(BUILD_DIR)/$(CONF_SRC)
 PRMPT_DST    := $(BUILD_DIR)/$(PRMPT_SRC)
+DBG_DST      := $(BUILD_DIR)/$(DBG_SRC)
 
 ifeq ($(OS),Windows_NT)
   EXE := .exe
-  MKDIR = if not exist "$(1)" mkdir $(1)
+  MKDIR = if not exist "$(1)" mkdir "$(1)"
   RMDIR = if exist "$(1)" rmdir /S /Q "$(1)"
   COPY  = if exist "$(1)" xcopy /E /I /Y "$(1)" "$(2)" >nul
 else
@@ -28,8 +31,9 @@ all: build copy
 
 build:
 	@echo Building $(APP)...
-	@$(call MKDIR,$(BUILD_DIR))
-	@go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
+	$(call MKDIR,$(ARTIFACTS))
+	$(call MKDIR,$(BUILD_DIR))
+	go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
 
 copy:
 	@echo Copying data...
@@ -38,18 +42,20 @@ copy:
 	$(call COPY,$(CONF_SRC),$(CONF_DST))
 	$(call COPY,$(PRMPT_SRC),$(PRMPT_DST))
 
-debug: build
+debug: build copy
 	@echo Running [debug] $(EXECUTABLE)...
+	$(call RMDIR,$(DBG_DST))
+	$(call COPY,$(DBG_SRC),$(DBG_DST))
 	@$(EXECUTABLE) -debug
 
 run:
 	@echo Running $(EXECUTABLE)...
-	@$(EXECUTABLE)
+	$(EXECUTABLE)
 
 clean:
 	@echo Cleaning...
 	$(call RMDIR,$(BUILD_DIR))
-	@go clean
+	go clean
 
 br: build run
 bcd: build copy debug

@@ -10,7 +10,6 @@ import (
 func main() {
 	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
 	flag.Parse()
-	ada.Debug = *dbg
 	ollama.Init()
-	ada.Run()
+	ada.Run(*dbg)
 }
