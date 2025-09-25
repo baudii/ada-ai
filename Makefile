@@ -1,4 +1,4 @@
-APP          := ada-ai
+APP          := ada-cli
 PKG          := ./cmd/$(APP)
 ARTIFACTS    := artifacts
 BUILD_DIR    := $(ARTIFACTS)/builds
