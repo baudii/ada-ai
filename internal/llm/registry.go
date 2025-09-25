@@ -8,8 +8,8 @@ import (
 )
 
 type config struct {
-	Provider string         `json:"provider" yaml:"provider"`
-	Options  map[string]any `json:"options"  yaml:"options"`
+	Provider string         `json:"provider"`
+	Options  map[string]any `json:"options"`
 }
 
 type ProviderBuilder func(cfg map[string]any) (LLM, error)
@@ -21,7 +21,7 @@ func Register(name string, builder ProviderBuilder) {
 }
 
 func Resolve() (LLM, error) {
-	relativePath := filepath.Join("cfg", "llm.json")
+	relativePath := filepath.Join("cfg", "llm-provider.json")
 	cfgPath := utils.GetAbsolutePath(relativePath)
 	cfg := utils.ParseJsonFile[config](cfgPath)
 	builder, ok := registry[cfg.Provider]
