@@ -1,3 +1,4 @@
 {
+    "requestTimeout": "3m",
     "projRoot": ".projects"
 }

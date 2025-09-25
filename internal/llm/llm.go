@@ -1,6 +1,9 @@
 package llm
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	RoleSystem role = "system"
@@ -12,7 +15,7 @@ const (
 type role string
 
 type LLM interface {
-	SendMessage(string) (*Response, error)
+	SendMessage(string, context.Context) (*Response, error)
 }
 
 type Request struct {

@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -38,7 +39,7 @@ func Init() {
 	})
 }
 
-func (ol Ollama) SendMessage(prompt string) (*llm.Response, error) {
+func (ol Ollama) SendMessage(prompt string, ctx context.Context) (*llm.Response, error) {
 	ollamaReq := llm.Request{
 		Model: ol.model,
 		Messages: []llm.Message{{
@@ -52,7 +53,7 @@ func (ol Ollama) SendMessage(prompt string) (*llm.Response, error) {
 		return nil, err
 	}
 	client := http.Client{}
-	httpReq, err := http.NewRequest(http.MethodPost, ol.url, bytes.NewReader(js))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, ol.url, bytes.NewReader(js))
 	if err != nil {
 		return nil, err
 	}

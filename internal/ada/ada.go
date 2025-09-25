@@ -1,16 +1,19 @@
 package ada
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/baudii/ada-ai/internal/llm"
 	"github.com/baudii/ada-ai/internal/utils"
 )
 
 type config struct {
+	Timeout  string `json:"requestTimeout"`
 	ProjRoot string `json:"projRoot"`
 	UserName string `json:"userName"`
 	ProjName string `json:"projName"`
@@ -84,8 +87,15 @@ func sendReqWithTemplate(step int, input ...string) (*llm.Response, error) {
 	}
 
 	prompt := fmt.Sprintf(string(template), utils.ToAnySlice(input)...)
-	fmt.Println(prompt)
-	res, err := ai.SendMessage(prompt)
+	dur, err := time.ParseDuration(cfg.Timeout)
+	if err != nil {
+		dur = time.Minute * 3
+		fmt.Printf("Failed to parse duration: '%v'. Using default: %v", cfg.Timeout, dur)
+	}
+
+	ctx, cf := context.WithTimeout(context.Background(), dur)
+	res, err := ai.SendMessage(prompt, ctx)
+	cf()
 	if err != nil {
 		return nil, err
 	}
