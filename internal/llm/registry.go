@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal"
+	"github.com/baudii/ada-ai/internal/utils"
 )
 
 type config struct {
@@ -22,8 +22,8 @@ func Register(name string, builder ProviderBuilder) {
 
 func Resolve() (LLM, error) {
 	relativePath := filepath.Join("cfg", "llm.json")
-	cfgPath := internal.GetAbsolutePath(relativePath)
-	cfg := internal.ParseJsonFile[config](cfgPath)
+	cfgPath := utils.GetAbsolutePath(relativePath)
+	cfg := utils.ParseJsonFile[config](cfgPath)
 	builder, ok := registry[cfg.Provider]
 	if !ok {
 		return nil, fmt.Errorf("unknown provider: %s", cfg.Provider)

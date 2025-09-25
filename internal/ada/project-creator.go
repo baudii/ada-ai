@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/baudii/ada-ai/internal"
+	"github.com/baudii/ada-ai/internal/utils"
 )
 
 var projDescrFile string
@@ -111,7 +111,7 @@ func (n *Node) materialize(base string) error {
 }
 
 func createDirectory() error {
-	path := filepath.Join(internal.Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
+	path := filepath.Join(utils.Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
 	_, err := os.Stat(path)
 	if err == nil {
 		projRoot = path

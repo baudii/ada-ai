@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal"
 	"github.com/baudii/ada-ai/internal/llm"
+	"github.com/baudii/ada-ai/internal/utils"
 )
 
 type config struct {
@@ -27,8 +27,8 @@ func Run(debugMode bool) {
 	}
 
 	relativePath := filepath.Join("cfg", "ada.json")
-	cfgPath = internal.GetAbsolutePath(relativePath)
-	cfg = internal.ParseJsonFile[config](cfgPath)
+	cfgPath = utils.GetAbsolutePath(relativePath)
+	cfg = utils.ParseJsonFile[config](cfgPath)
 
 	var err error
 	if ai, err = llm.Resolve(); err != nil {
@@ -36,16 +36,16 @@ func Run(debugMode bool) {
 	}
 
 	if cfg.UserName == "" {
-		cfg.UserName = internal.ReadInput("Provide nickname")
-		internal.SaveJsonToFile(cfg, cfgPath)
+		cfg.UserName = utils.ReadInput("Provide nickname")
+		utils.SaveJsonToFile(cfg, cfgPath)
 	}
 
 	if cfg.ProjName == "" {
-		cfg.ProjName = internal.ReadInput("Provide project name")
-		internal.SaveJsonToFile(cfg, cfgPath)
+		cfg.ProjName = utils.ReadInput("Provide project name")
+		utils.SaveJsonToFile(cfg, cfgPath)
 	}
 
-	input := internal.ReadInput("Provide project description")
+	input := utils.ReadInput("Provide project description")
 	if err = processInput(input); err != nil {
 		fmt.Printf("Something went wrong when processing the request: %v\n", err)
 	}
@@ -83,7 +83,7 @@ func sendReqWithTemplate(step int, input ...string) (*llm.Response, error) {
 		return nil, fmt.Errorf("failed to parse a file %v", fileName)
 	}
 
-	prompt := fmt.Sprintf(string(template), internal.ToAnySlice(input)...)
+	prompt := fmt.Sprintf(string(template), utils.ToAnySlice(input)...)
 	fmt.Println(prompt)
 	res, err := ai.SendMessage(prompt)
 	if err != nil {
@@ -98,7 +98,7 @@ func debugProjectStructure() {
 	cfg.ProjName = "airline-price-analyzer"
 	cfg.UserName = "baudii"
 	cfg.ProjRoot = ".projects"
-	path := internal.GetAbsolutePath(r)
+	path := utils.GetAbsolutePath(r)
 	f, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)

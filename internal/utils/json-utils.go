@@ -1,27 +1,9 @@
-package internal
+package utils
 
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 )
-
-const Artifacts string = "artifacts"
-
-func GetAbsolutePath(relativePath string) string {
-	exe, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	base := filepath.Dir(exe)
-	return filepath.Join(base, relativePath)
-}
-
-func PathExist(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
 
 func SaveJsonToFile(content any, filePath string) error {
 	_, err := os.Stat(filePath)
@@ -50,12 +32,4 @@ func ParseJsonFile[T any](filePath string) T {
 	}
 
 	return cfg
-}
-
-func ToAnySlice(ss []string) []any {
-	res := make([]any, len(ss))
-	for i, v := range ss {
-		res[i] = v
-	}
-	return res
 }
