@@ -39,14 +39,18 @@ func Init() {
 	})
 }
 
-func (ol Ollama) SendMessage(prompt string, ctx context.Context) (*llm.Response, error) {
-	ollamaReq := llm.Request{
-		Model: ol.model,
-		Messages: []llm.Message{{
+func (ol Ollama) SendMessage(prompt string, ctx context.Context, h []llm.Message) (*llm.Response, error) {
+	if h == nil {
+		h = []llm.Message{{
 			Role:    llm.RoleUser,
 			Content: prompt,
-		}},
-		Stream: ol.stream,
+		}}
+	}
+
+	ollamaReq := llm.Request{
+		Model:    ol.model,
+		Messages: h,
+		Stream:   ol.stream,
 	}
 
 	js, err := json.Marshal(&ollamaReq)

@@ -15,7 +15,7 @@ const (
 type role string
 
 type LLM interface {
-	SendMessage(string, context.Context) (*Response, error)
+	SendMessage(string, context.Context, []Message) (*Response, error)
 }
 
 type Request struct {

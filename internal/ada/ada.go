@@ -94,7 +94,7 @@ func sendReqWithTemplate(step int, input ...any) (*llm.Response, error) {
 	}
 
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ai.SendMessage(prompt, ctx)
+	res, err := ai.SendMessage(prompt, ctx, nil)
 	cf()
 	if err != nil {
 		return nil, err
