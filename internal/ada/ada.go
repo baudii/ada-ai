@@ -79,14 +79,14 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendReqWithTemplate(step int, input ...string) (*llm.Response, error) {
+func sendReqWithTemplate(step int, input ...any) (*llm.Response, error) {
 	fileName := fmt.Sprintf("prompts/step%v-template.txt", step)
 	template, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse a file %v", fileName)
 	}
 
-	prompt := fmt.Sprintf(string(template), utils.ToAnySlice(input)...)
+	prompt := fmt.Sprintf(string(template), input...)
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
