@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/utils"
+	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 type config struct {

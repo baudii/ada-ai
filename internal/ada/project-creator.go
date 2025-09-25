@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/baudii/ada-ai/internal/utils"
+	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 var projDescrFile string
