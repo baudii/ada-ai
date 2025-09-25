@@ -2,10 +2,10 @@ package ada
 
 import "fmt"
 
-type projExist struct {
+type ProjExist struct {
 	Path string
 }
 
-func (e *projExist) Error() string {
+func (e *ProjExist) Error() string {
 	return fmt.Sprintf("project already exists at %v", e.Path)
 }

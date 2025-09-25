@@ -115,7 +115,7 @@ func createDirectory() error {
 	_, err := os.Stat(path)
 	if err == nil {
 		projRoot = path
-		return &projExist{Path: path}
+		return &ProjExist{Path: path}
 	}
 
 	if !os.IsNotExist(err) {

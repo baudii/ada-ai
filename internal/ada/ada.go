@@ -110,8 +110,8 @@ func debugProjectStructure() {
 	}
 
 	if err = saveProjectStructure(data); err != nil {
-		var nfErr *projExist
-		if !errors.As(err, nfErr) {
+		var nfErr *ProjExist
+		if !errors.As(err, &nfErr) {
 			panic(err)
 		}
 	}
