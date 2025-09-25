@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/baudii/ada-ai/internal/llm"
 	"github.com/baudii/ada-ai/internal/utils"
+	"github.com/baudii/ada-ai/pkg/llm"
 )
 
 type config struct {

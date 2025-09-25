@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/baudii/ada-ai/internal/llm"
+	"github.com/baudii/ada-ai/pkg/llm"
 )
 
 type Ollama struct {

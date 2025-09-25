@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/baudii/ada-ai/internal/ada"
-	"github.com/baudii/ada-ai/internal/llm/providers/ollama"
+	"github.com/baudii/ada-ai/pkg/llm/providers/ollama"
 )
 
 func main() {
