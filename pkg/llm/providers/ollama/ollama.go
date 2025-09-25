@@ -48,20 +48,25 @@ func (ol Ollama) SendMessage(prompt string, ctx context.Context) (*llm.Response,
 		}},
 		Stream: ol.stream,
 	}
+
 	js, err := json.Marshal(&ollamaReq)
 	if err != nil {
 		return nil, err
 	}
+
 	client := http.Client{}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, ol.url, bytes.NewReader(js))
 	if err != nil {
 		return nil, err
 	}
+	defer httpReq.Body.Close()
+
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
+
 	ollamaResp := llm.Response{}
 	err = json.NewDecoder(httpResp.Body).Decode(&ollamaResp)
 	return &ollamaResp, err
