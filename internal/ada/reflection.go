@@ -17,23 +17,6 @@ type Reflection struct {
 	Suggestions []string `json:"improvement_suggestions"`
 }
 
-func Reflect(request *string, response *string) (*Reflection, error) {
-	prompt := getPromptFromTemplate("reflect-template.txt", *request, *response)
-	msgs, err := sendRequest(prompt, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	rfl := msgs[len(msgs)-1].Content
-	var r Reflection
-	err = json.Unmarshal([]byte(rfl), &r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &r, nil
-}
-
 func (r Reflection) Avg() float32 {
 	s := r.Scores
 	return (s.Relevance + s.Accuracy + s.Completeness) / 3
@@ -49,7 +32,7 @@ func Improve(prompt *string, response *string) {
 	)
 
 	for i := 0; i < cfg.ReflectionDepth; i++ {
-		r, err = Reflect(prompt, ans)
+		r, err = reflect(prompt, ans)
 		avg := r.Avg()
 		if err != nil {
 			fmt.Printf("error occurred during reflection: %v", err)
@@ -65,6 +48,22 @@ func Improve(prompt *string, response *string) {
 			bestAns = ans
 		}
 
-		// TODO: Send new message with included suggestions
 	}
+}
+
+func reflect(request *string, response *string) (*Reflection, error) {
+	prompt := getPromptFromTemplate("reflect-template.txt", *request, *response)
+	msgs, err := sendRequest(prompt, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	rfl := msgs[len(msgs)-1].Content
+	var r Reflection
+	err = json.Unmarshal([]byte(rfl), &r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &r, nil
 }
