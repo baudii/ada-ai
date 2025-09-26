@@ -2,6 +2,8 @@ package ada
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 )
 
 type Score struct {
@@ -31,6 +33,37 @@ func Reflect(request *string, response *string) (*Reflection, error) {
 	return &r, nil
 }
 
-func (r Score) Avg() float32 {
-	return (r.Relevance + r.Accuracy + r.Completeness) / 3
+func (r Reflection) Avg() float32 {
+	s := r.Scores
+	return (s.Relevance + s.Accuracy + s.Completeness) / 3
+}
+
+func Improve(prompt *string, response *string) {
+	var (
+		r       *Reflection
+		bestSc  float32 = math.SmallestNonzeroFloat32
+		bestAns *string = response
+		ans     *string = response
+		err     error
+	)
+
+	for i := 0; i < cfg.ReflectionDepth; i++ {
+		r, err = Reflect(prompt, ans)
+		avg := r.Avg()
+		if err != nil {
+			fmt.Printf("error occurred during reflection: %v", err)
+			continue
+		}
+		if avg > 8 {
+			*response = *bestAns
+			return
+		}
+
+		if avg > bestSc {
+			bestSc = r.Avg()
+			bestAns = ans
+		}
+
+		// TODO: Send new message with included suggestions
+	}
 }

@@ -2,7 +2,6 @@ package ada
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,10 +12,11 @@ import (
 )
 
 type config struct {
-	Timeout  string `json:"requestTimeout"`
-	ProjRoot string `json:"projRoot"`
-	UserName string `json:"userName"`
-	ProjName string `json:"projName"`
+	Timeout         string `json:"requestTimeout"`
+	ReflectionDepth int    `json:"reflectionDepth"`
+	ProjRoot        string `json:"projRoot"`
+	UserName        string `json:"userName"`
+	ProjName        string `json:"projName"`
 }
 
 var cfg config
@@ -55,7 +55,8 @@ func Run(debugMode bool) {
 }
 
 func processInput(input string) error {
-	response, err := sendReqWithTemplate(1, cfg.ProjName, input)
+	prompt := getPromptFromTemplate("step1-template.txt", cfg.ProjName, input)
+	response, err := sendReqWithTemplate(prompt)
 	if err != nil {
 		return err
 	}
@@ -79,14 +80,7 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendReqWithTemplate(step int, input ...any) (*llm.Response, error) {
-	fileName := fmt.Sprintf("prompts/step%v-template.txt", step)
-	template, err := os.ReadFile(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse a file %v", fileName)
-	}
-
-	prompt := fmt.Sprintf(string(template), input...)
+func sendReqWithTemplate(prompt string) (*llm.Response, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
@@ -101,4 +95,15 @@ func sendReqWithTemplate(step int, input ...any) (*llm.Response, error) {
 	}
 
 	return res, nil
+}
+
+func getPromptFromTemplate(fileName string, input ...any) string {
+	fileName = utils.GetAbsolutePath(filepath.Join("prompts", fileName))
+	template, err := os.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	prompt := fmt.Sprintf(string(template), input...)
+	return prompt
 }
