@@ -56,17 +56,18 @@ func Run(debugMode bool) {
 
 func processInput(input string) error {
 	prompt := getPromptFromTemplate("step1-template.txt", cfg.ProjName, input)
-	response, err := sendReqWithTemplate(prompt)
+	msgs, err := sendRequest(prompt, nil)
 	if err != nil {
 		return err
 	}
 
-	data := string(response.Message.Content)
+	response := msgs[len(msgs)-1]
+	data := string(response.Content)
 	if data, err = tidy(data); err != nil {
 		panic(err)
 	}
 
-	err = saveProjectStructure(response.Message.Content)
+	err = saveProjectStructure(response.Content)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -80,21 +81,26 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendReqWithTemplate(prompt string) (*llm.Response, error) {
+func sendRequest(prompt string, msgs []llm.Message) ([]llm.Message, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
 		fmt.Printf("Failed to parse duration: '%v'. Using default: %v", cfg.Timeout, dur)
 	}
 
-	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ai.SendMessage(prompt, ctx, nil)
-	cf()
-	if err != nil {
-		return nil, err
+	if msgs == nil {
+		msgs = []llm.Message{}
 	}
 
-	return res, nil
+	msgs = append(msgs, llm.Message{
+		Role:    llm.RoleUser,
+		Content: prompt,
+	})
+
+	ctx, cf := context.WithTimeout(context.Background(), dur)
+	res, err := ai.SendMessage(msgs, ctx)
+	cf()
+	return res, err
 }
 
 func getPromptFromTemplate(fileName string, input ...any) string {

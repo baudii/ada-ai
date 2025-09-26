@@ -19,13 +19,14 @@ type Reflection struct {
 
 func Reflect(request *string, response *string) (*Reflection, error) {
 	prompt := getPromptFromTemplate("reflect-template.txt", *request, *response)
-	rfl, err := sendReqWithTemplate(prompt)
+	msgs, err := sendRequest(prompt, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	rfl := msgs[len(msgs)-1].Content
 	var r Reflection
-	err = json.Unmarshal([]byte(rfl.Message.Content), &r)
+	err = json.Unmarshal([]byte(rfl), &r)
 	if err != nil {
 		return nil, err
 	}
