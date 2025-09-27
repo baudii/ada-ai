@@ -1,4 +1,4 @@
-package logger
+package dailylog
 
 import (
 	"fmt"
@@ -19,6 +19,29 @@ type DailyWriter struct {
 	loc     *time.Location
 	curDate string
 	file    *os.File
+}
+
+func Init() {
+	dwWriter := &DailyWriter{
+		loc:    time.Local,
+		dir:    utils.GetAbsolutePath("logs"),
+		prefix: "ada",
+	}
+
+	if err := dwWriter.rotateIfNeeded(); err != nil {
+		lgr := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		}))
+		slog.SetDefault(lgr)
+		slog.Error("Failed to initialize the daily writer. Will use 'os.Stderr'", "error", err)
+		return
+	}
+
+	writer := io.MultiWriter(os.Stderr, dwWriter)
+	lgr := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	slog.SetDefault(lgr)
 }
 
 func (dw *DailyWriter) Write(p []byte) (n int, err error) {
@@ -57,24 +80,5 @@ func (dw *DailyWriter) rotateIfNeeded() error {
 
 	dw.file = f
 	dw.curDate = date
-	return nil
-}
-
-func New() error {
-	dwWriter := &DailyWriter{
-		loc:    time.Local,
-		dir:    utils.GetAbsolutePath("logs"),
-		prefix: "ada",
-	}
-
-	if err := dwWriter.rotateIfNeeded(); err != nil {
-		return err
-	}
-
-	writer := io.MultiWriter(os.Stdout, dwWriter)
-	lgr := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(lgr)
 	return nil
 }
