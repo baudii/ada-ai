@@ -16,7 +16,7 @@ read:
 		line = scanner.Text()
 	}
 
-	if err := scanner.Err(); err == nil {
+	if err := scanner.Err(); err != nil {
 		slog.Error("error reading from stdin", "error", err)
 		goto read
 	}

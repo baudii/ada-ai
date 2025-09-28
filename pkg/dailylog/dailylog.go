@@ -28,7 +28,7 @@ type dailyWriter struct {
 	file    *os.File
 }
 
-func Init(cfg Config) {
+func Init(cfg *Config) {
 	tz := time.FixedZone(cfg.Timezone, 0)
 	dw := &dailyWriter{
 		path:     cfg.Path,
@@ -70,7 +70,7 @@ func setSlog(w io.Writer, l slog.Level, loc *time.Location) {
 	slog.SetDefault(logger)
 }
 
-func getLogLevelFromCfg(cfg Config) slog.Level {
+func getLogLevelFromCfg(cfg *Config) slog.Level {
 	switch strings.ToLower(cfg.LogLevel) {
 	case "info":
 		return slog.LevelInfo

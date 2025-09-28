@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 )
 
-const Artifacts string = "artifacts"
-
 func GetAbsolutePath(relativePath string) string {
 	exe, err := os.Executable()
 	if err != nil {

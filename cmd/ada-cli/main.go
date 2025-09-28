@@ -17,7 +17,7 @@ func main() {
 	cfg, err := utils.ParseJsonFile[dailylog.Config](utils.GetAbsolutePath(cfgPath))
 	fmt.Println(cfg)
 	if err != nil {
-		cfg = dailylog.Config{
+		cfg = &dailylog.Config{
 			Timezone: "local",
 			Path:     utils.GetAbsolutePath("logs"),
 			Prefix:   "ada",
