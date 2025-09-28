@@ -28,6 +28,12 @@ type dailyWriter struct {
 	file    *os.File
 }
 
+// ToFile and ToConsole allow you to log separately to file and to console.
+var (
+	ToFile    *slog.Logger
+	ToConsole *slog.Logger
+)
+
 func Init(cfg *Config) {
 	tz := time.FixedZone(cfg.Timezone, 0)
 	dw := &dailyWriter{
@@ -38,12 +44,16 @@ func Init(cfg *Config) {
 
 	level := getLogLevelFromCfg(cfg)
 	if err := dw.rotateIfNeeded(); err != nil {
-		setSlog(os.Stderr, level, tz)
+		lg := getLogger(os.Stderr, level, tz)
+		slog.SetDefault(lg)
 		slog.Error("Failed to initialize the daily writer. Will use 'os.Stderr'", "error", err)
 		return
 	}
 
-	setSlog(io.MultiWriter(os.Stderr, dw), level, tz)
+	lg := getLogger(io.MultiWriter(os.Stderr, dw), level, tz)
+	slog.SetDefault(lg)
+	ToFile = getLogger(dw, level, tz)
+	ToConsole = getLogger(os.Stderr, level, tz)
 }
 
 func (dw *dailyWriter) Write(p []byte) (n int, err error) {
@@ -55,7 +65,7 @@ func (dw *dailyWriter) Write(p []byte) (n int, err error) {
 	return dw.file.Write(p)
 }
 
-func setSlog(w io.Writer, l slog.Level, loc *time.Location) {
+func getLogger(w io.Writer, l slog.Level, loc *time.Location) *slog.Logger {
 	logger := slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{
 		Level: l,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -67,17 +77,17 @@ func setSlog(w io.Writer, l slog.Level, loc *time.Location) {
 			return a
 		},
 	}))
-	slog.SetDefault(logger)
+	return logger
 }
 
 func getLogLevelFromCfg(cfg *Config) slog.Level {
 	switch strings.ToLower(cfg.LogLevel) {
-	case "info":
-		return slog.LevelInfo
-	case "warn":
-		return slog.LevelWarn
 	case "error":
 		return slog.LevelError
+	case "warn":
+		return slog.LevelWarn
+	case "info":
+		return slog.LevelInfo
 	default:
 		return slog.LevelDebug
 	}
