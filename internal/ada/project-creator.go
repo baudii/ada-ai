@@ -3,6 +3,7 @@ package ada
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,7 +106,7 @@ func (n *Node) materialize(base string) error {
 			defer f.Close()
 		}
 	default:
-		fmt.Println("Invalid json was provided, but can continue...")
+		slog.Warn("invalid json was provided", "node_type", n.Type)
 	}
 	return nil
 }

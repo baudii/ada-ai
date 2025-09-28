@@ -3,6 +3,7 @@ package ada
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,6 +43,7 @@ func Run(debugMode bool) {
 		cfg.UserName = utils.ReadInput("Provide nickname")
 		utils.SaveJsonToFile(cfg, cfgPath)
 	}
+	slog.Info("recognized username", "username", cfg.UserName)
 
 	if cfg.ProjName == "" {
 		cfg.ProjName = utils.ReadInput("Provide project name")
@@ -50,7 +52,7 @@ func Run(debugMode bool) {
 
 	input := utils.ReadInput("Provide project description")
 	if err = processInput(input); err != nil {
-		fmt.Printf("Something went wrong when processing the request: %v\n", err)
+		slog.Error("something went wrong when processing the request", "error", err)
 	}
 }
 
@@ -69,7 +71,7 @@ func processInput(input string) error {
 
 	err = saveProjectStructure(response.Content)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("error occurred when saving project structure", "error", err)
 	}
 
 	node, err := unmarshalStructure(data)
@@ -85,7 +87,7 @@ func sendRequest(prompt string, msgs []llm.Message) ([]llm.Message, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
-		fmt.Printf("Failed to parse duration: '%v'. Using default: %v", cfg.Timeout, dur)
+		slog.Warn("failed to parse duration from config: using default", "duration", cfg.Timeout, "default", dur)
 	}
 
 	if msgs == nil {

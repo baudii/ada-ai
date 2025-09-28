@@ -2,7 +2,7 @@ package ada
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"math"
 )
 
@@ -35,7 +35,7 @@ func Improve(prompt *string, response *string) {
 		r, err = reflect(prompt, ans)
 		avg := r.Avg()
 		if err != nil {
-			fmt.Printf("error occurred during reflection: %v", err)
+			slog.Error("error occurred during reflection", "error", err)
 			continue
 		}
 		if avg > 8 {
