@@ -42,7 +42,7 @@ func Run(debugMode bool) {
 
 	relativePath := filepath.Join("cfg", "ada.json")
 	cfgPath = utils.GetAbsolutePath(relativePath)
-	cfg, err = utils.ParseJsonFile[config](cfgPath)
+	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
 	if err != nil {
 		cfg = &defaultCfg
 	}

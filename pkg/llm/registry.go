@@ -22,7 +22,7 @@ func Register(name string, builder ProviderBuilder) {
 
 func Resolve() (LLM, error) {
 	relativePath := filepath.Join("cfg", "llm-provider.json")
-	cfg, err := utils.ParseJsonFile[config](utils.GetAbsolutePath(relativePath))
+	cfg, err := utils.ParseJsonConfigWithLocal[config](utils.GetAbsolutePath(relativePath))
 	if err != nil {
 		return nil, err
 	}

@@ -14,7 +14,7 @@ import (
 
 func main() {
 	cfgPath := filepath.Join("cfg", "dailylog.json")
-	cfg, err := utils.ParseJsonFile[dailylog.Config](utils.GetAbsolutePath(cfgPath))
+	cfg, err := utils.ParseJsonConfigWithLocal[dailylog.Config](utils.GetAbsolutePath(cfgPath))
 	fmt.Println(cfg)
 	if err != nil {
 		cfg = &dailylog.Config{

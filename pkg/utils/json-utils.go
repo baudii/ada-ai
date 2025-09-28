@@ -20,7 +20,7 @@ func SaveJsonToFile(content any, filePath string) error {
 	return os.WriteFile(filePath, data, 0)
 }
 
-func ParseJsonFileOld[T any](filePath string) (*T, error) {
+func ParseJsonFile[T any](filePath string) (*T, error) {
 	var cfg T
 	file, err := os.ReadFile(filePath)
 	if err != nil {
@@ -35,7 +35,7 @@ func ParseJsonFileOld[T any](filePath string) (*T, error) {
 	return &cfg, nil
 }
 
-func ParseJSONFileToMap(path string) (map[string]any, error) {
+func ParseJsonFileToMap(path string) (map[string]any, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
