@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/baudii/ada-ai/pkg/llm"
 )
@@ -40,6 +42,7 @@ func Init() {
 }
 
 func (ol Ollama) SendMessage(msgs []llm.Message, ctx context.Context) ([]llm.Message, error) {
+	slog.Info("sending message to ollama")
 	ollamaReq := llm.Request{
 		Model:    ol.model,
 		Messages: msgs,
@@ -66,6 +69,12 @@ func (ol Ollama) SendMessage(msgs []llm.Message, ctx context.Context) ([]llm.Mes
 
 	ollamaResp := llm.Response{}
 	err = json.NewDecoder(httpResp.Body).Decode(&ollamaResp)
+	slog.Info("response received",
+		"model", ollamaResp.Model,
+		"total_duration", time.Duration(ollamaResp.TotalDuration),
+		"eval_count", ollamaResp.EvalCount,
+		"eval_duration", time.Duration(ollamaResp.EvalDuration),
+	)
 	msgs = append(msgs, ollamaResp.Message)
 	return msgs, err
 }

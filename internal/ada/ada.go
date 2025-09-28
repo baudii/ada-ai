@@ -49,6 +49,7 @@ func Run(debugMode bool) {
 		cfg.ProjName = utils.ReadInput("Provide project name")
 		utils.SaveJsonToFile(cfg, cfgPath)
 	}
+	slog.Info("recognized project", "projname", cfg.ProjName)
 
 	input := utils.ReadInput("Provide project description")
 	if err = processInput(input); err != nil {
