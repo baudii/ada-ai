@@ -35,13 +35,14 @@ var (
 )
 
 func Init(cfg *Config) {
-	tz := time.FixedZone(cfg.Timezone, 0)
+	tz := getTimezone(cfg)
 	dw := &dailyWriter{
 		path:     cfg.Path,
 		prefix:   cfg.Prefix,
 		timezone: tz,
 	}
 
+	fmt.Println(*dw.timezone)
 	level := getLogLevelFromCfg(cfg)
 	if err := dw.rotateIfNeeded(); err != nil {
 		lg := getLogger(os.Stderr, level, tz)
@@ -78,6 +79,17 @@ func getLogger(w io.Writer, l slog.Level, loc *time.Location) *slog.Logger {
 		},
 	}))
 	return logger
+}
+
+func getTimezone(cfg *Config) *time.Location {
+	switch strings.ToLower(cfg.Timezone) {
+	case "local":
+		return time.Local
+	case "utc":
+		return time.UTC
+	default:
+		return time.FixedZone(cfg.Timezone, 0)
+	}
 }
 
 func getLogLevelFromCfg(cfg *Config) slog.Level {
