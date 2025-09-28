@@ -6,45 +6,47 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
-
-	"github.com/baudii/ada-ai/pkg/utils"
 )
 
-type DailyWriter struct {
+type Config struct {
+	Timezone string `json:"timezone"`
+	Path     string `json:"path"`
+	Prefix   string `json:"prefix"`
+	LogLevel string `json:"logLevel"`
+}
+
+type dailyWriter struct {
+	path     string
+	prefix   string
+	timezone *time.Location
+
 	mu      sync.Mutex
-	dir     string
-	prefix  string
-	loc     *time.Location
 	curDate string
 	file    *os.File
 }
 
-func Init() {
-	dwWriter := &DailyWriter{
-		loc:    time.Local,
-		dir:    utils.GetAbsolutePath("logs"),
-		prefix: "ada",
+func Init(cfg Config) {
+	tz := time.FixedZone(cfg.Timezone, 0)
+	dw := &dailyWriter{
+		path:     cfg.Path,
+		prefix:   cfg.Prefix,
+		timezone: tz,
 	}
 
-	if err := dwWriter.rotateIfNeeded(); err != nil {
-		lgr := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		}))
-		slog.SetDefault(lgr)
+	level := getLogLevelFromCfg(cfg)
+	if err := dw.rotateIfNeeded(); err != nil {
+		setSlog(os.Stderr, level, tz)
 		slog.Error("Failed to initialize the daily writer. Will use 'os.Stderr'", "error", err)
 		return
 	}
 
-	writer := io.MultiWriter(os.Stderr, dwWriter)
-	lgr := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(lgr)
+	setSlog(io.MultiWriter(os.Stderr, dw), level, tz)
 }
 
-func (dw *DailyWriter) Write(p []byte) (n int, err error) {
+func (dw *dailyWriter) Write(p []byte) (n int, err error) {
 	dw.mu.Lock()
 	defer dw.mu.Unlock()
 	if err := dw.rotateIfNeeded(); err != nil {
@@ -53,12 +55,40 @@ func (dw *DailyWriter) Write(p []byte) (n int, err error) {
 	return dw.file.Write(p)
 }
 
-func (dw *DailyWriter) filename(t time.Time) string {
-	return filepath.Join(dw.dir, fmt.Sprintf("%s_%s.log", dw.prefix, t.Format("2006-01-02")))
+func setSlog(w io.Writer, l slog.Level, loc *time.Location) {
+	logger := slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{
+		Level: l,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				if t, ok := a.Value.Any().(time.Time); ok {
+					a.Value = slog.TimeValue(t.In(loc))
+				}
+			}
+			return a
+		},
+	}))
+	slog.SetDefault(logger)
 }
 
-func (dw *DailyWriter) rotateIfNeeded() error {
-	now := time.Now().In(dw.loc)
+func getLogLevelFromCfg(cfg Config) slog.Level {
+	switch strings.ToLower(cfg.LogLevel) {
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelDebug
+	}
+}
+
+func (dw *dailyWriter) filename(t time.Time) string {
+	return filepath.Join(dw.path, fmt.Sprintf("%s_%s.log", dw.prefix, t.Format("2006-01-02")))
+}
+
+func (dw *dailyWriter) rotateIfNeeded() error {
+	now := time.Now().In(dw.timezone)
 	date := now.Format("2006-01-02")
 	if dw.file != nil && date == dw.curDate {
 		return nil
@@ -69,7 +99,7 @@ func (dw *DailyWriter) rotateIfNeeded() error {
 		dw.file = nil
 	}
 
-	if err := os.MkdirAll(dw.dir, 0o755); err != nil {
+	if err := os.MkdirAll(dw.path, 0o755); err != nil {
 		return err
 	}
 
