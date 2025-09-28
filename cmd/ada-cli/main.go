@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log/slog"
 	"path/filepath"
 
@@ -15,7 +14,6 @@ import (
 func main() {
 	cfgPath := filepath.Join("cfg", "dailylog.json")
 	cfg, err := utils.ParseJsonConfigWithLocal[dailylog.Config](utils.GetAbsolutePath(cfgPath))
-	fmt.Println(cfg)
 	if err != nil {
 		cfg = &dailylog.Config{
 			Timezone: "local",
