@@ -2,8 +2,8 @@ package ada
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,10 +13,11 @@ import (
 )
 
 type config struct {
-	Timeout  string `json:"requestTimeout"`
-	ProjRoot string `json:"projRoot"`
-	UserName string `json:"userName"`
-	ProjName string `json:"projName"`
+	Timeout         string `json:"requestTimeout"`
+	ReflectionDepth int    `json:"reflectionDepth"`
+	ProjRoot        string `json:"projRoot"`
+	UserName        string `json:"userName"`
+	ProjName        string `json:"projName"`
 }
 
 var cfg config
@@ -42,32 +43,36 @@ func Run(debugMode bool) {
 		cfg.UserName = utils.ReadInput("Provide nickname")
 		utils.SaveJsonToFile(cfg, cfgPath)
 	}
+	slog.Info("recognized username", "username", cfg.UserName)
 
 	if cfg.ProjName == "" {
 		cfg.ProjName = utils.ReadInput("Provide project name")
 		utils.SaveJsonToFile(cfg, cfgPath)
 	}
+	slog.Info("recognized project", "projname", cfg.ProjName)
 
 	input := utils.ReadInput("Provide project description")
 	if err = processInput(input); err != nil {
-		fmt.Printf("Something went wrong when processing the request: %v\n", err)
+		slog.Error("something went wrong when processing the request", "error", err)
 	}
 }
 
 func processInput(input string) error {
-	response, err := sendReqWithTemplate(1, cfg.ProjName, input)
+	prompt := getPromptFromTemplate("step1-template.txt", cfg.ProjName, input)
+	msgs, err := sendRequest(prompt, nil)
 	if err != nil {
 		return err
 	}
 
-	data := string(response.Message.Content)
+	response := msgs[len(msgs)-1]
+	data := string(response.Content)
 	if data, err = tidy(data); err != nil {
 		panic(err)
 	}
 
-	err = saveProjectStructure(response.Message.Content)
+	err = saveProjectStructure(response.Content)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("error occurred when saving project structure", "error", err)
 	}
 
 	node, err := unmarshalStructure(data)
@@ -79,59 +84,35 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendReqWithTemplate(step int, input ...any) (*llm.Response, error) {
-	fileName := fmt.Sprintf("prompts/step%v-template.txt", step)
-	template, err := os.ReadFile(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse a file %v", fileName)
-	}
-
-	prompt := fmt.Sprintf(string(template), input...)
+func sendRequest(prompt string, msgs []llm.Message) ([]llm.Message, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
-		fmt.Printf("Failed to parse duration: '%v'. Using default: %v", cfg.Timeout, dur)
+		slog.Warn("failed to parse duration from config: using default", "duration", cfg.Timeout, "default", dur)
 	}
+
+	if msgs == nil {
+		msgs = []llm.Message{}
+	}
+
+	msgs = append(msgs, llm.Message{
+		Role:    llm.RoleUser,
+		Content: prompt,
+	})
 
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ai.SendMessage(prompt, ctx, nil)
+	res, err := ai.SendMessage(msgs, ctx)
 	cf()
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return res, err
 }
 
-func debugProjectStructure() {
-	r := filepath.Join("diagnostics", "structure-unparsed.txt")
-	cfg.ProjName = "airline-price-analyzer"
-	cfg.UserName = "baudii"
-	cfg.ProjRoot = ".projects"
-	path := utils.GetAbsolutePath(r)
-	f, err := os.ReadFile(path)
+func getPromptFromTemplate(fileName string, input ...any) string {
+	fileName = utils.GetAbsolutePath(filepath.Join("prompts", fileName))
+	template, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}
 
-	data := string(f)
-	if data, err = tidy(data); err != nil {
-		panic(err)
-	}
-
-	if err = saveProjectStructure(data); err != nil {
-		var nfErr *ProjExist
-		if !errors.As(err, &nfErr) {
-			panic(err)
-		}
-	}
-
-	node, err := unmarshalStructure(data)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(projRoot)
-	node.printTree()
-	node.materialize(projRoot)
+	prompt := fmt.Sprintf(string(template), input...)
+	return prompt
 }

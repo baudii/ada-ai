@@ -1,0 +1,6 @@
+{
+    "prefix": "ada",
+    "timezone": "local|utc|other",
+    "path": "path/to/logs",
+    "logLevel": "debug|info|warn|error"
+}

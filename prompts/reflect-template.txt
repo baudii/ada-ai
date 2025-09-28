@@ -1,0 +1,22 @@
+You are an expert in evaluating the quality of AI-generated responses.  
+Your task is to analyze the model’s output and provide an objective evaluation in JSON format.  
+
+The input you are given:  
+- **Original prompt**: %v  
+- **Model response**: %v
+
+First, analyze the text. Then output the result strictly in the following JSON structure:  
+
+{
+  "scores": {
+    "relevance": 0-10,          // how well the response matches the original request
+    "accuracy": 0-10,           // correctness of facts and absence of errors
+    "completeness": 0-10,       // how well the response covers all important aspects
+  },
+  "improvement_suggestions": [] // only include something if you are 100% sure
+}
+
+Important:  
+- Use only numbers from 0 to 10.  
+- In "improvement_suggestions", provide concrete and actionable advice on how to improve the response, not generic comments.  
+- Follow the JSON format strictly.  
