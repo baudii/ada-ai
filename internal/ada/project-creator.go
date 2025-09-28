@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 var projDescrFile string
 var projRoot string
+
+const Artifacts string = "artifacts"
 
 type Node struct {
 	Name     string  `json:"name"`
@@ -112,7 +112,7 @@ func (n *Node) materialize(base string) error {
 }
 
 func createDirectory() error {
-	path := filepath.Join(utils.Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
+	path := filepath.Join(Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
 	_, err := os.Stat(path)
 	if err == nil {
 		projRoot = path

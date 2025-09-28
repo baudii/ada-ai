@@ -7,8 +7,11 @@
 *.dll
 *.so
 *.dylib
+
+# Local data
 bin/
 artifacts/
+*.local.json
 
 # Test binary, built with `go test -c`
 *.test

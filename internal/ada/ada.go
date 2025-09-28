@@ -20,9 +20,14 @@ type config struct {
 	ProjName        string `json:"projName"`
 }
 
-var cfg config
+var cfg *config
 var cfgPath string
 var ai llm.LLM
+
+var defaultCfg config = config{
+	ProjRoot: ".projects",
+	Timeout:  "3m",
+}
 
 func Run(debugMode bool) {
 	if debugMode {
@@ -30,13 +35,16 @@ func Run(debugMode bool) {
 		return
 	}
 
-	relativePath := filepath.Join("cfg", "ada.json")
-	cfgPath = utils.GetAbsolutePath(relativePath)
-	cfg = utils.ParseJsonFile[config](cfgPath)
-
 	var err error
 	if ai, err = llm.Resolve(); err != nil {
 		panic(err)
+	}
+
+	relativePath := filepath.Join("cfg", "ada.json")
+	cfgPath = utils.GetAbsolutePath(relativePath)
+	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
+	if err != nil {
+		cfg = &defaultCfg
 	}
 
 	if cfg.UserName == "" {

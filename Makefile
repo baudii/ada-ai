@@ -50,7 +50,7 @@ debug: build copy
 
 run:
 	@echo Running $(EXECUTABLE)...
-	$(EXECUTABLE)
+	@$(EXECUTABLE)
 
 clean:
 	@echo Cleaning...
