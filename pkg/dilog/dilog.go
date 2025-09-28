@@ -1,4 +1,4 @@
-package dailylog
+package dilog
 
 import (
 	"fmt"
