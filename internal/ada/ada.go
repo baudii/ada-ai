@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/baudii/ada-ai/pkg/llm"
 	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/tmc/langchaingo/llms"
 )
 
 type config struct {
@@ -22,24 +22,21 @@ type config struct {
 
 var cfg *config
 var cfgPath string
-var ai llm.LLM
+var ai llms.Model
 
 var defaultCfg config = config{
 	ProjRoot: ".projects",
 	Timeout:  "3m",
 }
 
-func Run(debugMode bool) {
+func Run(model llms.Model, debugMode bool) {
+	ai = model
 	if debugMode {
 		debugProjectStructure()
 		return
 	}
 
 	var err error
-	if ai, err = llm.Resolve(); err != nil {
-		panic(err)
-	}
-
 	relativePath := filepath.Join("cfg", "ada.json")
 	cfgPath = utils.GetAbsolutePath(relativePath)
 	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
@@ -67,18 +64,17 @@ func Run(debugMode bool) {
 
 func processInput(input string) error {
 	prompt := getPromptFromTemplate("step1-template.txt", cfg.ProjName, input)
-	msgs, err := sendRequest(prompt, nil)
+	resp, err := sendRequest(prompt, nil)
 	if err != nil {
 		return err
 	}
 
-	response := msgs[len(msgs)-1]
-	data := string(response.Content)
+	data := resp.Choices[0].Content
 	if data, err = tidy(data); err != nil {
 		panic(err)
 	}
 
-	err = saveProjectStructure(response.Content)
+	err = saveProjectStructure(data)
 	if err != nil {
 		slog.Error("error occurred when saving project structure", "error", err)
 	}
@@ -92,7 +88,7 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendRequest(prompt string, msgs []llm.Message) ([]llm.Message, error) {
+func sendRequest(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
@@ -100,16 +96,15 @@ func sendRequest(prompt string, msgs []llm.Message) ([]llm.Message, error) {
 	}
 
 	if msgs == nil {
-		msgs = []llm.Message{}
+		msgs = []llms.MessageContent{}
 	}
 
-	msgs = append(msgs, llm.Message{
-		Role:    llm.RoleUser,
-		Content: prompt,
-	})
+	msgs = append(msgs,
+		llms.TextParts(llms.ChatMessageTypeSystem, prompt),
+	)
 
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ai.SendMessage(msgs, ctx)
+	res, err := ai.GenerateContent(ctx, msgs, llms.WithJSONMode())
 	cf()
 	return res, err
 }
