@@ -53,14 +53,13 @@ func Improve(prompt *string, response *string) {
 
 func reflect(request *string, response *string) (*Reflection, error) {
 	prompt := getPromptFromTemplate("reflect-template.txt", *request, *response)
-	msgs, err := sendRequest(prompt, nil)
+	resp, err := sendRequest(prompt, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	rfl := msgs[len(msgs)-1].Content
 	var r Reflection
-	err = json.Unmarshal([]byte(rfl), &r)
+	err = json.Unmarshal([]byte(resp.Choices[0].Content), &r)
 	if err != nil {
 		return nil, err
 	}

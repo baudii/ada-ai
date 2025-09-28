@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
+	"log"
 	"log/slog"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/pkg/dilog"
-	"github.com/baudii/ada-ai/pkg/llm/providers/ollama"
 	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/tmc/langchaingo/llms/ollama"
 )
 
 func main() {
@@ -26,6 +27,10 @@ func main() {
 	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
 	flag.Parse()
 	slog.Info("registering ollama")
-	ollama.Init()
-	ada.Run(*dbg)
+	l, err := ollama.New(ollama.WithModel("gemma3:4b"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ada.Run(l, *dbg)
 }
