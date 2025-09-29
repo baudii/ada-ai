@@ -20,6 +20,11 @@ type config struct {
 	ProjName        string `json:"projName"`
 }
 
+var (
+	Debug      bool
+	DebugStage int
+)
+
 var cfg *config
 var cfgPath string
 var ai llms.Model
@@ -29,10 +34,10 @@ var defaultCfg config = config{
 	Timeout:  "3m",
 }
 
-func Run(model llms.Model, debugMode bool) {
+func Run(model llms.Model) {
 	ai = model
-	if debugMode {
-		debugProjectStructure()
+	if Debug {
+		enableDebugging()
 		return
 	}
 
@@ -74,7 +79,18 @@ func processInput(input string) error {
 		panic(err)
 	}
 
-	err = saveProjectStructure(data)
+	if err = Improve(&prompt, &data); err != nil {
+		slog.Error("failed to improve", "error", err)
+	}
+
+	slog.Info("finished improve")
+	var r string
+	r, err = tidy(data)
+	if err != nil {
+		slog.Info("failed to clean the json", "error", err)
+	}
+
+	err = saveProjectStructure(r)
 	if err != nil {
 		slog.Error("error occurred when saving project structure", "error", err)
 	}
@@ -93,10 +109,6 @@ func sendRequest(prompt string, msgs []llms.MessageContent) (*llms.ContentRespon
 	if err != nil {
 		dur = time.Minute * 3
 		slog.Warn("failed to parse duration from config: using default", "duration", cfg.Timeout, "default", dur)
-	}
-
-	if msgs == nil {
-		msgs = []llms.MessageContent{}
 	}
 
 	msgs = append(msgs,

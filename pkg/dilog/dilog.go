@@ -28,33 +28,28 @@ type dailyWriter struct {
 	file    *os.File
 }
 
-// ToFile and ToConsole allow you to log separately to file and to console.
 var (
-	ToFile    *slog.Logger
-	ToConsole *slog.Logger
+	Dw *dailyWriter
 )
 
 func Init(cfg *Config) {
 	tz := getTimezone(cfg)
-	dw := &dailyWriter{
+	Dw = &dailyWriter{
 		path:     cfg.Path,
 		prefix:   cfg.Prefix,
 		timezone: tz,
 	}
 
-	fmt.Println(*dw.timezone)
 	level := getLogLevelFromCfg(cfg)
-	if err := dw.rotateIfNeeded(); err != nil {
+	if err := Dw.rotateIfNeeded(); err != nil {
 		lg := getLogger(os.Stderr, level, tz)
 		slog.SetDefault(lg)
 		slog.Error("Failed to initialize the daily writer. Will use 'os.Stderr'", "error", err)
 		return
 	}
 
-	lg := getLogger(io.MultiWriter(os.Stderr, dw), level, tz)
+	lg := getLogger(io.MultiWriter(os.Stderr, Dw), level, tz)
 	slog.SetDefault(lg)
-	ToFile = getLogger(dw, level, tz)
-	ToConsole = getLogger(os.Stderr, level, tz)
 }
 
 func (dw *dailyWriter) Write(p []byte) (n int, err error) {
@@ -64,6 +59,10 @@ func (dw *dailyWriter) Write(p []byte) (n int, err error) {
 		return 0, err
 	}
 	return dw.file.Write(p)
+}
+
+func WritelnToDw(msg string) {
+	Dw.Write([]byte(msg + "\n"))
 }
 
 func getLogger(w io.Writer, l slog.Level, loc *time.Location) *slog.Logger {
