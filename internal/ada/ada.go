@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -42,7 +43,7 @@ func Run(model llms.Model) {
 	}
 
 	var err error
-	relativePath := filepath.Join("data", "configuration", "ada.json")
+	relativePath := filepath.Join(common.ConfigPath, "ada.json")
 	cfgPath = utils.GetAbsolutePath(relativePath)
 	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
 	if err != nil {
@@ -122,7 +123,7 @@ func sendRequest(prompt string, msgs []llms.MessageContent) (*llms.ContentRespon
 }
 
 func getPromptFromTemplate(fileName string, input ...any) string {
-	fileName = utils.GetAbsolutePath(filepath.Join("data", "prompts", fileName))
+	fileName = utils.GetAbsolutePath(filepath.Join(common.PromptsPath, fileName))
 	template, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)
