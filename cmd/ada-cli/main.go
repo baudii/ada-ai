@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/ada"
+	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 
 func main() {
-	cfgPath := filepath.Join("cfg", "dilog.json")
+	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
 	cfg, err := utils.ParseJsonConfigWithLocal[dilog.Config](utils.GetAbsolutePath(cfgPath))
 	if err != nil {
 		cfg = &dilog.Config{

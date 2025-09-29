@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -38,7 +39,7 @@ func debugStage1Reflection() {
 
 func debugProjectStructure() {
 	cfg = &debugCfg
-	r := filepath.Join("diagnostics", "structure-unparsed.txt")
+	r := filepath.Join(common.DebuggingPath, "structure-unparsed.txt")
 	path := utils.GetAbsolutePath(r)
 	f, err := os.ReadFile(path)
 	if err != nil {

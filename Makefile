@@ -2,12 +2,14 @@ APP          := ada-cli
 PKG          := ./cmd/$(APP)
 ARTIFACTS    := artifacts
 BUILD_DIR    := $(ARTIFACTS)/builds
-CONF_SRC     := cfg
-PRMPT_SRC    := prompts
-DBG_SRC      := diagnostics
+CONF_SRC     := data/configuration
+PRMPT_SRC    := data/prompts
+DBG_SRC      := data/debugging
 CONF_DST     := $(BUILD_DIR)/$(CONF_SRC)
 PRMPT_DST    := $(BUILD_DIR)/$(PRMPT_SRC)
 DBG_DST      := $(BUILD_DIR)/$(DBG_SRC)
+
+# variables
 stage        := 0
 
 ifeq ($(OS),Windows_NT)
