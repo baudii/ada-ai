@@ -1,17 +1,22 @@
-package ada
+package cli
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 const desc string = "An AI-powered app that suggests recipes based on the ingredients you already have at home"
 
-var debugCfg config = config{
+var (
+	Debug      bool
+	DebugStage int
+)
+
+var debugCfg ada.Config = ada.Config{
 	ProjRoot:        ".projects",
 	ProjName:        "pantrypal",
 	UserName:        "baudiis",
@@ -23,22 +28,26 @@ func enableDebugging() {
 	switch DebugStage {
 	case 0:
 		debugProjectStructure()
-	case 1:
-		debugStage1Reflection()
+	default:
+		debugStage()
 	}
 }
 
-func debugStage1Reflection() {
-	cfg = &debugCfg
-	var err error
+func debugStage() {
+	ai := common.RegisterOllama()
+	ada.Init(ai, &debugCfg)
+
 	utils.ReadInput("Press Enter to continue")
-	if err = processInput(desc); err != nil {
+	template := ada.GetTemplate(DebugStage, desc)
+	data, err := ada.SendWithReflection(template)
+	if err != nil {
 		panic(err)
 	}
+
+	ada.Print(data)
 }
 
 func debugProjectStructure() {
-	cfg = &debugCfg
 	r := filepath.Join(common.DebuggingPath, "structure-unparsed.txt")
 	path := utils.GetAbsolutePath(r)
 	f, err := os.ReadFile(path)
@@ -47,22 +56,9 @@ func debugProjectStructure() {
 	}
 
 	data := string(f)
-	if data, err = tidy(data); err != nil {
+	if data, err = utils.Tidy(data); err != nil {
 		panic(err)
 	}
 
-	if err = saveProjectStructure(data); err != nil {
-		var nfErr *ProjExist
-		if !errors.As(err, &nfErr) {
-			panic(err)
-		}
-	}
-
-	node, err := unmarshalStructure(data)
-	if err != nil {
-		panic(err)
-	}
-
-	node.printTree()
-	node.materialize(projRoot)
+	ada.Print(data)
 }

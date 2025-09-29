@@ -2,20 +2,34 @@ package main
 
 import (
 	"flag"
-	"log"
 	"log/slog"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/ada"
+	"github.com/baudii/ada-ai/internal/cli"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/utils"
-	"github.com/tmc/langchaingo/llms/ollama"
 )
 
 func main() {
+	initLogger()
+	parseFlags()
+	cli.Run()
+}
+
+func parseFlags() {
+	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
+	stage := flag.Int("stage", 0, "Choose the stage you want to debug")
+	flag.Parse()
+
+	slog.Debug("debug flags parsed", "debug", *dbg, "stage", *stage)
+	cli.Debug = *dbg
+	cli.DebugStage = *stage
+}
+
+func initLogger() {
 	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
-	cfg, err := utils.ParseJsonConfigWithLocal[dilog.Config](utils.GetAbsolutePath(cfgPath))
+	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](utils.GetAbsolutePath(cfgPath))
 	if err != nil {
 		cfg = &dilog.Config{
 			Timezone: "local",
@@ -25,22 +39,4 @@ func main() {
 	}
 
 	dilog.Init(cfg)
-	parseFlags()
-	slog.Info("registering ollama")
-	l, err := ollama.New(ollama.WithModel("gemma3:4b"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ada.Run(l)
-}
-
-func parseFlags() {
-	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
-	stage := flag.Int("stage", 0, "Choose the stage you want to debug")
-	flag.Parse()
-
-	slog.Debug("debug flags parsed", "debug", *dbg, "stage", *stage)
-	ada.Debug = *dbg
-	ada.DebugStage = *stage
 }

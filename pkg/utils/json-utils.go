@@ -4,9 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
-func SaveJsonToFile(content any, filePath string) error {
+func Tidy(data string) (string, error) {
+	start := strings.IndexByte(data, '{')
+	end := strings.LastIndexByte(data, '}')
+	if start == -1 || end == -1 {
+		return "", fmt.Errorf("not a valid json")
+	}
+	return data[start : end+1], nil
+}
+
+func SaveJSONToFile(content any, filePath string) error {
 	_, err := os.Stat(filePath)
 	if err != nil {
 		return err
@@ -20,7 +30,7 @@ func SaveJsonToFile(content any, filePath string) error {
 	return os.WriteFile(filePath, data, 0)
 }
 
-func ParseJsonFile[T any](filePath string) (*T, error) {
+func ParseJSONFile[T any](filePath string) (*T, error) {
 	var cfg T
 	file, err := os.ReadFile(filePath)
 	if err != nil {
@@ -35,7 +45,7 @@ func ParseJsonFile[T any](filePath string) (*T, error) {
 	return &cfg, nil
 }
 
-func ParseJsonFileToMap(path string) (map[string]any, error) {
+func ParseJSONFileToMap(path string) (map[string]any, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

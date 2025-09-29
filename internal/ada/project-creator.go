@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 var projDescrFile string
@@ -27,20 +26,11 @@ type nodeAlias struct {
 	Contents []*json.RawMessage `json:"contents"`
 }
 
-func tidy(data string) (string, error) {
-	start := strings.IndexByte(data, '{')
-	end := strings.LastIndexByte(data, '}')
-	if start == -1 || end == -1 {
-		return "", fmt.Errorf("not a valid json")
-	}
-	return data[start : end+1], nil
+func parseNode(data string) (n *Node, err error) {
+	return parseNodeHelper([]byte(data))
 }
 
-func unmarshalStructure(data string) (n *Node, err error) {
-	return parseNode([]byte(data))
-}
-
-func parseNode(b []byte) (*Node, error) {
+func parseNodeHelper(b []byte) (*Node, error) {
 	var a nodeAlias
 	if err := json.Unmarshal(b, &a); err != nil {
 		return nil, err
@@ -59,17 +49,13 @@ func parseNode(b []byte) (*Node, error) {
 		if r == nil {
 			continue
 		}
-		child, err := parseNode(*r) // <- recurse with alias again
+		child, err := parseNodeHelper(*r) // <- recurse with alias again
 		if err != nil {
 			return nil, err
 		}
 		n.Children = append(n.Children, child)
 	}
 	return n, nil
-}
-
-func (n *Node) printTree() {
-	printTree(n, "", true)
 }
 
 func printTree(n *Node, prefix string, isLast bool) {
@@ -83,32 +69,6 @@ func printTree(n *Node, prefix string, isLast bool) {
 	for i, c := range n.Children {
 		printTree(c, nextPrefix, i == len(n.Children)-1)
 	}
-}
-
-func (n *Node) materialize(base string) error {
-	path := filepath.Join(base, n.Name)
-	switch n.Type {
-	case "folder":
-		if err := os.MkdirAll(path, 0o755); err != nil {
-			return err
-		}
-		for _, c := range n.Children {
-			if err := c.materialize(path); err != nil {
-				return err
-			}
-		}
-	case "file":
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			f, err := os.Create(path)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-		}
-	default:
-		slog.Warn("invalid json was provided", "node_type", n.Type)
-	}
-	return nil
 }
 
 func createDirectory() error {
@@ -138,4 +98,34 @@ func saveProjectStructure(content string) (err error) {
 	}
 	projDescrFile = filepath.Join(projRoot, "project-structure.json")
 	return os.WriteFile(projDescrFile, []byte(content), 0644)
+}
+
+func (n *Node) printTree() {
+	printTree(n, "", true)
+}
+
+func (n *Node) materialize(base string) error {
+	path := filepath.Join(base, n.Name)
+	switch n.Type {
+	case "folder":
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return err
+		}
+		for _, c := range n.Children {
+			if err := c.materialize(path); err != nil {
+				return err
+			}
+		}
+	case "file":
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			f, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+		}
+	default:
+		slog.Warn("invalid json was provided", "node_type", n.Type)
+	}
+	return nil
 }

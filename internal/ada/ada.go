@@ -2,6 +2,7 @@ package ada
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-type config struct {
+type Config struct {
 	Timeout         string `json:"requestTimeout"`
 	ReflectionDepth int    `json:"reflectionDepth"`
 	ProjRoot        string `json:"projRoot"`
@@ -21,63 +22,23 @@ type config struct {
 	ProjName        string `json:"projName"`
 }
 
-var (
-	Debug      bool
-	DebugStage int
-)
-
-var cfg *config
-var cfgPath string
+var cfg *Config
 var ai llms.Model
 
-var defaultCfg config = config{
-	ProjRoot: ".projects",
-	Timeout:  "3m",
-}
-
-func Run(model llms.Model) {
+func Init(model llms.Model, c *Config) {
+	cfg = c
 	ai = model
-	if Debug {
-		enableDebugging()
-		return
-	}
-
-	var err error
-	relativePath := filepath.Join(common.ConfigPath, "ada.json")
-	cfgPath = utils.GetAbsolutePath(relativePath)
-	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
-	if err != nil {
-		cfg = &defaultCfg
-	}
-
-	if cfg.UserName == "" {
-		cfg.UserName = utils.ReadInput("Provide nickname")
-		utils.SaveJsonToFile(cfg, cfgPath)
-	}
-	slog.Info("recognized username", "username", cfg.UserName)
-
-	if cfg.ProjName == "" {
-		cfg.ProjName = utils.ReadInput("Provide project name")
-		utils.SaveJsonToFile(cfg, cfgPath)
-	}
-	slog.Info("recognized project", "projname", cfg.ProjName)
-
-	input := utils.ReadInput("Provide project description")
-	if err = processInput(input); err != nil {
-		slog.Error("something went wrong when processing the request", "error", err)
-	}
 }
 
-func processInput(input string) error {
-	prompt := getPromptFromTemplate("step1-template.txt", cfg.ProjName, input)
-	resp, err := sendRequest(prompt, nil)
+func SendWithReflection(prompt string) (string, error) {
+	resp, err := GenerateJSON(prompt, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	data := resp.Choices[0].Content
-	if data, err = tidy(data); err != nil {
-		panic(err)
+	if data, err = utils.Tidy(data); err != nil {
+		return "", err
 	}
 
 	if err = Improve(&prompt, &data); err != nil {
@@ -85,18 +46,23 @@ func processInput(input string) error {
 	}
 
 	slog.Info("finished improve")
-	var r string
-	r, err = tidy(data)
-	if err != nil {
-		slog.Info("failed to clean the json", "error", err)
+	return utils.Tidy(data)
+}
+
+func EnsureSaved(data string) error {
+	var err error
+	if err = saveProjectStructure(data); err != nil {
+		var nfErr *ProjExist
+		if !errors.As(err, &nfErr) {
+			return err
+		}
 	}
 
-	err = saveProjectStructure(r)
-	if err != nil {
-		slog.Error("error occurred when saving project structure", "error", err)
-	}
+	return nil
+}
 
-	node, err := unmarshalStructure(data)
+func Print(data string) error {
+	node, err := parseNode(data)
 	if err != nil {
 		return err
 	}
@@ -105,7 +71,21 @@ func processInput(input string) error {
 	return nil
 }
 
-func sendRequest(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
+func Materialize(data string) error {
+	node, err := parseNode(data)
+	if err != nil {
+		return err
+	}
+
+	node.materialize(projRoot)
+	return nil
+}
+
+func GetTemplate(step int, input string) string {
+	return getPromptFromTemplate(fmt.Sprintf("step%d-template.txt", step), cfg.ProjName, input)
+}
+
+func GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3

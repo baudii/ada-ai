@@ -8,6 +8,7 @@ import (
 	"math"
 
 	"github.com/baudii/ada-ai/pkg/dilog"
+	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -98,13 +99,13 @@ func improveResponse(msgs []llms.MessageContent) (*string, error) {
 
 func reflect(prompt *string) (*Reflection, error) {
 	var err error
-	resp, err := sendRequest(*prompt, []llms.MessageContent{})
+	resp, err := GenerateJSON(*prompt, []llms.MessageContent{})
 	if err != nil {
 		return nil, err
 	}
 
 	var js string
-	js, err = tidy(resp.Choices[0].Content)
+	js, err = utils.Tidy(resp.Choices[0].Content)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred in reflect() when cleaning up the response: %v", err)
 	}
