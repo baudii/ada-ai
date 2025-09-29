@@ -38,7 +38,7 @@ func debugStage1Reflection() {
 
 func debugProjectStructure() {
 	cfg = &debugCfg
-	r := filepath.Join("diagnostics", "structure-unparsed.txt")
+	r := filepath.Join("data", "debugging", "structure-unparsed.txt")
 	path := utils.GetAbsolutePath(r)
 	f, err := os.ReadFile(path)
 	if err != nil {

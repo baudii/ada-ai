@@ -42,7 +42,7 @@ func Run(model llms.Model) {
 	}
 
 	var err error
-	relativePath := filepath.Join("cfg", "ada.json")
+	relativePath := filepath.Join("data", "configuration", "ada.json")
 	cfgPath = utils.GetAbsolutePath(relativePath)
 	cfg, err = utils.ParseJsonConfigWithLocal[config](cfgPath)
 	if err != nil {
@@ -122,7 +122,7 @@ func sendRequest(prompt string, msgs []llms.MessageContent) (*llms.ContentRespon
 }
 
 func getPromptFromTemplate(fileName string, input ...any) string {
-	fileName = utils.GetAbsolutePath(filepath.Join("prompts", fileName))
+	fileName = utils.GetAbsolutePath(filepath.Join("data", "prompts", fileName))
 	template, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)

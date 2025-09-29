@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	cfgPath := filepath.Join("cfg", "dilog.json")
+	cfgPath := filepath.Join("data", "configuration", "dilog.json")
 	cfg, err := utils.ParseJsonConfigWithLocal[dilog.Config](utils.GetAbsolutePath(cfgPath))
 	if err != nil {
 		cfg = &dilog.Config{
