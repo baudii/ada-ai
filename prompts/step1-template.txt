@@ -1,13 +1,14 @@
 Instruction:
 You are an AI software architect. A user will describe an application idea. Your task is to design the initial project folder structure for this idea.
 
-Create a JSON document representing the project’s folder structure. This JSON should:
+Create a minified JSON document representing the project’s folder structure. This JSON should:
 * Include the root project folder (name derived from the project's name: %v; make it filesystem-safe kebab-case).
 * Show standard subfolders depending on the project type.
 * Inside "src", include appropriate submodules or packages related to the user’s application.
 * Keep the structure clear, minimal, and extendable.
 
 JSON Output Rules:
+* JSON should be minified.
 * Output only a single valid JSON value (no extra text before or after).
 * Use this schema for every node:
   - "name": string (folder or file name)

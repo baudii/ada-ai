@@ -1,4 +1,5 @@
 {
     "requestTimeout": "3m",
+	"reflectionDepth": 2,
     "projRoot": ".projects"
 }

@@ -24,13 +24,22 @@ func main() {
 	}
 
 	dilog.Init(cfg)
-	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
-	flag.Parse()
+	parseFlags()
 	slog.Info("registering ollama")
 	l, err := ollama.New(ollama.WithModel("gemma3:4b"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ada.Run(l, *dbg)
+	ada.Run(l)
+}
+
+func parseFlags() {
+	dbg := flag.Bool("debug", false, "Enable an application in a Debug mode")
+	stage := flag.Int("stage", 0, "Choose the stage you want to debug")
+	flag.Parse()
+
+	slog.Debug("debug flags parsed", "debug", *dbg, "stage", *stage)
+	ada.Debug = *dbg
+	ada.DebugStage = *stage
 }

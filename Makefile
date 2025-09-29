@@ -8,6 +8,7 @@ DBG_SRC      := diagnostics
 CONF_DST     := $(BUILD_DIR)/$(CONF_SRC)
 PRMPT_DST    := $(BUILD_DIR)/$(PRMPT_SRC)
 DBG_DST      := $(BUILD_DIR)/$(DBG_SRC)
+stage        := 0
 
 ifeq ($(OS),Windows_NT)
   EXE := .exe
@@ -43,10 +44,10 @@ copy:
 	@$(call COPY,$(PRMPT_SRC),$(PRMPT_DST))
 
 debug: build copy
-	@echo Running [debug] $(EXECUTABLE)...
+	@echo Running [flags: -debug, -stage=$(stage)] $(EXECUTABLE)...
 	@$(call RMDIR,$(DBG_DST))
 	@$(call COPY,$(DBG_SRC),$(DBG_DST))
-	@$(EXECUTABLE) -debug
+	@$(EXECUTABLE) -debug -stage=$(stage)
 
 run:
 	@echo Running $(EXECUTABLE)...
