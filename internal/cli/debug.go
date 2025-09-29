@@ -56,9 +56,9 @@ func debugProjectStructure() {
 	}
 
 	data := string(f)
-	if data, err = utils.Tidy(data); err != nil {
+	if f, err = utils.TrimJSON(data); err != nil {
 		panic(err)
 	}
 
-	ada.Print(data)
+	ada.Print(f)
 }

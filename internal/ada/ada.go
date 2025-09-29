@@ -30,26 +30,22 @@ func Init(model llms.Model, c *Config) {
 	ai = model
 }
 
-func SendWithReflection(prompt string) (string, error) {
+func SendWithReflection(prompt string) ([]byte, error) {
 	resp, err := GenerateJSON(prompt, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	data := resp.Choices[0].Content
-	if data, err = utils.Tidy(data); err != nil {
-		return "", err
-	}
-
 	if err = Improve(&prompt, &data); err != nil {
 		slog.Error("failed to improve", "error", err)
 	}
 
 	slog.Info("finished improve")
-	return utils.Tidy(data)
+	return utils.TrimJSON(data)
 }
 
-func EnsureSaved(data string) error {
+func EnsureSaved(data []byte) error {
 	var err error
 	if err = saveProjectStructure(data); err != nil {
 		var nfErr *ProjExist
@@ -61,17 +57,21 @@ func EnsureSaved(data string) error {
 	return nil
 }
 
-func Print(data string) error {
+func Print(data []byte) error {
 	node, err := parseNode(data)
 	if err != nil {
 		return err
 	}
 
-	node.printTree()
+	printTree(node, "", true)
 	return nil
 }
 
-func Materialize(data string) error {
+func Materialize(data []byte) error {
+	if err := EnsureSaved(data); err != nil {
+		slog.Error("failed to save data", "error", err)
+	}
+
 	node, err := parseNode(data)
 	if err != nil {
 		return err

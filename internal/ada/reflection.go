@@ -98,20 +98,19 @@ func improveResponse(msgs []llms.MessageContent) (*string, error) {
 }
 
 func reflect(prompt *string) (*Reflection, error) {
-	var err error
 	resp, err := GenerateJSON(*prompt, []llms.MessageContent{})
 	if err != nil {
 		return nil, err
 	}
 
-	var js string
-	js, err = utils.Tidy(resp.Choices[0].Content)
+	var js []byte
+	js, err = utils.TrimJSON(resp.Choices[0].Content)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred in reflect() when cleaning up the response: %v", err)
 	}
 
 	var r Reflection
-	err = json.Unmarshal([]byte(js), &r)
+	err = json.Unmarshal(js, &r)
 	if err != nil {
 		return nil, err
 	}
