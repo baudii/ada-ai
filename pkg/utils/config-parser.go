@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-func ParseJsonConfigWithLocal[T any](basePath string) (*T, error) {
-	baseMap, err := ParseJsonFileToMap(basePath)
+func ParseJSONConfigWithLocal[T any](basePath string) (*T, error) {
+	baseMap, err := ParseJSONFileToMap(basePath)
 	if err != nil {
 		return nil, fmt.Errorf("read base config: %w", err)
 	}
@@ -18,7 +18,7 @@ func ParseJsonConfigWithLocal[T any](basePath string) (*T, error) {
 	name := strings.TrimSuffix(basePath, ext)
 	localPath := name + ".local" + ext
 	if st, err := os.Stat(localPath); err == nil && !st.IsDir() {
-		localMap, err := ParseJsonFileToMap(localPath)
+		localMap, err := ParseJSONFileToMap(localPath)
 		if err != nil {
 			return nil, fmt.Errorf("read local config: %w", err)
 		}

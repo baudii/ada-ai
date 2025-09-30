@@ -1,6 +1,8 @@
 package common
 
-import "path/filepath"
+import (
+	"path/filepath"
+)
 
 // Define the path to the named folders. Used for centrilized access to the files that contain data.
 var (

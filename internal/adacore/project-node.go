@@ -1,4 +1,4 @@
-package ada
+package adacore
 
 import (
 	"encoding/json"
@@ -6,13 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 )
-
-var projDescrFile string
-var projRoot string
-
-const Artifacts string = "artifacts"
 
 type Node struct {
 	Name     string  `json:"name"`
@@ -27,17 +21,14 @@ type nodeAlias struct {
 	Contents []*json.RawMessage `json:"contents"`
 }
 
-func tidy(data string) (string, error) {
-	start := strings.IndexByte(data, '{')
-	end := strings.LastIndexByte(data, '}')
-	if start == -1 || end == -1 {
-		return "", fmt.Errorf("not a valid json")
+func Print(data []byte) error {
+	node, err := parseNode(data)
+	if err != nil {
+		return err
 	}
-	return data[start : end+1], nil
-}
 
-func unmarshalStructure(data string) (n *Node, err error) {
-	return parseNode([]byte(data))
+	printTree(node, "", true)
+	return nil
 }
 
 func parseNode(b []byte) (*Node, error) {
@@ -59,30 +50,13 @@ func parseNode(b []byte) (*Node, error) {
 		if r == nil {
 			continue
 		}
-		child, err := parseNode(*r) // <- recurse with alias again
+		child, err := parseNode(*r)
 		if err != nil {
 			return nil, err
 		}
 		n.Children = append(n.Children, child)
 	}
 	return n, nil
-}
-
-func (n *Node) printTree() {
-	printTree(n, "", true)
-}
-
-func printTree(n *Node, prefix string, isLast bool) {
-	conn := "├── "
-	nextPrefix := prefix + "│   "
-	if isLast {
-		conn = "└── "
-		nextPrefix = prefix + "    "
-	}
-	fmt.Printf("%s%s%s\n", prefix, conn, n.Name)
-	for i, c := range n.Children {
-		printTree(c, nextPrefix, i == len(n.Children)-1)
-	}
 }
 
 func (n *Node) materialize(base string) error {
@@ -111,31 +85,15 @@ func (n *Node) materialize(base string) error {
 	return nil
 }
 
-func createDirectory() error {
-	path := filepath.Join(Artifacts, cfg.ProjRoot, cfg.UserName, cfg.ProjName)
-	_, err := os.Stat(path)
-	if err == nil {
-		projRoot = path
-		return &ProjExist{Path: path}
+func printTree(n *Node, prefix string, isLast bool) {
+	conn := "├── "
+	nextPrefix := prefix + "│   "
+	if isLast {
+		conn = "└── "
+		nextPrefix = prefix + "    "
 	}
-
-	if !os.IsNotExist(err) {
-		return err
+	fmt.Printf("%s%s%s\n", prefix, conn, n.Name)
+	for i, c := range n.Children {
+		printTree(c, nextPrefix, i == len(n.Children)-1)
 	}
-
-	err = os.MkdirAll(path, 0o755)
-	if err != nil {
-		return err
-	}
-
-	projRoot = path
-	return nil
-}
-
-func saveProjectStructure(content string) (err error) {
-	if err := createDirectory(); err != nil {
-		return err
-	}
-	projDescrFile = filepath.Join(projRoot, "project-structure.json")
-	return os.WriteFile(projDescrFile, []byte(content), 0644)
 }
