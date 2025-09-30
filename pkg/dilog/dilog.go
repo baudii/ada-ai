@@ -1,13 +1,10 @@
 package dilog
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -17,20 +14,6 @@ type Config struct {
 	Prefix   string `json:"prefix"`
 	LogLevel string `json:"logLevel"`
 }
-
-type dailyWriter struct {
-	path     string
-	prefix   string
-	timezone *time.Location
-
-	mu      sync.Mutex
-	curDate string
-	file    *os.File
-}
-
-var (
-	Dw *dailyWriter
-)
 
 func Init(cfg *Config) {
 	tz := getTimezone(cfg)
@@ -52,17 +35,10 @@ func Init(cfg *Config) {
 	slog.SetDefault(lg)
 }
 
-func (dw *dailyWriter) Write(p []byte) (n int, err error) {
-	dw.mu.Lock()
-	defer dw.mu.Unlock()
-	if err := dw.rotateIfNeeded(); err != nil {
-		return 0, err
-	}
-	return dw.file.Write(p)
-}
-
 func WritelnToDw(msg string) {
-	Dw.Write([]byte(msg + "\n"))
+	if Dw != nil {
+		Dw.Write([]byte(msg + "\n"))
+	}
 }
 
 func getLogger(w io.Writer, l slog.Level, loc *time.Location) *slog.Logger {
@@ -82,12 +58,15 @@ func getLogger(w io.Writer, l slog.Level, loc *time.Location) *slog.Logger {
 
 func getTimezone(cfg *Config) *time.Location {
 	switch strings.ToLower(cfg.Timezone) {
-	case "local":
+	case "local", "":
 		return time.Local
 	case "utc":
 		return time.UTC
 	default:
-		return time.FixedZone(cfg.Timezone, 0)
+		if loc, err := time.LoadLocation(cfg.Timezone); err == nil {
+			return loc
+		}
+		return time.Local
 	}
 }
 
@@ -102,34 +81,4 @@ func getLogLevelFromCfg(cfg *Config) slog.Level {
 	default:
 		return slog.LevelDebug
 	}
-}
-
-func (dw *dailyWriter) filename(t time.Time) string {
-	return filepath.Join(dw.path, fmt.Sprintf("%s_%s.log", dw.prefix, t.Format("2006-01-02")))
-}
-
-func (dw *dailyWriter) rotateIfNeeded() error {
-	now := time.Now().In(dw.timezone)
-	date := now.Format("2006-01-02")
-	if dw.file != nil && date == dw.curDate {
-		return nil
-	}
-
-	if dw.file != nil {
-		_ = dw.file.Close()
-		dw.file = nil
-	}
-
-	if err := os.MkdirAll(dw.path, 0o755); err != nil {
-		return err
-	}
-
-	f, err := os.OpenFile(dw.filename(now), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		return err
-	}
-
-	dw.file = f
-	dw.curDate = date
-	return nil
 }
