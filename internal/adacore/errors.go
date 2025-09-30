@@ -1,4 +1,4 @@
-package ada
+package adacore
 
 import "fmt"
 

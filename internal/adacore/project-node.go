@@ -1,4 +1,4 @@
-package ada
+package adacore
 
 import (
 	"encoding/json"
@@ -19,6 +19,16 @@ type nodeAlias struct {
 	Type     string             `json:"type"`
 	Children []*json.RawMessage `json:"children"`
 	Contents []*json.RawMessage `json:"contents"`
+}
+
+func Print(data []byte) error {
+	node, err := parseNode(data)
+	if err != nil {
+		return err
+	}
+
+	printTree(node, "", true)
+	return nil
 }
 
 func parseNode(b []byte) (*Node, error) {

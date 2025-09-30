@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/ada"
+	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
@@ -16,13 +16,16 @@ var (
 	DebugStage int
 )
 
-var debugCfg ada.Config = ada.Config{
+var debugCfg adacore.Config = adacore.Config{
 	ProjRoot:        ".projects",
-	ProjName:        "pantrypal",
-	UserName:        "baudiis",
 	ReflectionDepth: 3,
 	Timeout:         "3m",
 }
+
+var (
+	debugUserName = "baudii"
+	debugProjName = "pantrypal"
+)
 
 func enableDebugging() {
 	switch DebugStage {
@@ -35,7 +38,8 @@ func enableDebugging() {
 
 func debugStage() {
 	ai := common.RegisterOllama()
-	ada.Init(ai, &debugCfg)
+	ada := adacore.New(ai, &debugCfg)
+	ada.AddProjCtx(debugUserName, debugProjName)
 
 	utils.ReadInput("Press Enter to continue")
 	template := ada.GetTemplate(DebugStage, desc)
@@ -44,7 +48,9 @@ func debugStage() {
 		panic(err)
 	}
 
-	ada.Print(data)
+	adacore.Print(data)
+	ada.EnsureSaved(data)
+	ada.Materialize(data)
 }
 
 func debugProjectStructure() {
@@ -55,10 +61,9 @@ func debugProjectStructure() {
 		panic(err)
 	}
 
-	data := string(f)
-	if f, err = utils.TrimJSON(data); err != nil {
+	if f, err = utils.TrimJSON(string(f)); err != nil {
 		panic(err)
 	}
 
-	ada.Print(f)
+	adacore.Print(f)
 }

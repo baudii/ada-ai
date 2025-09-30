@@ -4,14 +4,12 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/ada"
+	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
-var cfgPath string
-
-var defaultCfg ada.Config = ada.Config{
+var defaultCfg adacore.Config = adacore.Config{
 	ProjRoot: ".projects",
 	Timeout:  "3m",
 }
@@ -23,37 +21,34 @@ func Run() {
 		return
 	}
 
-	var cfg *ada.Config
+	var cfg *adacore.Config
 	var err error
-	relativePath := filepath.Join(common.ConfigPath, "ada.json")
-	cfgPath = utils.GetAbsolutePath(relativePath)
-	cfg, err = utils.ParseJSONConfigWithLocal[ada.Config](cfgPath)
+	relativePath := filepath.Join(common.ConfigPath, "adacore.json")
+	cfgPath := utils.GetAbsolutePath(relativePath)
+	cfg, err = utils.ParseJSONConfigWithLocal[adacore.Config](cfgPath)
 	if err != nil {
 		cfg = &defaultCfg
 	}
 
-	ada.Init(ai, cfg)
-	setUserData(cfg)
+	ada := adacore.New(ai, cfg)
+	setUserData(ada)
 	input := utils.ReadInput("Provide project description")
 	data, err := ada.SendWithReflection(input)
 	if err != nil {
 		slog.Error("something went wrong when processing the request", "error", err)
 	}
 
-	ada.Print(data)
+	adacore.Print(data)
 }
 
-func setUserData(cfg *ada.Config) {
-	// TODO: switch to other way of storing user data
-	if cfg.UserName == "" {
-		cfg.UserName = utils.ReadInput("Provide nickname")
-		utils.SaveJSONToFile(cfg, cfgPath)
+func setUserData(ada *adacore.Ada) {
+	if ada.Ctx.UserName != "" && ada.Ctx.ProjName != "" {
+		return
 	}
-	slog.Info("recognized username", "username", cfg.UserName)
 
-	if cfg.ProjName == "" {
-		cfg.ProjName = utils.ReadInput("Provide project name")
-		utils.SaveJSONToFile(cfg, cfgPath)
-	}
-	slog.Info("recognized project", "projname", cfg.ProjName)
+	ada.Ctx.UserName = utils.ReadInput("Provide nickname")
+	slog.Info("recognized username", "username", ada.Ctx.UserName)
+	ada.Ctx.ProjName = utils.ReadInput("Provide project name")
+	slog.Info("recognized project", "projname", ada.Ctx.ProjName)
+	utils.SaveJSONToFile(ada.Ctx, utils.GetAbsolutePath(adacore.UserDataPath))
 }
