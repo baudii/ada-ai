@@ -17,17 +17,12 @@ func TrimJSON(data string) ([]byte, error) {
 }
 
 func SaveJSONToFile(content any, filePath string) error {
-	_, err := os.Stat(filePath)
-	if err != nil {
-		return err
-	}
-
 	data, err := json.MarshalIndent(content, "", "\t")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(filePath, data, 0)
+	return os.WriteFile(filePath, data, 0o644)
 }
 
 func ParseJSONFile[T any](filePath string) (*T, error) {
