@@ -8,6 +8,17 @@ import (
 	"time"
 )
 
+var (
+	w     io.Writer                                  = os.Stdout
+	getDw func(*Config, *time.Location) *dailyWriter = func(cfg *Config, tz *time.Location) *dailyWriter {
+		return &dailyWriter{
+			path:     cfg.Path,
+			prefix:   cfg.Prefix,
+			timezone: tz,
+		}
+	}
+)
+
 type Config struct {
 	Timezone string `json:"timezone"`
 	Path     string `json:"path"`
@@ -17,21 +28,17 @@ type Config struct {
 
 func Init(cfg *Config) {
 	tz := getTimezone(cfg)
-	Dw = &dailyWriter{
-		path:     cfg.Path,
-		prefix:   cfg.Prefix,
-		timezone: tz,
-	}
+	Dw = getDw(cfg, tz)
 
 	level := getLogLevelFromCfg(cfg)
 	if err := Dw.rotateIfNeeded(); err != nil {
-		lg := getLogger(os.Stderr, level, tz)
+		lg := getLogger(w, level, tz)
 		slog.SetDefault(lg)
-		slog.Error("Failed to initialize the daily writer. Will use 'os.Stderr'", "error", err)
+		slog.Error("Failed to initialize the daily writer. Will use 'w'", "w", w, "error", err)
 		return
 	}
 
-	lg := getLogger(io.MultiWriter(os.Stderr, Dw), level, tz)
+	lg := getLogger(io.MultiWriter(w, Dw), level, tz)
 	slog.SetDefault(lg)
 }
 
