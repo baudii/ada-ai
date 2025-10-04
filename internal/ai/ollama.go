@@ -36,9 +36,5 @@ func registerOllama(options map[string]string) (llms.Model, error) {
 		}
 	}
 
-	l, err := ollama.New(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register ollama: %w", err)
-	}
-	return l, nil
+	return ollama.New(opts...)
 }
