@@ -12,6 +12,8 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+// TODO: Improve this entire file.
+
 type Score struct {
 	Relevance    float32 `json:"relevance"`
 	Accuracy     float32 `json:"accuracy"`
@@ -28,7 +30,22 @@ func (r Reflection) Avg() float32 {
 	return (s.Relevance + s.Accuracy + s.Completeness) / 3
 }
 
-func (ada *Ada) ReflectImprove(request *string, response *string) error {
+func (ada *Ada) SendWithReflection(prompt string) ([]byte, error) {
+	resp, err := ada.GenerateJSON(prompt, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	data := resp.Choices[0].Content
+	if err = ada.reflectImprove(&prompt, &data); err != nil {
+		slog.Error("failed to improve", "error", err)
+	}
+
+	slog.Info("finished improve")
+	return utils.TrimJSON(data)
+}
+
+func (ada *Ada) reflectImprove(request *string, response *string) error {
 	var (
 		reflection *Reflection
 		err        error
@@ -43,7 +60,10 @@ func (ada *Ada) ReflectImprove(request *string, response *string) error {
 
 	for i := 0; i < ada.cfg.ReflectionDepth; i++ {
 		slog.Debug("reflecting", "attempt", i+1, "total", ada.cfg.ReflectionDepth)
-		prompt = getPromptFromTemplate("reflect-template.txt", *request, *curAns)
+		prompt, err = GetPromptFromTemplate(ReflectPromptFile, *request, *curAns)
+		if err != nil {
+			return fmt.Errorf("failed to get reflection prompt from template: %w", err)
+		}
 		dilog.WritelnToDw("prompt:\n" + prompt)
 		reflection, err = ada.reflect(&prompt)
 		if err != nil {

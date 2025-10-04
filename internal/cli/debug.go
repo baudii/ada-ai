@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 
@@ -32,17 +33,22 @@ func enableDebugging(ai llms.Model) {
 	switch DebugStage {
 	case 0:
 		debugProjectStructure()
-	default:
-		debugStage(ai)
+	case 1:
+		debugStep1(ai)
 	}
 }
 
-func debugStage(ai llms.Model) {
+func debugStep1(ai llms.Model) {
 	ada := adacore.New(ai, &debugCfg)
 	ada.AddProjCtx(debugUserName, debugProjName)
 
 	utils.ReadInput("Press Enter to continue")
-	template := ada.GetTemplate(DebugStage, desc)
+
+	template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc)
+	if err != nil {
+		log.Fatal("failed to get step1 prompt from template", "error", err)
+	}
+
 	data, err := ada.SendWithReflection(template)
 	if err != nil {
 		panic(err)

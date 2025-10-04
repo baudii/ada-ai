@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-var executable = os.Executable
+var Executable = os.Executable
 
 // Returns absolute that is calculated from the current
 // executable path. Panics if os.Executable() returns an error.
 func GetAbsolutePath(relativePath string) string {
-	exe, err := executable()
+	exe, err := Executable()
 	if err != nil {
 		// TODO: Replace panic with error handling and fix comment
 		panic(err)

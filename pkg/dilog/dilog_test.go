@@ -17,12 +17,13 @@ import (
 
 func TestInit(t *testing.T) {
 	today := "2025-10-05"
-	origW, origF, origGf := w, getDate, getFileName
+	origW, origF, origGf, origGetDw := w, getDate, getFileName, getDw
 	getDate = func(*time.Location) string { return today }
 	t.Cleanup(func() {
 		w = origW
 		getDate = origF
 		getFileName = origGf
+		getDw = origGetDw
 		Dw.file.Close()
 		Dw = nil
 	})
@@ -107,4 +108,16 @@ func TestWritelnToDw(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Test message\n", string(content))
 	Dw.file.Close()
+}
+
+func TestVariableFunctions(t *testing.T) {
+	dw := getDw(&Config{Path: "pa", Prefix: "pr"}, time.UTC)
+	assert.Equal(t, "pa", dw.path)
+	assert.Equal(t, "pr", dw.prefix)
+	assert.Equal(t, time.UTC, dw.timezone)
+	date := getDate(time.UTC)
+	_, err := time.Parse("2006-01-02", date)
+	assert.NoError(t, err)
+	filename := getFileName(&dailyWriter{}, "2024-10-05")
+	assert.Contains(t, filename, "2024-10-05")
 }

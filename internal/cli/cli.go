@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"log"
 	"log/slog"
 	"path/filepath"
 
@@ -40,9 +41,14 @@ func Run() {
 
 	ada := adacore.New(ai, cfg)
 	setUserData(ada)
+
 	input := utils.ReadInput("Provide project description")
-	template := ada.GetTemplate(1, input)
-	data, err := ada.SendWithReflection(template)
+	step1Template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, input)
+	if err != nil {
+		log.Fatal("failed to get step1 prompt from template", "error", err)
+	}
+
+	data, err := ada.SendWithReflection(step1Template)
 	if err != nil {
 		slog.Error("something went wrong when processing the request", "error", err)
 	}
@@ -61,7 +67,7 @@ func setUserData(ada *adacore.Ada) {
 	username := utils.ReadInput("Provide nickname")
 	projname := utils.ReadInput("Provide project name")
 	ada.AddProjCtx(username, projname)
-	if err := utils.SaveJSONToFile(ada.Ctx, utils.GetAbsolutePath(adacore.UserDataPath)); err != nil {
+	if err := ada.SaveCtx(); err != nil {
 		slog.Error("failed to save project context but will use it in this session", "context", ada.Ctx, "error", err)
 	} else {
 		slog.Info("saved project context", "context", ada.Ctx)

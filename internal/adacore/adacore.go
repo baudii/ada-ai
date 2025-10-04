@@ -13,7 +13,14 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-var UserDataPath = filepath.Join(common.DataPath, "user_data.json")
+type promptTemplate string
+
+const (
+	ReflectPromptFile promptTemplate = "reflect-template.txt"
+	Step1PromptFile   promptTemplate = "step1-template.txt"
+)
+
+var userDataPath = utils.GetAbsolutePath(filepath.Join(common.DataPath, "user_data.json"))
 
 type Config struct {
 	Timeout         string `json:"requestTimeout"`
@@ -34,48 +41,36 @@ type Ada struct {
 	Ctx *projectContext
 }
 
+// New initializes a new Ada instance with the provided LLM model and configuration.
+// If a user context is found in the user data file, it is loaded and associated with
+// the Ada instance. Otherwise, the context remains nil and expected to be set later
+// using AddProjCtx.
 func New(ai llms.Model, cfg *Config) *Ada {
-	pc, err := utils.ParseJSONFile[projectContext](utils.GetAbsolutePath(UserDataPath))
+	pc, err := utils.ParseJSONFile[projectContext](userDataPath)
 	if err != nil {
 		return &Ada{cfg: cfg, ai: ai}
 	}
 	return &Ada{cfg: cfg, ai: ai, Ctx: pc}
 }
 
+// AddProjCtx sets the project context for the Ada instance with the provided
+// username and project name.
 func (ada *Ada) AddProjCtx(userName string, projName string) {
 	ada.Ctx = &projectContext{UserName: userName, ProjName: projName}
 }
 
-func (ada *Ada) SendWithReflection(prompt string) ([]byte, error) {
-	resp, err := ada.GenerateJSON(prompt, nil)
-	if err != nil {
-		return nil, err
+// SaveCtx saves the current project context to the user data file.
+// If no context is set, it returns an error.
+func (ada *Ada) SaveCtx() error {
+	if ada.Ctx == nil {
+		return fmt.Errorf("no project context to save")
 	}
-
-	data := resp.Choices[0].Content
-	if err = ada.ReflectImprove(&prompt, &data); err != nil {
-		slog.Error("failed to improve", "error", err)
-	}
-
-	slog.Info("finished improve")
-	return utils.TrimJSON(data)
+	return utils.SaveJSONToFile(ada.Ctx, userDataPath)
 }
 
-func (ada *Ada) GetTemplate(step int, input string) string {
-	return getPromptFromTemplate(fmt.Sprintf("step%d-template.txt", step), ada.Ctx.ProjName, input)
-}
-
-func getPromptFromTemplate(fileName string, input ...any) string {
-	fileName = utils.GetAbsolutePath(filepath.Join(common.PromptsPath, fileName))
-	template, err := os.ReadFile(fileName)
-	if err != nil {
-		panic(err)
-	}
-
-	prompt := fmt.Sprintf(string(template), input...)
-	return prompt
-}
-
+// GenerateJSON sends a prompt along with a series of messages to the LLM
+// and expects a JSON response. It uses the timeout specified in the Ada configuration.
+// If the timeout is invalid, it defaults to 3 minutes.
 func (ada *Ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(ada.cfg.Timeout)
 	if err != nil {
@@ -91,4 +86,16 @@ func (ada *Ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.C
 	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithJSONMode())
 	cf()
 	return res, err
+}
+
+// GetPromptFromTemplate reads a prompt template file and formats it with the provided input.
+// It returns the formatted prompt string or an error if the file cannot be read.
+func GetPromptFromTemplate(file promptTemplate, input ...any) (string, error) {
+	fileName := utils.GetAbsolutePath(filepath.Join(common.PromptsPath, string(file)))
+	template, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", fmt.Errorf("failed to read prompt template file %q: %w", fileName, err)
+	}
+
+	return fmt.Sprintf(string(template), input...), nil
 }

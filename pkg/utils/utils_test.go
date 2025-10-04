@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetAbsolutePath(t *testing.T) {
-	t.Cleanup(func() { executable = os.Executable })
+	t.Cleanup(func() { Executable = os.Executable })
 	tests := []struct {
 		relPath  string
 		basePath string
@@ -25,7 +25,7 @@ func TestGetAbsolutePath(t *testing.T) {
 
 	for _, v := range tests {
 		v.basePath = filepath.Join(v.basePath, "exe.exe")
-		executable = func() (string, error) { return v.basePath, v.err }
+		Executable = func() (string, error) { return v.basePath, v.err }
 		if v.err != nil {
 			require.PanicsWithError(t, v.err.Error(), func() { GetAbsolutePath(v.relPath) })
 			continue
