@@ -7,6 +7,7 @@ import (
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/tmc/langchaingo/llms"
 )
 
 const desc string = "An AI-powered app that suggests recipes based on the ingredients you already have at home"
@@ -27,17 +28,16 @@ var (
 	debugProjName = "pantrypal"
 )
 
-func enableDebugging() {
+func enableDebugging(ai llms.Model) {
 	switch DebugStage {
 	case 0:
 		debugProjectStructure()
 	default:
-		debugStage()
+		debugStage(ai)
 	}
 }
 
-func debugStage() {
-	ai := common.RegisterOllama()
+func debugStage(ai llms.Model) {
 	ada := adacore.New(ai, &debugCfg)
 	ada.AddProjCtx(debugUserName, debugProjName)
 

@@ -15,14 +15,18 @@ var defaultCfg adacore.Config = adacore.Config{
 }
 
 func Run() {
-	ai := common.RegisterOllama()
+	ai, err := common.Register()
+	if err != nil {
+		slog.Error("failed to register llm", "error", err)
+		return
+	}
+
 	if Debug {
-		enableDebugging()
+		enableDebugging(ai)
 		return
 	}
 
 	var cfg *adacore.Config
-	var err error
 	relativePath := filepath.Join(common.ConfigPath, "ada.json")
 	cfgPath := utils.GetAbsolutePath(relativePath)
 	cfg, err = utils.ParseJSONConfigWithLocal[adacore.Config](cfgPath)
