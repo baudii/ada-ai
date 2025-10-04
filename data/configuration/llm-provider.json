@@ -1,8 +1,10 @@
 {
-    "provider": "ollama",
-    "options": {
-        "url": "http://localhost:11434/api/chat",
-        "model": "gemma3:12b",
-        "stream": false
-    }
+  "provider": "ollama",
+  "options": {
+    "model": "gemma3:4b",
+    "url": "http://localhost:11434",
+    "keep_alive": "20m",
+    "format": "json",
+    "http_timeout": "60s"
+  }
 }

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/adacore"
+	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
@@ -15,14 +16,18 @@ var defaultCfg adacore.Config = adacore.Config{
 }
 
 func Run() {
-	ai := common.RegisterOllama()
+	ai, err := ai.RegisterFromFile(common.ConfigPath)
+	if err != nil {
+		slog.Error("failed to register llm", "error", err)
+		return
+	}
+
 	if Debug {
-		enableDebugging()
+		enableDebugging(ai)
 		return
 	}
 
 	var cfg *adacore.Config
-	var err error
 	relativePath := filepath.Join(common.ConfigPath, "ada.json")
 	cfgPath := utils.GetAbsolutePath(relativePath)
 	cfg, err = utils.ParseJSONConfigWithLocal[adacore.Config](cfgPath)
