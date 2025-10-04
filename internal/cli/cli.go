@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/adacore"
+	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
@@ -15,7 +16,7 @@ var defaultCfg adacore.Config = adacore.Config{
 }
 
 func Run() {
-	ai, err := common.Register()
+	ai, err := ai.RegisterFromFile(common.ConfigPath)
 	if err != nil {
 		slog.Error("failed to register llm", "error", err)
 		return
