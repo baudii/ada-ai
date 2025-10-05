@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/projects"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -24,46 +27,68 @@ var debugCfg adacore.Config = adacore.Config{
 }
 
 var (
-	debugUserName = "baudii"
+	debugUserName = "debug-user"
 	debugProjName = "pantrypal"
 )
 
 func enableDebugging(ai llms.Model) {
 	switch DebugStage {
 	case 0:
-		debugProjectStructure()
-	default:
-		debugStage(ai)
+		debugProjectStructure(ai)
+	case 1:
+		debugStep1(ai)
 	}
 }
 
-func debugStage(ai llms.Model) {
+func debugStep1(ai llms.Model) {
 	ada := adacore.New(ai, &debugCfg)
 	ada.AddProjCtx(debugUserName, debugProjName)
 
 	utils.ReadInput("Press Enter to continue")
-	template := ada.GetTemplate(DebugStage, desc)
+
+	template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc)
+	if err != nil {
+		log.Fatal("failed to get step1 prompt from template", "error", err)
+	}
+
 	data, err := ada.SendWithReflection(template)
 	if err != nil {
 		panic(err)
 	}
 
-	adacore.Print(data)
-	ada.EnsureSaved(data)
-	ada.Materialize(data)
+	ld, err := projects.NewLocalProj(data, utils.GetAbsolutePath(debugCfg.ProjRoot))
+	if err != nil {
+		log.Fatal("couldn't parse a description into a valid json")
+	}
+	ada.SetWorkspace(ld)
+
+	utils.PrintTree(os.Stdout, ada.Ctx.Proj.Structure(), "")
+	ada.Ctx.Proj.Materialize()
 }
 
-func debugProjectStructure() {
-	r := filepath.Join(common.DebuggingPath, "structure-unparsed.txt")
+func debugProjectStructure(ai llms.Model) {
+	r := filepath.Join(common.DebuggingPath, "structure-unparsed.json")
 	path := utils.GetAbsolutePath(r)
 	f, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
 
+	ada := adacore.New(ai, &debugCfg)
+	ada.AddProjCtx(debugUserName, debugProjName)
 	if f, err = utils.TrimJSON(string(f)); err != nil {
 		panic(err)
 	}
 
-	adacore.Print(f)
+	ld, err := projects.NewLocalProj(f, utils.GetAbsolutePath(ada.ResolveProjectPath()))
+	if err != nil {
+		panic(err)
+	}
+
+	ada.SetWorkspace(ld)
+	utils.PrintTree(os.Stdout, ada.Ctx.Proj.Structure(), "")
+	err = ld.Materialize()
+	if err != nil {
+		slog.Error("error occured whe materializing", "error", err)
+	}
 }

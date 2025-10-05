@@ -1,0 +1,93 @@
+package utils
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestParseJSONFileToMap(t *testing.T) {
+	tests := []struct {
+		path        string
+		expected    map[string]any
+		jsonContent string
+		hasErr      bool
+	}{
+		{t.TempDir(), nil, "", true},
+		{t.TempDir(), nil, "{", true},
+		{t.TempDir(), map[string]any{
+			"a": "hello",
+			"b": "world",
+			"c": map[string]any{"d": float64(100)},
+		}, "{\"a\":\"hello\", \"b\":\"world\",\"c\": {\"d\":100}}", false},
+	}
+
+	for _, v := range tests {
+		v.path = filepath.Join(v.path, "tmp.json")
+		if v.jsonContent != "" {
+			os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+		}
+
+		res, err := ParseJSONFileToMap(v.path)
+		require.True(t, (err != nil) == v.hasErr)
+		require.Equal(t, v.expected, res)
+	}
+}
+
+func TestParseJSONConfigWithLocal(t *testing.T) {
+	type config struct {
+		A string         `json:"a"`
+		B int            `json:"b"`
+		C map[string]int `json:"c"`
+	}
+
+	tests := []struct {
+		path             string
+		expected         *config
+		jsonContent      string
+		localJsonContent string
+		hasErr           bool
+	}{
+		{t.TempDir(), nil, "", "", true},
+		{t.TempDir(), nil, "{", "{}", true},
+		{t.TempDir(), nil, "{}", "}", true},
+		{t.TempDir(), nil, "{\"b\":\"fail\"}", "{}", true},
+		{
+			t.TempDir(),
+			&config{
+				A: "world",
+				B: 1,
+				C: map[string]int{"d": 100},
+			},
+			"{\"a\":\"hello\", \"b\":1,\"c\": {\"d\":100}}",
+			"{\"a\":\"world\"}",
+			false,
+		},
+		{
+			t.TempDir(),
+			&config{
+				A: "hello",
+				B: 1,
+				C: map[string]int{"d": 100},
+			},
+			"{\"a\":\"hello\", \"b\":1}",
+			"{\"c\": {\"d\":100}}",
+			false,
+		},
+	}
+
+	for _, v := range tests {
+		v.path = filepath.Join(v.path, "tmp.json")
+		if v.jsonContent != "" {
+			localPath := InsertFsuffix(v.path, ".local")
+			os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+			os.WriteFile(localPath, []byte(v.localJsonContent), 0644)
+		}
+
+		res, err := ParseJSONConfigWithLocal[config](v.path)
+		require.True(t, (err != nil) == v.hasErr)
+		require.Equal(t, v.expected, res)
+	}
+}

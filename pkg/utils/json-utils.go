@@ -11,7 +11,7 @@ func TrimJSON(data string) ([]byte, error) {
 	start := strings.IndexByte(data, '{')
 	end := strings.LastIndexByte(data, '}')
 	if start == -1 || end == -1 {
-		return nil, fmt.Errorf("not a valid json")
+		return []byte(data), fmt.Errorf("not a valid json")
 	}
 	return []byte(data)[start : end+1], nil
 }
@@ -26,31 +26,32 @@ func SaveJSONToFile(content any, filePath string) error {
 }
 
 func ParseJSONFile[T any](filePath string) (*T, error) {
-	var cfg T
+	var res T
 	file, err := os.ReadFile(filePath)
 	if err != nil {
-		return &cfg, err
+		return &res, err
 	}
 
-	err = json.Unmarshal(file, &cfg)
+	err = json.Unmarshal(file, &res)
 	if err != nil {
-		return &cfg, err
+		return &res, err
+	}
+
+	return &res, nil
+}
+
+// Converts given map m into a struct of type T. Uses json marshalling
+// and unmarshalling under the hood.
+func MapToStruct[T any](m map[string]any) (*T, error) {
+	marshalled, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal: %w", err)
+	}
+
+	var cfg T
+	if err := json.Unmarshal(marshalled, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into %T: %w", cfg, err)
 	}
 
 	return &cfg, nil
-}
-
-func ParseJSONFileToMap(path string) (map[string]any, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var m map[string]any
-	if err := json.NewDecoder(f).Decode(&m); err != nil {
-		return nil, fmt.Errorf("unmarshal %s: %w", path, err)
-	}
-
-	return m, nil
 }

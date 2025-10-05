@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+var (
+	getDate func(*time.Location) string = func(loc *time.Location) string {
+		return time.Now().In(loc).Format("2006-01-02")
+	}
+	getFileName func(*dailyWriter, string) string = func(dw *dailyWriter, date string) string {
+		return filepath.Join(dw.path, fmt.Sprintf("%s_%s.log", dw.prefix, date))
+	}
+)
+
 type dailyWriter struct {
 	path     string
 	prefix   string
@@ -36,13 +45,8 @@ func (dw *dailyWriter) Write(p []byte) (n int, err error) {
 	return dw.file.Write(p)
 }
 
-func (dw *dailyWriter) filename(t time.Time) string {
-	return filepath.Join(dw.path, fmt.Sprintf("%s_%s.log", dw.prefix, t.Format("2006-01-02")))
-}
-
 func (dw *dailyWriter) rotateIfNeeded() error {
-	now := time.Now().In(dw.timezone)
-	date := now.Format("2006-01-02")
+	date := getDate(dw.timezone)
 	if dw.file != nil && date == dw.curDate {
 		return nil
 	}
@@ -56,7 +60,7 @@ func (dw *dailyWriter) rotateIfNeeded() error {
 		return err
 	}
 
-	f, err := os.OpenFile(dw.filename(now), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(getFileName(dw, date), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
