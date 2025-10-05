@@ -3,11 +3,13 @@ package cli
 import (
 	"log"
 	"log/slog"
+	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/projects"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -52,10 +54,13 @@ func Run() {
 	if err != nil {
 		slog.Error("something went wrong when processing the request", "error", err)
 	}
-
-	adacore.Print(data)
-	ada.EnsureSaved(data)
-	ada.Materialize(data)
+	ld, err := projects.NewLocalProj(data, utils.GetAbsolutePath(cfg.ProjRoot))
+	if err != nil {
+		log.Fatal("couldn't parse a description into a valid json")
+	}
+	ada.SetWorkspace(ld)
+	utils.PrintTree(os.Stdout, ada.Ctx.Proj.Structure(), "")
+	ada.Ctx.Proj.Materialize()
 }
 
 func setUserData(ada *adacore.Ada) {

@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,12 +16,18 @@ var Executable = os.Executable
 func GetAbsolutePath(relativePath string) string {
 	exe, err := Executable()
 	if err != nil {
-		// TODO: Replace panic with error handling and fix comment
+		// TODO: Change the logic. Probably get rid of this func
+		// and create global ProjectRoot variable that can accessed
+		// from anywhere.
 		panic(err)
 	}
 
 	base := filepath.Dir(exe)
-	return filepath.Join(base, relativePath)
+	res, err := filepath.Abs(filepath.Join(base, relativePath))
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func InsertFsuffix(path string, postfix string) string {
@@ -113,5 +121,32 @@ func deepCopyR(v reflect.Value) reflect.Value {
 
 	default:
 		return v
+	}
+}
+
+// PrintTree writes a textual tree representation of the given structure to w.
+//
+// The structure is expected to be a nested map[string]any, where each key is
+// treated as a directory or file name, and nested maps represent subdirectories.
+//
+// The output uses Unicode box-drawing characters (├──, └──, │) to visualize
+// the hierarchy, similar to the Unix `tree` command.
+//
+// The prefix argument is used internally to align child elements and should
+// normally be an empty string when called from outside.
+func PrintTree(w io.Writer, structure map[string]any, prefix string) {
+	i := 0
+	for k, v := range structure {
+		i++
+		conn := "├── "
+		nextPrefix := prefix + "│   "
+		if i == len(structure) {
+			conn = "└── "
+			nextPrefix = prefix + "    "
+		}
+		fmt.Fprintf(w, "%s%s%s\n", prefix, conn, k)
+		if m, ok := v.(map[string]any); ok {
+			PrintTree(w, m, nextPrefix)
+		}
 	}
 }

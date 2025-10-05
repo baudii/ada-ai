@@ -28,17 +28,15 @@ type Config struct {
 	ProjRoot        string `json:"projRoot"`
 }
 
-type projectContext struct {
-	UserName     string `json:"userName"`
-	ProjName     string `json:"projName"`
-	projRoot     string
-	projDescFile string
-}
-
 type Ada struct {
 	cfg *Config
 	ai  llms.Model
 	Ctx *projectContext
+}
+
+type Project interface {
+	Materialize() error
+	Structure() map[string]any
 }
 
 // New initializes a new Ada instance with the provided LLM model and configuration.
@@ -51,21 +49,6 @@ func New(ai llms.Model, cfg *Config) *Ada {
 		return &Ada{cfg: cfg, ai: ai}
 	}
 	return &Ada{cfg: cfg, ai: ai, Ctx: pc}
-}
-
-// AddProjCtx sets the project context for the Ada instance with the provided
-// username and project name.
-func (ada *Ada) AddProjCtx(userName string, projName string) {
-	ada.Ctx = &projectContext{UserName: userName, ProjName: projName}
-}
-
-// SaveCtx saves the current project context to the user data file.
-// If no context is set, it returns an error.
-func (ada *Ada) SaveCtx() error {
-	if ada.Ctx == nil {
-		return fmt.Errorf("no project context to save")
-	}
-	return utils.SaveJSONToFile(ada.Ctx, userDataPath)
 }
 
 // GenerateJSON sends a prompt along with a series of messages to the LLM

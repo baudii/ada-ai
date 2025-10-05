@@ -1,0 +1,14 @@
+{
+    "src": {
+        "cmd": {
+            "cli.go": 0,
+            "cli_test.go": 0
+        },
+        "internal": {
+            "core": {
+                "service.go": 0,
+                "errors.go": 0
+            }
+        }
+    } 
+}
