@@ -21,9 +21,12 @@ var (
 )
 
 var debugCfg adacore.Config = adacore.Config{
-	ProjRoot:        ".projects",
-	ReflectionDepth: 3,
-	Timeout:         "3m",
+	ProjRoot: ".projects",
+	Timeout:  "3m",
+	Reflection: adacore.ReflectConfig{
+		Depth:      3,
+		Threshhold: 0.95,
+	},
 }
 
 var (
@@ -46,12 +49,12 @@ func debugStep1(ai llms.Model) {
 
 	utils.ReadInput("Press Enter to continue")
 
-	template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc)
+	template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc, "")
 	if err != nil {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}
 
-	data, err := ada.SendWithReflection(template)
+	data, err := ada.SendReflect(template)
 	if err != nil {
 		panic(err)
 	}

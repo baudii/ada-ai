@@ -1,5 +1,8 @@
 {
     "requestTimeout": "3m",
-	"reflectionDepth": 2,
-    "projRoot": ".projects"
+    "projRoot": ".projects",
+    "reflection": {
+        "reflectionDepth": 2,
+        "reflectionThreshold": 0.95
+    }
 }

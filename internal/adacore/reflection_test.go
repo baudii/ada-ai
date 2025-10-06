@@ -31,9 +31,9 @@ func TestSendWithReflection(t *testing.T) {
 			generateContentMock = origMockFun
 		}
 		ai := &mockLLM{}
-		cfg := &Config{ReflectionDepth: 0}
+		cfg := &Config{Reflection: ReflectConfig{Depth: 3, Threshhold: 0.95}}
 		ada := New(ai, cfg)
-		res, err := ada.SendWithReflection("some prompt")
+		res, err := ada.SendReflect("some prompt")
 		if err == nil {
 			assert.Equal(t, []byte("some response"), res)
 			assert.True(t, (err != nil) == v.hasError)

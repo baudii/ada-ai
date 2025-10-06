@@ -1,139 +1,169 @@
 package adacore
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
 
-	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 )
 
-// TODO: Improve this entire file.
+var (
+	ReflectPromptFile      promptTemplate = "reflect-template.txt"
+	ReflectShortPromptFile promptTemplate = "reflect-template-short.txt"
+	ImprovePromptFile      promptTemplate = "improve-template.txt"
+)
 
-type Score struct {
+// ReflectConfig defines configuration parameters for the reflection algorithm.
+//
+// Depth controls how many iterations of reflection will be performed.
+// Threshold sets the minimum score (0.0–1.0) required to trigger reflection logic.
+type ReflectConfig struct {
+	Depth      int     `json:"reflectionDepth"`
+	Threshhold float32 `json:"reflectionThreshold"`
+}
+
+type score struct {
 	Relevance    float32 `json:"relevance"`
 	Accuracy     float32 `json:"accuracy"`
 	Completeness float32 `json:"completeness"`
 }
 
-type Reflection struct {
-	Scores      Score    `json:"scores"`
+type reflection struct {
+	Scores      score    `json:"scores"`
 	Suggestions []string `json:"improvement_suggestions"`
 }
 
-func (r Reflection) Avg() float32 {
-	s := r.Scores
-	return (s.Relevance + s.Accuracy + s.Completeness) / 3
+type eval struct {
+	ans   string
+	score float32
 }
 
-func (ada *Ada) SendWithReflection(prompt string) ([]byte, error) {
+type templates struct {
+	reflect      string
+	shortReflect string
+	improve      string
+}
+
+func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 	resp, err := ada.GenerateJSON(prompt, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	data := resp.Choices[0].Content
-	if err = ada.reflectImprove(&prompt, &data); err != nil {
-		slog.Error("failed to improve", "error", err)
+	res, err := ada.Improve(prompt, data)
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if res != nil {
+		data = res.ans
 	}
 
 	slog.Info("finished improve")
 	return utils.TrimJSON(data)
 }
 
-func (ada *Ada) reflectImprove(request *string, response *string) error {
+func (ada *Ada) Improve(request string, response string) (*eval, error) {
 	var (
-		reflection *Reflection
-		err        error
-		prompt     string
-
-		bestScore float32               = math.SmallestNonzeroFloat32
-		bestAns   *string               = response
-		curAns    *string               = response
-		threshold float32               = 0.95
-		msgs      []llms.MessageContent = make([]llms.MessageContent, 3)
+		res    *eval                 = &eval{response, math.SmallestNonzeroFloat32}
+		curAns string                = response
+		msgs   []llms.MessageContent = make([]llms.MessageContent, 5)
 	)
 
-	for i := 0; i < ada.cfg.ReflectionDepth; i++ {
-		slog.Debug("reflecting", "attempt", i+1, "total", ada.cfg.ReflectionDepth)
-		prompt, err = GetPromptFromTemplate(ReflectPromptFile, *request, *curAns)
-		if err != nil {
-			return fmt.Errorf("failed to get reflection prompt from template: %w", err)
-		}
-		dilog.WritelnToDw("prompt:\n" + prompt)
-		reflection, err = ada.reflect(&prompt)
+	templates, err := loadTemplates()
+	if err != nil {
+		return res, err
+	}
+
+	for i := 0; i < ada.cfg.Reflection.Depth; i++ {
+		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.cfg.Reflection.Depth)
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, request))
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, curAns))
+		reflection, err := ada.Reflect(templates.reflect, msgs)
 		if err != nil {
 			slog.Error("error occurred during reflection", "error", err)
 			continue
 		}
 
-		avg := reflection.Avg()
+		avg := reflection.avg()
 		slog.Debug("reflection completed", "reflect", reflection, "avg", avg)
-		if avg > threshold {
-			slog.Debug("threshold met")
-			*response = *bestAns
-			return nil
-		}
-
-		if avg > bestScore {
+		if avg > res.score {
 			slog.Debug("found new best score")
-			bestScore = reflection.Avg()
-			bestAns = curAns
+			res.score = avg
+			res.ans = curAns
 		}
 
-		msgs[0] = llms.TextParts(llms.ChatMessageTypeHuman, prompt)
-		msgs[1] = llms.TextParts(llms.ChatMessageTypeAI, fmt.Sprintf("**RESPONSE_EVALUATION**: %v", reflection))
-		curAns, err = ada.improveResponse(msgs)
+		if res.score > ada.cfg.Reflection.Threshhold {
+			slog.Debug("threshold met")
+			return res, nil
+		}
+
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, templates.shortReflect))
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, fmt.Sprintf("%v", reflection)))
+		resp, err := ada.GenerateJSON(templates.improve, msgs)
 		if err != nil {
-			*response = *bestAns
-			return err
+			return res, err
 		}
+
+		msgs = msgs[:0]
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, request))
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, curAns))
+		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, fmt.Sprintf("%v", reflection)))
+		curAns = resp.Choices[0].Content
 	}
 
-	if ada.cfg.ReflectionDepth <= 0 {
-		return fmt.Errorf("reflection omitted: reflection depth is set to %v", ada.cfg.ReflectionDepth)
+	if ada.cfg.Reflection.Depth <= 0 {
+		return res, fmt.Errorf("reflection omitted: reflection depth is set to %v", ada.cfg.Reflection.Depth)
 	}
 
-	*response = *bestAns
-	return fmt.Errorf("failed to improve the response to threshold %v - setting the best score: %v", threshold, bestScore)
+	slog.Error("failed to improve", "error", "")
+	return res, nil
 }
 
-func (ada *Ada) improveResponse(msgs []llms.MessageContent) (*string, error) {
-	msgs[2] = llms.TextParts(
-		llms.ChatMessageTypeHuman,
-		"From the given evaluation and suggestions provide an improved version of **MODEL_RESPONSE**.",
-	)
-
-	var err error
-	resp, err := ada.ai.GenerateContent(context.Background(), msgs, llms.WithJSONMode())
+func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
+	resp, err := ada.GenerateJSON(reflectPrompt, msgs)
 	if err != nil {
-		return nil, err
-	}
-
-	return &resp.Choices[0].Content, nil
-}
-
-func (ada *Ada) reflect(prompt *string) (*Reflection, error) {
-	resp, err := ada.GenerateJSON(*prompt, []llms.MessageContent{})
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reflect: %w", err)
 	}
 
 	var js []byte
 	js, err = utils.TrimJSON(resp.Choices[0].Content)
 	if err != nil {
-		return nil, fmt.Errorf("error occurred in reflect() when cleaning up the response: %v", err)
+		return nil, fmt.Errorf("trim reflect: %w", err)
 	}
 
-	var r Reflection
+	var r reflection
 	err = json.Unmarshal(js, &r)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal reflect: %w", err)
+	}
+
+	return &r, nil
+}
+
+func loadTemplates() (*templates, error) {
+	reflectTemplate, err := GetPromptFromTemplate(ReflectPromptFile)
 	if err != nil {
 		return nil, err
 	}
 
-	return &r, nil
+	sReflectTemplate, err := GetPromptFromTemplate(ReflectShortPromptFile)
+	if err != nil {
+		return nil, err
+	}
+
+	improveTemplate, err := GetPromptFromTemplate(ImprovePromptFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &templates{reflectTemplate, sReflectTemplate, improveTemplate}, nil
+}
+
+func (r reflection) avg() float32 {
+	s := r.Scores
+	return (s.Relevance + s.Accuracy + s.Completeness) / 3
 }

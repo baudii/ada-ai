@@ -16,16 +16,15 @@ import (
 type promptTemplate string
 
 const (
-	ReflectPromptFile promptTemplate = "reflect-template.txt"
-	Step1PromptFile   promptTemplate = "step1-template.txt"
+	Step1PromptFile promptTemplate = "step1-template.txt"
 )
 
 var userDataPath = utils.GetAbsolutePath(filepath.Join(common.DataPath, "user_data.json"))
 
 type Config struct {
-	Timeout         string `json:"requestTimeout"`
-	ReflectionDepth int    `json:"reflectionDepth"`
-	ProjRoot        string `json:"projRoot"`
+	Timeout    string        `json:"requestTimeout"`
+	ProjRoot   string        `json:"projRoot"`
+	Reflection ReflectConfig `json:"reflection"`
 }
 
 type Ada struct {

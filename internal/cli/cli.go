@@ -50,7 +50,7 @@ func Run() {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}
 
-	data, err := ada.SendWithReflection(step1Template)
+	data, err := ada.SendReflect(step1Template)
 	if err != nil {
 		slog.Error("something went wrong when processing the request", "error", err)
 	}
