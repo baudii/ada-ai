@@ -11,7 +11,7 @@ func TrimJSON(data string) ([]byte, error) {
 	start := strings.IndexByte(data, '{')
 	end := strings.LastIndexByte(data, '}')
 	if start == -1 || end == -1 {
-		return []byte(data), fmt.Errorf("not a valid json")
+		return []byte(data), fmt.Errorf("not a valid json: failed to find '{' or '}'")
 	}
 	return []byte(data)[start : end+1], nil
 }

@@ -19,14 +19,14 @@ import (
 func ParseJSONConfigWithLocal[T any](basePath string) (*T, error) {
 	basecfg, err := ParseJSONFileToMap(basePath)
 	if err != nil {
-		return nil, fmt.Errorf("read base config: %w", err)
+		return nil, fmt.Errorf("read base config at %q: %w", basePath, err)
 	}
 
 	localPath := InsertFsuffix(basePath, ".local")
 	if localcfg, err := ParseJSONFileToMap(localPath); err == nil {
 		MergeMap(basecfg, localcfg)
 	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to read '%v' error: %w", localPath, err)
+		return nil, fmt.Errorf("read local config at %q: %w", localPath, err)
 	}
 
 	return MapToStruct[T](basecfg)
@@ -42,7 +42,7 @@ func ParseJSONFileToMap(path string) (map[string]any, error) {
 
 	var m map[string]any
 	if err := json.NewDecoder(f).Decode(&m); err != nil {
-		return nil, fmt.Errorf("unmarshal %s: %w", path, err)
+		return nil, fmt.Errorf("unmarshal %q: %w", path, err)
 	}
 
 	return m, nil
