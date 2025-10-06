@@ -15,9 +15,11 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-type mockLLM struct{}
+type mockLLM struct {
+	generate func() (*llms.ContentResponse, error)
+}
 
-var generateContentMock = func() (*llms.ContentResponse, error) {
+var defaultMock = func() (*llms.ContentResponse, error) {
 	return &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "some response"}}}, nil
 }
 
@@ -26,7 +28,7 @@ func (m *mockLLM) Call(ctx context.Context, prompt string, options ...llms.CallO
 }
 
 func (m *mockLLM) GenerateContent(ctx context.Context, messages []llms.MessageContent, options ...llms.CallOption) (*llms.ContentResponse, error) {
-	return generateContentMock()
+	return m.generate()
 }
 
 func TestNew(t *testing.T) {
@@ -103,29 +105,23 @@ func TestSaveCtx(t *testing.T) {
 }
 
 func TestGenerateJSON(t *testing.T) {
-	origfunc := generateContentMock
-	t.Cleanup(func() {
-		generateContentMock = origfunc
-	})
-
 	tests := []struct {
 		cfg      Config
-		fails    bool
+		hasError bool
 		mockFunc func() (*llms.ContentResponse, error)
 	}{
-		{Config{Timeout: "1m"}, false, generateContentMock},
+		{Config{Timeout: "1m"}, false, defaultMock},
 		{Config{Timeout: "invalid"}, true, func() (*llms.ContentResponse, error) {
 			return nil, errors.New("context deadline exceeded")
 		}},
 	}
 
 	for _, v := range tests {
-		ai := &mockLLM{}
+		ai := &mockLLM{v.mockFunc}
 		ada := New(ai, &v.cfg)
-		generateContentMock = v.mockFunc
 		res, err := ada.GenerateJSON("test prompt", []llms.MessageContent{})
-		assert.Equal(t, v.fails, err != nil)
-		if !v.fails {
+		assert.Equal(t, v.hasError, err != nil)
+		if !v.hasError {
 			assert.NotNil(t, res)
 			assert.Equal(t, "some response", res.Choices[0].Content)
 		}
@@ -133,11 +129,7 @@ func TestGenerateJSON(t *testing.T) {
 }
 
 func TestGetPromptFromTemplate(t *testing.T) {
-	o := utils.Executable
-	t.Cleanup(func() {
-		utils.Executable = o
-	})
-
+	t.Parallel()
 	tests := []struct {
 		template string
 		args     []any
@@ -150,19 +142,16 @@ func TestGetPromptFromTemplate(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		filename := "test_template.txt"
 		tempdir := t.TempDir()
 		promptsDir := filepath.Join(tempdir, common.PromptsPath)
-		utils.Executable = func() (string, error) {
-			return filepath.Join(tempdir, "mocked.exe"), nil
-		}
+		promptFile := filepath.Join(promptsDir, "test_template.txt")
 		if !v.hasErr {
 			err := os.MkdirAll(promptsDir, 0755)
 			require.NoError(t, err)
-			err = os.WriteFile(filepath.Join(promptsDir, filename), []byte(v.template), 0644)
+			err = os.WriteFile(promptFile, []byte(v.template), 0644)
 			require.NoError(t, err)
 		}
-		res, err := PromptFromTemplate(promptTemplate(filename), v.args...)
+		res, err := PromptFromTemplate(promptFile, v.args...)
 		assert.Equal(t, v.hasErr, err != nil)
 		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
 	}

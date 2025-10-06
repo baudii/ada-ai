@@ -13,7 +13,7 @@ var Executable = os.Executable
 
 // Returns absolute that is calculated from the current
 // executable path. Panics if os.Executable() returns an error.
-func GetAbsolutePath(relativePath string) string {
+func AbsolutePath(relativePath string) string {
 	exe, err := Executable()
 	if err != nil {
 		// TODO: Change the logic. Probably get rid of this func

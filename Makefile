@@ -1,13 +1,12 @@
 APP          := ada-cli
 PKG          := ./cmd/$(APP)
 ARTIFACTS    := artifacts
-BUILD_DIR    := $(ARTIFACTS)/builds
 CONF_SRC     := data/configuration
 PRMPT_SRC    := data/prompts
 DBG_SRC      := data/debugging
-CONF_DST     := $(BUILD_DIR)/$(CONF_SRC)
-PRMPT_DST    := $(BUILD_DIR)/$(PRMPT_SRC)
-DBG_DST      := $(BUILD_DIR)/$(DBG_SRC)
+CONF_DST     := $(ARTIFACTS)/$(CONF_SRC)
+PRMPT_DST    := $(ARTIFACTS)/$(PRMPT_SRC)
+DBG_DST      := $(ARTIFACTS)/$(DBG_SRC)
 
 # variables
 stage        := 0
@@ -24,7 +23,7 @@ else
   COPY  = cp -r $(1) $(2)
 endif
 
-EXECUTABLE := $(BUILD_DIR)/$(APP)$(EXE)
+EXECUTABLE := $(ARTIFACTS)/$(APP)$(EXE)
 
 .PHONY: all build copy run clean install
 
@@ -35,7 +34,6 @@ all: build copy
 build:
 	@echo Building $(APP)...
 	@$(call MKDIR,$(ARTIFACTS))
-	@$(call MKDIR,$(BUILD_DIR))
 	@go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
 
 copy:
@@ -57,7 +55,7 @@ run:
 
 clean:
 	@echo Cleaning...
-	@$(call RMDIR,$(BUILD_DIR))
+	@$(call RMDIR,$(ARTIFACTS))
 	@go clean
 
 br: build run

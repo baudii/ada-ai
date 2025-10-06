@@ -9,10 +9,9 @@ import (
 )
 
 func TestSendWithReflection(t *testing.T) {
-	origDataPath, origMockFun := userDataPath, generateContentMock
+	origDataPath := userDataPath
 	t.Cleanup(func() {
 		userDataPath = origDataPath
-		generateContentMock = origMockFun
 	})
 
 	tests := []struct {
@@ -21,16 +20,11 @@ func TestSendWithReflection(t *testing.T) {
 		hasError       bool
 	}{
 		{func() (*llms.ContentResponse, error) { return nil, fmt.Errorf("mock error") }, 0, true},
-		{nil, 0, true},
-		{nil, 1, false},
+		{defaultMock, 0, true},
+		{defaultMock, 1, false},
 	}
 	for _, v := range tests {
-		if v.mockFunc != nil {
-			generateContentMock = v.mockFunc
-		} else {
-			generateContentMock = origMockFun
-		}
-		ai := &mockLLM{}
+		ai := &mockLLM{v.mockFunc}
 		cfg := &Config{Reflection: ReflectConfig{Depth: 3, Threshhold: 0.95}}
 		ada := New(ai, cfg)
 		res, err := ada.SendReflect("some prompt")

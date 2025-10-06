@@ -29,11 +29,11 @@ func parseFlags() {
 
 func initLogger() {
 	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
-	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](utils.GetAbsolutePath(cfgPath))
+	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](cfgPath)
 	if err != nil {
 		cfg = &dilog.Config{
 			Timezone: "local",
-			Path:     utils.GetAbsolutePath("logs"),
+			Path:     "logs",
 			Prefix:   "ada",
 		}
 	}

@@ -59,7 +59,7 @@ func debugStep1(ai llms.Model) {
 		panic(err)
 	}
 
-	ld, err := projects.NewLocalProj(data, utils.GetAbsolutePath(debugCfg.ProjRoot))
+	ld, err := projects.NewLocalProj(data, filepath.Join(common.Artifacts, debugCfg.ProjRoot))
 	if err != nil {
 		log.Fatal("couldn't parse a description into a valid json")
 	}
@@ -70,8 +70,7 @@ func debugStep1(ai llms.Model) {
 }
 
 func debugProjectStructure(ai llms.Model) {
-	r := filepath.Join(common.DebuggingPath, "structure-unparsed.json")
-	path := utils.GetAbsolutePath(r)
+	path := filepath.Join(common.DebuggingPath, "structure-unparsed.json")
 	f, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
@@ -83,7 +82,7 @@ func debugProjectStructure(ai llms.Model) {
 		panic(err)
 	}
 
-	ld, err := projects.NewLocalProj(f, utils.GetAbsolutePath(ada.ResolveProjectPath()))
+	ld, err := projects.NewLocalProj(f, ada.ResolveProjectPath())
 	if err != nil {
 		panic(err)
 	}

@@ -60,7 +60,7 @@ func TestRegisterFromFile(t *testing.T) {
 			err := os.WriteFile(filepath.Join(dir, configName), []byte(`{"provider": "ollama", "options": {"model":"some"}}`), 0644)
 			require.NoError(t, err)
 		}
-		_, err := RegisterFromFile("")
+		_, err := RegisterFromFile(dir)
 		if v.hasErr {
 			assert.Error(t, err)
 		} else {

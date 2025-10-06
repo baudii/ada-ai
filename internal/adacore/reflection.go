@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"path/filepath"
 
+	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 )
 
 var (
-	ReflectPromptFile      promptTemplate = "reflect-template.txt"
-	ReflectShortPromptFile promptTemplate = "reflect-template-short.txt"
-	ImprovePromptFile      promptTemplate = "improve-template.txt"
+	ReflectPromptFile      string = filepath.Join(common.PromptsPath, "reflect-template.txt")
+	ReflectShortPromptFile string = filepath.Join(common.PromptsPath, "reflect-template-short.txt")
+	ImprovePromptFile      string = filepath.Join(common.PromptsPath, "improve-template.txt")
 )
 
 // ReflectConfig defines configuration parameters for the reflection algorithm.

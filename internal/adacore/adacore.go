@@ -13,13 +13,8 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
-type promptTemplate string
-
-const (
-	Step1PromptFile promptTemplate = "step1-template.txt"
-)
-
-var userDataPath = utils.GetAbsolutePath(filepath.Join(common.DataPath, "user_data.json"))
+var Step1PromptFile = filepath.Join(common.PromptsPath, "step1-template.txt")
+var userDataPath = filepath.Join(common.DataPath, "user_data.json")
 
 type Config struct {
 	Timeout    string        `json:"requestTimeout"`
@@ -60,21 +55,17 @@ func (ada *Ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.C
 		slog.Warn("failed to parse duration from config: using default", "duration", ada.cfg.Timeout, "default", dur)
 	}
 
-	msgs = append(msgs,
-		llms.TextParts(llms.ChatMessageTypeSystem, prompt),
-	)
-
+	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	ctx, cf := context.WithTimeout(context.Background(), dur)
 	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithJSONMode())
 	cf()
-	return res, fmt.Errorf("generate JSON: %w", err)
+	return res, err
 }
 
 // PromptFromTemplate reads a prompt template file and formats it with the provided input.
 // It returns the formatted prompt string or an error if the file cannot be read.
-func PromptFromTemplate(file promptTemplate, input ...any) (string, error) {
-	fileName := utils.GetAbsolutePath(filepath.Join(common.PromptsPath, string(file)))
-	template, err := os.ReadFile(fileName)
+func PromptFromTemplate(file string, input ...any) (string, error) {
+	template, err := os.ReadFile(file)
 	if err != nil {
 		return "", fmt.Errorf("read template: %w", err)
 	}

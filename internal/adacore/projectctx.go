@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -35,7 +36,7 @@ func (ada *Ada) SaveCtx() error {
 //
 // This method returns relative path.
 func (ada *Ada) ResolveProjectPath() string {
-	return filepath.Join("..", ada.cfg.ProjRoot, ada.Ctx.UserName, ada.Ctx.ProjName)
+	return filepath.Join(common.Artifacts, ada.cfg.ProjRoot, ada.Ctx.UserName, ada.Ctx.ProjName)
 }
 
 // SetWorkspace adds a descriptor of the project, that defines the way

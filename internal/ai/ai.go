@@ -30,11 +30,11 @@ func Register(cfg *Config) (llms.Model, error) {
 // from 'llm-provider.json' file located at path.
 //
 // Path will be joined with the current os.Executable() directory.
-func RegisterFromFile(path string) (llms.Model, error) {
-	relPath := filepath.Join(path, configName)
-	cfg, err := utils.ParseJSONConfigWithLocal[Config](utils.GetAbsolutePath(relPath))
+func RegisterFromFile(folder string) (llms.Model, error) {
+	path := filepath.Join(folder, configName)
+	cfg, err := utils.ParseJSONConfigWithLocal[Config](path)
 	if err != nil {
-		return nil, fmt.Errorf("parse llm config %q: %w", relPath, err)
+		return nil, fmt.Errorf("parse llm config %q: %w", path, err)
 	}
 
 	return Register(cfg)

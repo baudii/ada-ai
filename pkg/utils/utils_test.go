@@ -27,11 +27,11 @@ func TestGetAbsolutePath(t *testing.T) {
 		v.basePath = filepath.Join(v.basePath, "exe.exe")
 		Executable = func() (string, error) { return v.basePath, v.err }
 		if v.err != nil {
-			require.PanicsWithError(t, v.err.Error(), func() { GetAbsolutePath(v.relPath) })
+			require.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath) })
 			continue
 		}
 
-		ap := GetAbsolutePath(v.relPath)
+		ap := AbsolutePath(v.relPath)
 		expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
 		require.Equal(t, ap, expected)
 	}

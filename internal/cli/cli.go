@@ -31,8 +31,7 @@ func Run() {
 	}
 
 	var cfg *adacore.Config
-	relativePath := filepath.Join(common.ConfigPath, "ada.json")
-	cfgPath := utils.GetAbsolutePath(relativePath)
+	cfgPath := filepath.Join(common.ConfigPath, "ada.json")
 	cfg, err = utils.ParseJSONConfigWithLocal[adacore.Config](cfgPath)
 	if err != nil {
 		slog.Error("failed to parse json configuration", "path", cfgPath, "error", err)
@@ -49,12 +48,11 @@ func Run() {
 	if err != nil {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}
-
 	data, err := ada.SendReflect(step1Template)
 	if err != nil {
 		slog.Error("something went wrong when processing the request", "error", err)
 	}
-	ld, err := projects.NewLocalProj(data, utils.GetAbsolutePath(cfg.ProjRoot))
+	ld, err := projects.NewLocalProj(data, ada.ResolveProjectPath())
 	if err != nil {
 		log.Fatal("couldn't parse a description into a valid json")
 	}
