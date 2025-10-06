@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -46,15 +45,18 @@ func Run() {
 	input := utils.ReadInput("Provide project description")
 	step1Template, err := adacore.PromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, input)
 	if err != nil {
-		log.Fatal("failed to get step1 prompt from template", "error", err)
+		slog.Error("failed to get step1 prompt from template", "error", err)
+		os.Exit(1)
 	}
 	data, err := ada.SendReflect(step1Template)
 	if err != nil {
-		slog.Error("something went wrong when processing the request", "error", err)
+		slog.Error("failed send reflect", "error", err)
+		os.Exit(1)
 	}
 	ld, err := projects.NewLocalProj(data, ada.ResolveProjectPath())
 	if err != nil {
-		log.Fatal("couldn't parse a description into a valid json")
+		slog.Error("failed to create new local project", "error", err)
+		os.Exit(1)
 	}
 	ada.SetWorkspace(ld)
 	utils.PrintTree(os.Stdout, ada.Ctx.Proj.Structure(), "")
@@ -71,7 +73,7 @@ func setUserData(ada *adacore.Ada) {
 	projname := utils.ReadInput("Provide project name")
 	ada.AddProjCtx(username, projname)
 	if err := ada.SaveCtx(); err != nil {
-		slog.Error("failed to save project context but will use it in this session", "context", ada.Ctx, "error", err)
+		slog.Warn("failed to save project context but will use it in this session", "context", ada.Ctx, "error", err)
 	} else {
 		slog.Info("saved project context", "context", ada.Ctx)
 	}
