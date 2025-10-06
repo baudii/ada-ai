@@ -119,7 +119,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		return res, fmt.Errorf("reflection depth is set to %v", ada.cfg.Reflection.Depth)
 	}
 
-	slog.Error("failed to improve", "error", "")
+	slog.Error("failed to improve", "best", res.score, "threshold", ada.cfg.Reflection.Threshhold)
 	return res, nil
 }
 
