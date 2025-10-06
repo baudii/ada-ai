@@ -12,7 +12,7 @@ const ProjectStrucutreFile string = "project-structure.json"
 type projectContext struct {
 	UserName string  `json:"userName"`
 	ProjName string  `json:"projName"`
-	Proj     Project `json:"-"`
+	Proj     Project `json:"-"` //TODO: Move inside Ada struct
 }
 
 // AddProjCtx sets the project context for the Ada instance with the provided
