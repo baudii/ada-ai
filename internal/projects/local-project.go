@@ -23,10 +23,10 @@ type LocalProj struct {
 func NewLocalProj(tr []byte, base string) (*LocalProj, error) {
 	d := &LocalProj{}
 	if err := json.Unmarshal([]byte(tr), &d.structure); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json: %w", err)
+		return nil, fmt.Errorf("unmarshal project structure: %w", err)
 	}
 	if !filepath.IsAbs(base) {
-		return nil, fmt.Errorf("base path must be an absolute path")
+		return nil, fmt.Errorf("path must be absolute")
 	}
 
 	d.projectRoot = base
@@ -44,10 +44,10 @@ func NewLocalProj(tr []byte, base string) (*LocalProj, error) {
 func (d *LocalProj) Materialize() error {
 	if info, err := os.Stat(d.projectRoot); err != nil {
 		if !os.IsNotExist(err) {
-			return fmt.Errorf("failed to stat base path: %w", err)
+			return fmt.Errorf("stat project root: %w", err)
 		}
 	} else if !info.IsDir() {
-		return fmt.Errorf("base path must be a directory")
+		return fmt.Errorf("project root %q is not a directory", d.projectRoot)
 	} else {
 		err := os.RemoveAll(d.projectRoot)
 		if err != nil {
@@ -56,11 +56,11 @@ func (d *LocalProj) Materialize() error {
 	}
 
 	if err := os.MkdirAll(d.projectRoot, 0644); err != nil {
-		return fmt.Errorf("failed to create root folder %q: %w", d.projectRoot, err)
+		return fmt.Errorf("create project root folder %q: %w", d.projectRoot, err)
 	}
 
 	if err := utils.SaveJSONToFile(d.structure, filepath.Join(d.projectRoot, adacore.ProjectStrucutreFile)); err != nil {
-		return fmt.Errorf("failed to save project structure to the project root: %q: %w", d.projectRoot, err)
+		return fmt.Errorf("save project structure file: %w", err)
 	}
 
 	return materialize(d.projectRoot, d.structure)
@@ -75,19 +75,19 @@ func materialize(base string, structure map[string]any) error {
 		path := filepath.Join(base, name)
 		if m, ok := v.(map[string]any); ok {
 			if err := os.MkdirAll(path, 0o755); err != nil {
-				return fmt.Errorf("failed to create folder(s): %w", err)
+				return fmt.Errorf("create folder(s): %w", err)
 			}
 			if err := materialize(path, m); err != nil {
 				return err
 			}
-		} else if n, ok := v.(float64); ok && n == 0 {
+		} else if _, ok := v.(float64); ok {
 			f, err := os.Create(path)
 			if err != nil {
-				return fmt.Errorf("failed to create file: %w", err)
+				return fmt.Errorf("create file: %w", err)
 			}
 			f.Close()
 		} else {
-			return fmt.Errorf("invalid structure: value must be either a map or 0, got %T", v)
+			return fmt.Errorf("invalid structure: value must be either a map or float64, got %T", v)
 		}
 	}
 	return nil

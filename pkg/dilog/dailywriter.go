@@ -57,12 +57,12 @@ func (dw *dailyWriter) rotateIfNeeded() error {
 	}
 
 	if err := os.MkdirAll(dw.path, 0o755); err != nil {
-		return err
+		return fmt.Errorf("rotate: %w", err)
 	}
 
 	f, err := os.OpenFile(getFileName(dw, date), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
-		return err
+		return fmt.Errorf("rotate: %w", err)
 	}
 
 	dw.file = f

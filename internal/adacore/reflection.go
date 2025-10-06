@@ -75,7 +75,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 
 	templates, err := loadTemplates()
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("load templates: %w", err)
 	}
 
 	for i := 0; i < ada.cfg.Reflection.Depth; i++ {
@@ -105,7 +105,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, fmt.Sprintf("%v", reflection)))
 		resp, err := ada.GenerateJSON(templates.improve, msgs)
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("generate improved prompt: %w", err)
 		}
 
 		msgs = msgs[:0]
@@ -116,10 +116,10 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 	}
 
 	if ada.cfg.Reflection.Depth <= 0 {
-		return res, fmt.Errorf("reflection omitted: reflection depth is set to %v", ada.cfg.Reflection.Depth)
+		return res, fmt.Errorf("reflection depth is set to %v", ada.cfg.Reflection.Depth)
 	}
 
-	slog.Error("failed to improve", "error", "")
+	slog.Error("failed to improve", "best", res.score, "threshold", ada.cfg.Reflection.Threshhold)
 	return res, nil
 }
 
@@ -145,17 +145,17 @@ func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 }
 
 func loadTemplates() (*templates, error) {
-	reflectTemplate, err := GetPromptFromTemplate(ReflectPromptFile)
+	reflectTemplate, err := PromptFromTemplate(ReflectPromptFile)
 	if err != nil {
 		return nil, err
 	}
 
-	sReflectTemplate, err := GetPromptFromTemplate(ReflectShortPromptFile)
+	sReflectTemplate, err := PromptFromTemplate(ReflectShortPromptFile)
 	if err != nil {
 		return nil, err
 	}
 
-	improveTemplate, err := GetPromptFromTemplate(ImprovePromptFile)
+	improveTemplate, err := PromptFromTemplate(ImprovePromptFile)
 	if err != nil {
 		return nil, err
 	}

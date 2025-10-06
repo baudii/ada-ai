@@ -22,7 +22,7 @@ func Register(cfg *Config) (llms.Model, error) {
 	case "ollama":
 		return registerOllama(cfg.Options)
 	default:
-		return nil, fmt.Errorf("unsupported llm provider: %s", cfg.Provider)
+		return nil, fmt.Errorf("unsupported llm provider: %q", cfg.Provider)
 	}
 }
 
@@ -34,7 +34,7 @@ func RegisterFromFile(path string) (llms.Model, error) {
 	relPath := filepath.Join(path, configName)
 	cfg, err := utils.ParseJSONConfigWithLocal[Config](utils.GetAbsolutePath(relPath))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse llm config %q: %w", relPath, err)
+		return nil, fmt.Errorf("parse llm config %q: %w", relPath, err)
 	}
 
 	return Register(cfg)

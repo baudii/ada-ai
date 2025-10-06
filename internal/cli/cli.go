@@ -45,7 +45,7 @@ func Run() {
 	setUserData(ada)
 
 	input := utils.ReadInput("Provide project description")
-	step1Template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, input)
+	step1Template, err := adacore.PromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, input)
 	if err != nil {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}

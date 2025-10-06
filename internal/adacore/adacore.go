@@ -67,16 +67,16 @@ func (ada *Ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.C
 	ctx, cf := context.WithTimeout(context.Background(), dur)
 	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithJSONMode())
 	cf()
-	return res, err
+	return res, fmt.Errorf("generate JSON: %w", err)
 }
 
-// GetPromptFromTemplate reads a prompt template file and formats it with the provided input.
+// PromptFromTemplate reads a prompt template file and formats it with the provided input.
 // It returns the formatted prompt string or an error if the file cannot be read.
-func GetPromptFromTemplate(file promptTemplate, input ...any) (string, error) {
+func PromptFromTemplate(file promptTemplate, input ...any) (string, error) {
 	fileName := utils.GetAbsolutePath(filepath.Join(common.PromptsPath, string(file)))
 	template, err := os.ReadFile(fileName)
 	if err != nil {
-		return "", fmt.Errorf("failed to read prompt template file %q: %w", fileName, err)
+		return "", fmt.Errorf("read template: %w", err)
 	}
 
 	return fmt.Sprintf(string(template), input...), nil

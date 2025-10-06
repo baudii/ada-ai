@@ -162,7 +162,7 @@ func TestGetPromptFromTemplate(t *testing.T) {
 			err = os.WriteFile(filepath.Join(promptsDir, filename), []byte(v.template), 0644)
 			require.NoError(t, err)
 		}
-		res, err := GetPromptFromTemplate(promptTemplate(filename), v.args...)
+		res, err := PromptFromTemplate(promptTemplate(filename), v.args...)
 		assert.Equal(t, v.hasErr, err != nil)
 		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
 	}

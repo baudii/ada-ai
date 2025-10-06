@@ -49,7 +49,7 @@ func debugStep1(ai llms.Model) {
 
 	utils.ReadInput("Press Enter to continue")
 
-	template, err := adacore.GetPromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc, "")
+	template, err := adacore.PromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, desc)
 	if err != nil {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}
