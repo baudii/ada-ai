@@ -38,7 +38,7 @@ func TestNew(t *testing.T) {
 		if !v.isValidJson {
 			assert.ErrorContains(t, err, "unmarshal project structure: ")
 		} else if !v.isAbs {
-			assert.ErrorContains(t, err, "path must be absolute")
+			assert.ErrorContains(t, err, "is not absolute")
 		} else {
 			assert.Equal(t, v.expected, p)
 		}

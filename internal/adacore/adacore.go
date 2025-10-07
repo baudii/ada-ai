@@ -18,7 +18,6 @@ const (
 	reflectShortPrompt = "reflect-template-short.txt"
 	improvePrompt      = "improve-template.txt"
 
-	promptsFolder        = "prompts"
 	ProjectStrucutreFile = "project-structure.json" // TODO: fix typo
 )
 
@@ -33,7 +32,6 @@ type Ada struct {
 
 type Config struct {
 	Timeout    string        `json:"requestTimeout"`
-	ProjRoot   string        `json:"projRoot"`
 	Reflection ReflectConfig `json:"reflection"`
 }
 
@@ -52,25 +50,33 @@ type Project interface {
 }
 
 type session struct {
-	root    string
-	Project ProjectData
+	projectsRoot string
+	promptsRoot  string
+	Project      ProjectData
 }
 
 var defaultCfg = Config{
-	ProjRoot: ".projects",
-	Timeout:  "3m",
+	Timeout: "3m",
 	Reflection: ReflectConfig{
 		Depth:      3,
 		Threshhold: 0.95,
 	},
 }
 
-// WithRoot sets the root path. It is used to resolve all paths during application
-// execution including searching prompts, configurations and saving states and
-// artifacts.
-func WithRoot(path string) SessionOption {
+// WithProjectsRoot sets the root folder for projects to be stored.
+// It will create user-specific and project-specific folders inside
+// and will use it in runtime.
+func WithProjectsRoot(path string) SessionOption {
 	return func(s *session) {
-		s.root = path
+		s.projectsRoot = path
+	}
+}
+
+// WithPromptsRoot sets the root folder of where the ada should search
+// for prompt templates.
+func WithPromptsRoot(path string) SessionOption {
+	return func(s *session) {
+		s.promptsRoot = path
 	}
 }
 
@@ -99,13 +105,13 @@ func New(ai llms.Model, config *Config, opts ...SessionOption) *Ada {
 // ResolvePromptPath a path to the prompt from the prompts folder with
 // given filename.
 func (ada *Ada) ResolvePromptPath(filename string) string {
-	return filepath.Join(ada.Session.root, promptsFolder, filename)
+	return filepath.Join(ada.Session.promptsRoot, filename)
 }
 
 // ResolveProjectPath resolves a project root folder path, based using
 // current project and user context.
 func (ada *Ada) ResolveProjectPath() string {
-	return filepath.Join(ada.Session.root, ada.Cfg.ProjRoot, ada.Session.Project.UserName, ada.Session.Project.ProjName)
+	return filepath.Join(ada.Session.projectsRoot, ada.Session.Project.UserName, ada.Session.Project.ProjName)
 }
 
 // GenerateJSON sends a prompt along with a series of messages to the LLM

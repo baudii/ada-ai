@@ -85,10 +85,7 @@ func TestImprove(t *testing.T) {
 		ai := &mockLLM{f}
 		cfg := &Config{Reflection: ReflectConfig{v.depth, threshold}}
 		root := t.TempDir()
-		ada := New(ai, cfg, WithRoot(root))
-		root = filepath.Join(root, promptsFolder)
-		err := os.MkdirAll(root, 0744)
-		require.NoError(t, err)
+		ada := New(ai, cfg, WithPromptsRoot(root))
 		prompts := []string{reflectPrompt, reflectShortPrompt, improvePrompt}
 		for i, pr := range prompts {
 			if ((1 << i) & v.flags) != 0 {
@@ -100,7 +97,7 @@ func TestImprove(t *testing.T) {
 				require.NoError(t, err)
 			}
 		}
-		_, err = ada.Improve("", "")
+		_, err := ada.Improve("", "")
 		if v.hasErr {
 			assert.Error(t, err)
 		} else {

@@ -37,9 +37,9 @@ func TestNew(t *testing.T) {
 		expectedRoot string
 		expectedPD   ProjectData
 	}{
-		{nil, []SessionOption{WithRoot("root")}, "root", ProjectData{}},
-		{&Config{"a", "b", ReflectConfig{1, 2}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
-		{&Config{}, []SessionOption{WithRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
+		{nil, []SessionOption{WithProjectsRoot("root")}, "root", ProjectData{}},
+		{&Config{"a", ReflectConfig{1, 2}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
+		{&Config{}, []SessionOption{WithProjectsRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
 	}
 	ai := &mockLLM{}
 	for _, v := range tests {
@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 		} else {
 			assert.Equal(t, v.cfg, ada.Cfg)
 		}
-		assert.Equal(t, v.expectedRoot, ada.Session.root)
+		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot)
 		assert.Equal(t, v.expectedPD, ada.Session.Project)
 	}
 }
@@ -96,13 +96,9 @@ func TestPromptFromTemplate(t *testing.T) {
 
 	for _, v := range tests {
 		tempdir := t.TempDir()
-		ada := New(&mockLLM{}, nil, WithRoot(tempdir))
-		promptsDir := filepath.Join(tempdir, promptsFolder)
-		promptFile := filepath.Join(promptsDir, file)
+		ada := New(&mockLLM{}, nil, WithPromptsRoot(tempdir))
 		if !v.hasErr {
-			err := os.MkdirAll(promptsDir, 0755)
-			require.NoError(t, err)
-			err = os.WriteFile(promptFile, []byte(v.template), 0644)
+			err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
 			require.NoError(t, err)
 		}
 		res, err := ada.PromptFromTemplate(file, v.args...)
@@ -112,6 +108,7 @@ func TestPromptFromTemplate(t *testing.T) {
 }
 
 func TestResolveProjectPath(t *testing.T) {
+	// TODO: Add tests
 	t.Parallel()
 	tests := []struct {
 		root     string
@@ -123,9 +120,9 @@ func TestResolveProjectPath(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		cfg := &Config{ProjRoot: v.projRoot}
+		cfg := &Config{}
 		ai := &mockLLM{}
-		ada := New(ai, cfg, WithRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
+		ada := New(ai, cfg, WithProjectsRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
 		res := ada.ResolveProjectPath()
 		assert.Contains(t, res, v.root)
 		assert.Contains(t, res, v.username)

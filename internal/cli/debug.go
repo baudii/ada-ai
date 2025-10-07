@@ -40,7 +40,8 @@ func debugStep1(ai llms.Model) {
 	ada := adacore.New(
 		ai,
 		nil,
-		adacore.WithRoot(common.DataPath),
+		adacore.WithProjectsRoot(common.ProjectsPath),
+		adacore.WithPromptsRoot(common.PromptsPath),
 		adacore.WithProjectData(debugProjData))
 
 	utils.ReadInput("Press Enter to continue")
@@ -55,7 +56,7 @@ func debugStep1(ai llms.Model) {
 		panic(err)
 	}
 
-	ld, err := projects.New(data, filepath.Join(common.Artifacts, ada.Cfg.ProjRoot))
+	ld, err := projects.New(data, ada.ResolveProjectPath())
 	if err != nil {
 		log.Fatal("couldn't parse a description into a valid json")
 	}
@@ -72,7 +73,10 @@ func debugProjectStructure(ai llms.Model) {
 		panic(err)
 	}
 
-	ada := adacore.New(ai, nil, adacore.WithRoot(common.DataPath), adacore.WithProjectData(debugProjData))
+	ada := adacore.New(ai, nil,
+		adacore.WithProjectsRoot(common.ProjectsPath),
+		adacore.WithProjectData(debugProjData),
+		adacore.WithPromptsRoot(common.PromptsPath))
 
 	if f, err = utils.TrimJSON(string(f)); err != nil {
 		panic(err)

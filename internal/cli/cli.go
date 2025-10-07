@@ -13,8 +13,7 @@ import (
 )
 
 var defaultCfg adacore.Config = adacore.Config{
-	ProjRoot: ".projects",
-	Timeout:  "3m",
+	Timeout: "3m",
 }
 
 func Run() {
@@ -61,13 +60,17 @@ func Run() {
 	}
 	ada.Proj = ld
 	utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
-	ada.Proj.Materialize()
+	err = ada.Proj.Materialize()
+	if err != nil {
+		slog.Error("failed to materialize project", "error", err)
+		os.Exit(1)
+	}
 }
 
 func getProjectData() []adacore.SessionOption {
 	path := filepath.Join(common.DataPath, adacore.ProjectDataFile)
 	var options []adacore.SessionOption
-	options = append(options, adacore.WithRoot(common.Artifacts))
+	options = append(options, adacore.WithProjectsRoot(common.ProjectsPath), adacore.WithPromptsRoot(common.PromptsPath))
 	projectData, err := utils.ParseJSONFile[adacore.ProjectData](path)
 	if err != nil {
 		username := utils.ReadInput("Provide nickname")

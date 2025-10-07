@@ -27,7 +27,7 @@ func New(structure []byte, base string) (*LocalProj, error) {
 		return nil, fmt.Errorf("unmarshal project structure: %w", err)
 	}
 	if !filepath.IsAbs(base) {
-		return nil, fmt.Errorf("path must be absolute")
+		return nil, fmt.Errorf("path %q is not absolute", base)
 	}
 
 	d.projectRoot = base
