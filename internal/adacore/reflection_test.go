@@ -9,9 +9,9 @@ import (
 )
 
 func TestSendWithReflection(t *testing.T) {
-	origDataPath := userDataPath
+	origDataPath := ProjectDataFile
 	t.Cleanup(func() {
-		userDataPath = origDataPath
+		ProjectDataFile = origDataPath
 	})
 
 	tests := []struct {

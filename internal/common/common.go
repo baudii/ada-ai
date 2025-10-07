@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/pkg/utils"
@@ -12,9 +13,8 @@ var (
 	DataPath      = filepath.Join(Artifacts, "data")
 	ConfigPath    = filepath.Join(DataPath, "configuration")
 	DebuggingPath = filepath.Join(DataPath, "debugging")
-	PromptsPath   = filepath.Join(DataPath, "prompts")
 )
 
 func init() {
-	Artifacts = utils.AbsolutePath("")
+	Artifacts = utils.AbsolutePath("", os.Executable)
 }

@@ -39,11 +39,12 @@ func Run() {
 		slog.Info("succesffully parsed json configuration", "cfg", cfg)
 	}
 
-	ada := adacore.New(ai, cfg)
-	setUserData(ada)
+	options := getProjectData()
+
+	ada := adacore.New(ai, cfg, options...)
 
 	input := utils.ReadInput("Provide project description")
-	step1Template, err := adacore.PromptFromTemplate(adacore.Step1PromptFile, ada.Ctx.ProjName, input)
+	step1Template, err := ada.PromptFromTemplate(adacore.ProjectStructurePrompt, ada.Session.Project.ProjName, input)
 	if err != nil {
 		slog.Error("failed to get step1 prompt from template", "error", err)
 		os.Exit(1)
@@ -58,23 +59,25 @@ func Run() {
 		slog.Error("failed to create new local project", "error", err)
 		os.Exit(1)
 	}
-	ada.SetWorkspace(ld)
-	utils.PrintTree(os.Stdout, ada.Ctx.Proj.Structure(), "")
-	ada.Ctx.Proj.Materialize()
+	ada.Proj = ld
+	utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	ada.Proj.Materialize()
 }
 
-func setUserData(ada *adacore.Ada) {
-	if ada.Ctx != nil && ada.Ctx.UserName != "" && ada.Ctx.ProjName != "" {
-		slog.Info("recognized project context", "context", ada.Ctx)
-		return
+func getProjectData() []adacore.SessionOption {
+	path := filepath.Join(common.DataPath, adacore.ProjectDataFile)
+	var options []adacore.SessionOption
+	options = append(options, adacore.WithRoot(common.Artifacts))
+	projectData, err := utils.ParseJSONFile[adacore.ProjectData](path)
+	if err != nil {
+		username := utils.ReadInput("Provide nickname")
+		projname := utils.ReadInput("Provide project name")
+		projectData = &adacore.ProjectData{UserName: username, ProjName: projname}
+		err = utils.SaveJSONToFile(projname, path)
+		if err != nil {
+			slog.Error("failed to save project data", "error", err)
+		}
 	}
 
-	username := utils.ReadInput("Provide nickname")
-	projname := utils.ReadInput("Provide project name")
-	ada.AddProjCtx(username, projname)
-	if err := ada.SaveCtx(); err != nil {
-		slog.Warn("failed to save project context but will use it in this session", "context", ada.Ctx, "error", err)
-	} else {
-		slog.Info("saved project context", "context", ada.Ctx)
-	}
+	return append(options, adacore.WithProjectData(*projectData))
 }
