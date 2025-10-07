@@ -9,6 +9,7 @@ import (
 )
 
 func TestParseJSONFileToMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path        string
 		expected    map[string]any
@@ -37,6 +38,7 @@ func TestParseJSONFileToMap(t *testing.T) {
 }
 
 func TestParseJSONConfigWithLocal(t *testing.T) {
+	t.Parallel()
 	type config struct {
 		A string         `json:"a"`
 		B int            `json:"b"`

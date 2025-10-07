@@ -3,31 +3,20 @@ package utils
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 )
 
-var Executable = os.Executable
-
 // Returns absolute that is calculated from the current
 // executable path. Panics if os.Executable() returns an error.
-func AbsolutePath(relativePath string) string {
-	exe, err := Executable()
+func AbsolutePath(relativePath string, executable func() (string, error)) string {
+	exe, err := executable()
 	if err != nil {
-		// TODO: Change the logic. Probably get rid of this func
-		// and create global ProjectRoot variable that can accessed
-		// from anywhere.
 		panic(err)
 	}
 
-	base := filepath.Dir(exe)
-	res, err := filepath.Abs(filepath.Join(base, relativePath))
-	if err != nil {
-		panic(err)
-	}
-	return res
+	return filepath.Join(filepath.Dir(exe), relativePath)
 }
 
 func InsertFsuffix(path string, postfix string) string {

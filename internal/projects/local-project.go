@@ -15,18 +15,19 @@ type LocalProj struct {
 	projectRoot string
 }
 
-// NewLocalProj creates a new project descriptor from a JSON structure and base
-// that determines the root base folder of where the project will be created
+// New creates a new local project descriptor from structure that represents
+// the json folder structure of the project and base that determines the root
+// base folder of where the project will be created
 //
 // It returns an error if the JSON cannot be unmarshaled or the base path
 // is invalid.
-func NewLocalProj(tr []byte, base string) (*LocalProj, error) {
+func New(structure []byte, base string) (*LocalProj, error) {
 	d := &LocalProj{}
-	if err := json.Unmarshal([]byte(tr), &d.structure); err != nil {
+	if err := json.Unmarshal([]byte(structure), &d.structure); err != nil {
 		return nil, fmt.Errorf("unmarshal project structure: %w", err)
 	}
 	if !filepath.IsAbs(base) {
-		return nil, fmt.Errorf("path must be absolute")
+		return nil, fmt.Errorf("path %q is not absolute", base)
 	}
 
 	d.projectRoot = base
@@ -42,20 +43,18 @@ func NewLocalProj(tr []byte, base string) (*LocalProj, error) {
 // If any part of the structure cannot be created or the JSON description cannot
 // be saved, an error is returned.
 func (d *LocalProj) Materialize() error {
-	if info, err := os.Stat(d.projectRoot); err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("stat project root: %w", err)
+	if info, err := os.Stat(d.projectRoot); err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("project root %q is not a directory", d.projectRoot)
 		}
-	} else if !info.IsDir() {
-		return fmt.Errorf("project root %q is not a directory", d.projectRoot)
-	} else {
-		err := os.RemoveAll(d.projectRoot)
-		if err != nil {
-			return err
+		if err := os.RemoveAll(d.projectRoot); err != nil {
+			return fmt.Errorf("remove existing project root: %w", err)
 		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat project root: %w", err)
 	}
 
-	if err := os.MkdirAll(d.projectRoot, 0644); err != nil {
+	if err := os.MkdirAll(d.projectRoot, 0744); err != nil {
 		return fmt.Errorf("create project root folder %q: %w", d.projectRoot, err)
 	}
 

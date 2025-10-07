@@ -109,6 +109,7 @@ func TestParseJSONFile(t *testing.T) {
 }
 
 func TestMapToStruct(t *testing.T) {
+	t.Parallel()
 	type s struct {
 		Val1 string         `json:"val1"`
 		Val2 int            `json:"val2"`

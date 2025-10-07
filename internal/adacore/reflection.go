@@ -5,17 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
-)
-
-var (
-	ReflectPromptFile      string = filepath.Join(common.PromptsPath, "reflect-template.txt")
-	ReflectShortPromptFile string = filepath.Join(common.PromptsPath, "reflect-template-short.txt")
-	ImprovePromptFile      string = filepath.Join(common.PromptsPath, "improve-template.txt")
 )
 
 // ReflectConfig defines configuration parameters for the reflection algorithm.
@@ -70,18 +62,18 @@ func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 
 func (ada *Ada) Improve(request string, response string) (*eval, error) {
 	var (
-		res    *eval                 = &eval{response, math.SmallestNonzeroFloat32}
+		res    *eval                 = &eval{response, float32(math.Inf(-1))}
 		curAns string                = response
 		msgs   []llms.MessageContent = make([]llms.MessageContent, 5)
 	)
 
-	templates, err := loadTemplates()
+	templates, err := ada.loadTemplates()
 	if err != nil {
 		return res, fmt.Errorf("load templates: %w", err)
 	}
 
-	for i := 0; i < ada.cfg.Reflection.Depth; i++ {
-		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.cfg.Reflection.Depth)
+	for i := 0; i < ada.Cfg.Reflection.Depth; i++ {
+		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.Cfg.Reflection.Depth)
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, request))
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, curAns))
 		reflection, err := ada.Reflect(templates.reflect, msgs)
@@ -98,7 +90,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 			res.ans = curAns
 		}
 
-		if res.score > ada.cfg.Reflection.Threshhold {
+		if res.score > ada.Cfg.Reflection.Threshhold {
 			slog.Debug("threshold met")
 			return res, nil
 		}
@@ -117,11 +109,11 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		curAns = resp.Choices[0].Content
 	}
 
-	if ada.cfg.Reflection.Depth <= 0 {
-		return res, fmt.Errorf("reflection depth is set to %v", ada.cfg.Reflection.Depth)
+	if ada.Cfg.Reflection.Depth <= 0 {
+		return res, fmt.Errorf("reflection depth is set to %v", ada.Cfg.Reflection.Depth)
 	}
 
-	slog.Error("failed to improve", "best", res.score, "threshold", ada.cfg.Reflection.Threshhold)
+	slog.Error("failed to improve", "best", res.score, "threshold", ada.Cfg.Reflection.Threshhold)
 	return res, nil
 }
 
@@ -146,18 +138,18 @@ func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 	return &r, nil
 }
 
-func loadTemplates() (*templates, error) {
-	reflectTemplate, err := PromptFromTemplate(ReflectPromptFile)
+func (ada *Ada) loadTemplates() (*templates, error) {
+	reflectTemplate, err := ada.PromptFromTemplate(reflectPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	sReflectTemplate, err := PromptFromTemplate(ReflectShortPromptFile)
+	sReflectTemplate, err := ada.PromptFromTemplate(reflectShortPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	improveTemplate, err := PromptFromTemplate(ImprovePromptFile)
+	improveTemplate, err := ada.PromptFromTemplate(improvePrompt)
 	if err != nil {
 		return nil, err
 	}

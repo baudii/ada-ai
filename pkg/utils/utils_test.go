@@ -1,16 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetAbsolutePath(t *testing.T) {
-	t.Cleanup(func() { Executable = os.Executable })
+func TestAbsolutePath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		relPath  string
 		basePath string
@@ -25,19 +26,19 @@ func TestGetAbsolutePath(t *testing.T) {
 
 	for _, v := range tests {
 		v.basePath = filepath.Join(v.basePath, "exe.exe")
-		Executable = func() (string, error) { return v.basePath, v.err }
+		executable := func() (string, error) { return v.basePath, v.err }
 		if v.err != nil {
-			require.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath) })
-			continue
+			require.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) })
+		} else {
+			ap := AbsolutePath(v.relPath, executable)
+			expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
+			require.Equal(t, expected, ap)
 		}
-
-		ap := AbsolutePath(v.relPath)
-		expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
-		require.Equal(t, ap, expected)
 	}
 }
 
 func TestDeepCopyMap(t *testing.T) {
+	t.Parallel()
 	s1 := struct{ s string }{"hello"}
 	s2 := struct{ s any }{"world"}
 	var (
@@ -82,6 +83,7 @@ func TestDeepCopyMap(t *testing.T) {
 }
 
 func TestMergeMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		dst      map[string]any
 		src      map[string]any
@@ -123,5 +125,26 @@ func TestMergeMap(t *testing.T) {
 	for _, v := range tests {
 		MergeMap(v.dst, v.src)
 		require.Equal(t, v.dst, v.expected)
+	}
+}
+
+func TestPrintTree(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		m        map[string]any
+		expected []string
+	}{
+		{map[string]any{"a": map[string]any{"b": 0}}, []string{"└── a\n    └── b\n"}},
+		{map[string]any{"a": map[string]any{"b": 0, "c": 0}, "b": map[string]any{"c": 0}}, []string{
+			"├── a\n│   ├── c\n│   └── b\n└── b\n    └── c\n",
+			"├── a\n│   ├── b\n│   └── c\n└── b\n    └── c\n",
+			"├── b\n│   └── c\n└── a\n    ├── b\n    └── c\n",
+		}},
+	}
+
+	for _, v := range tests {
+		w := &bytes.Buffer{}
+		PrintTree(w, v.m, "")
+		assert.Contains(t, v.expected, w.String())
 	}
 }

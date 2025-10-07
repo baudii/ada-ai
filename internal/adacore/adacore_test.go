@@ -8,18 +8,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmc/langchaingo/llms"
 )
 
 type mockLLM struct {
-	generate func() (*llms.ContentResponse, error)
+	generate func(...any) (*llms.ContentResponse, error)
 }
 
-var defaultMock = func() (*llms.ContentResponse, error) {
+var defaultMock = func(...any) (*llms.ContentResponse, error) {
 	return &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "some response"}}}, nil
 }
 
@@ -28,90 +26,43 @@ func (m *mockLLM) Call(ctx context.Context, prompt string, options ...llms.CallO
 }
 
 func (m *mockLLM) GenerateContent(ctx context.Context, messages []llms.MessageContent, options ...llms.CallOption) (*llms.ContentResponse, error) {
-	return m.generate()
+	return m.generate(messages)
 }
 
 func TestNew(t *testing.T) {
-	origDataPath := userDataPath
-	t.Cleanup(func() {
-		userDataPath = origDataPath
-	})
-
+	t.Parallel()
 	tests := []struct {
-		creatUserData bool
+		cfg          *Config
+		opts         []SessionOption
+		expectedRoot string
+		expectedPD   ProjectData
 	}{
-		{true},
-		{false},
+		{nil, []SessionOption{WithProjectsRoot("root")}, "root", ProjectData{}},
+		{&Config{"a", ReflectConfig{1, 2}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
+		{&Config{}, []SessionOption{WithProjectsRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
 	}
-	for _, v := range tests {
-		userDataPath = filepath.Join(t.TempDir(), "user_data.json")
-		if v.creatUserData {
-			os.WriteFile(userDataPath, []byte(`{ "userName": "mockedun", "projName": "mockedpn" }`), 0644)
-		}
-		ai := &mockLLM{}
-		cfg := &Config{}
-		ada := New(ai, cfg)
-		assert.Equal(t, ai, ada.ai)
-		assert.Equal(t, cfg, ada.cfg)
-		if v.creatUserData {
-			assert.Equal(t, ada.Ctx.UserName, "mockedun")
-			assert.Equal(t, ada.Ctx.ProjName, "mockedpn")
-		} else {
-			assert.Nil(t, ada.Ctx)
-		}
-	}
-}
-
-func TestAddProjCtx(t *testing.T) {
 	ai := &mockLLM{}
-	cfg := &Config{}
-	ada := New(ai, cfg)
-	ada.AddProjCtx("testuser", "testproj")
-	assert.NotNil(t, ada.Ctx)
-	assert.Equal(t, "testuser", ada.Ctx.UserName)
-	assert.Equal(t, "testproj", ada.Ctx.ProjName)
-}
-
-func TestSaveCtx(t *testing.T) {
-	origDataPath := userDataPath
-	t.Cleanup(func() {
-		userDataPath = origDataPath
-	})
-	tests := []struct {
-		add bool
-	}{
-		{true},
-		{false},
-	}
 	for _, v := range tests {
-		userDataPath = filepath.Join(t.TempDir(), "user_data.json")
-		ai := &mockLLM{}
-		cfg := &Config{}
-		ada := New(ai, cfg)
-		if v.add {
-			ada.AddProjCtx("testuser", "testproj")
-		}
-		err := ada.SaveCtx()
-		if v.add {
-			assert.NoError(t, err)
-			savedCtx, err := utils.ParseJSONFile[projectContext](userDataPath)
-			assert.NoError(t, err)
-			assert.Equal(t, "testuser", savedCtx.UserName)
-			assert.Equal(t, "testproj", savedCtx.ProjName)
+		ada := New(ai, v.cfg, v.opts...)
+		if v.cfg == nil {
+			assert.Equal(t, &defaultCfg, ada.Cfg)
 		} else {
-			assert.Error(t, err)
+			assert.Equal(t, v.cfg, ada.Cfg)
 		}
+		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot)
+		assert.Equal(t, v.expectedPD, ada.Session.Project)
 	}
 }
 
 func TestGenerateJSON(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		cfg      Config
 		hasError bool
-		mockFunc func() (*llms.ContentResponse, error)
+		mockFunc func(...any) (*llms.ContentResponse, error)
 	}{
 		{Config{Timeout: "1m"}, false, defaultMock},
-		{Config{Timeout: "invalid"}, true, func() (*llms.ContentResponse, error) {
+		{Config{Timeout: "invalid"}, true, func(...any) (*llms.ContentResponse, error) {
 			return nil, errors.New("context deadline exceeded")
 		}},
 	}
@@ -128,7 +79,7 @@ func TestGenerateJSON(t *testing.T) {
 	}
 }
 
-func TestGetPromptFromTemplate(t *testing.T) {
+func TestPromptFromTemplate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		template string
@@ -141,18 +92,41 @@ func TestGetPromptFromTemplate(t *testing.T) {
 		{"", []any{}, true},
 	}
 
+	file := "test_template.txt"
+
 	for _, v := range tests {
 		tempdir := t.TempDir()
-		promptsDir := filepath.Join(tempdir, common.PromptsPath)
-		promptFile := filepath.Join(promptsDir, "test_template.txt")
+		ada := New(&mockLLM{}, nil, WithPromptsRoot(tempdir))
 		if !v.hasErr {
-			err := os.MkdirAll(promptsDir, 0755)
-			require.NoError(t, err)
-			err = os.WriteFile(promptFile, []byte(v.template), 0644)
+			err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
 			require.NoError(t, err)
 		}
-		res, err := PromptFromTemplate(promptFile, v.args...)
+		res, err := ada.PromptFromTemplate(file, v.args...)
 		assert.Equal(t, v.hasErr, err != nil)
 		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
+	}
+}
+
+func TestResolveProjectPath(t *testing.T) {
+	// TODO: Add tests
+	t.Parallel()
+	tests := []struct {
+		root     string
+		projRoot string
+		username string
+		projname string
+	}{
+		{},
+	}
+
+	for _, v := range tests {
+		cfg := &Config{}
+		ai := &mockLLM{}
+		ada := New(ai, cfg, WithProjectsRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
+		res := ada.ResolveProjectPath()
+		assert.Contains(t, res, v.root)
+		assert.Contains(t, res, v.username)
+		assert.Contains(t, res, v.projRoot)
+		assert.Contains(t, res, v.projname)
 	}
 }
