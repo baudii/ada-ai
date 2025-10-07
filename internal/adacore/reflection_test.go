@@ -9,11 +9,7 @@ import (
 )
 
 func TestSendWithReflection(t *testing.T) {
-	origDataPath := ProjectDataFile
-	t.Cleanup(func() {
-		ProjectDataFile = origDataPath
-	})
-
+	t.Parallel()
 	tests := []struct {
 		mockFunc       func() (*llms.ContentResponse, error)
 		reflectinDepth int
@@ -33,4 +29,31 @@ func TestSendWithReflection(t *testing.T) {
 			assert.True(t, (err != nil) == v.hasError)
 		}
 	}
+}
+
+// func TestImprove(t *testing.T) {
+// 	ai := &mockLLM{}
+// 	cfg := &Config{Reflection: ReflectConfig{1, 0.5}}
+// 	root := t.TempDir()
+// 	ada := New(ai, cfg, WithRoot(root))
+
+// }
+
+func TestAvg(t *testing.T) {
+	tests := []struct {
+		r reflection
+		e float32
+	}{
+		{reflection{Scores: score{1, 1, 1}, Suggestions: []string{}}, 1},
+		{reflection{Scores: score{0.2, 0.9, 0.4}, Suggestions: []string{}}, 0.5},
+		{reflection{Scores: score{0, 0, 0}, Suggestions: []string{}}, 0},
+	}
+
+	for _, v := range tests {
+		assert.Equal(t, v.e, v.r.avg())
+	}
+}
+
+func TestLoadTemplates(t *testing.T) {
+
 }

@@ -54,7 +54,7 @@ func Run() {
 		slog.Error("failed send reflect", "error", err)
 		os.Exit(1)
 	}
-	ld, err := projects.NewLocalProj(data, ada.ResolveProjectPath())
+	ld, err := projects.New(data, ada.ResolveProjectPath())
 	if err != nil {
 		slog.Error("failed to create new local project", "error", err)
 		os.Exit(1)

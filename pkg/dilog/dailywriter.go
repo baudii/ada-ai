@@ -60,7 +60,7 @@ func (dw *dailyWriter) rotateIfNeeded() error {
 		return fmt.Errorf("rotate: %w", err)
 	}
 
-	f, err := os.OpenFile(getFileName(dw, date), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(getFileName(dw, date), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
 	if err != nil {
 		return fmt.Errorf("rotate: %w", err)
 	}

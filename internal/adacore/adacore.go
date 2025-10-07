@@ -19,7 +19,7 @@ const (
 	improvePrompt      = "improve-template.txt"
 
 	promptsFolder        = "prompts"
-	ProjectStrucutreFile = "project-structure.json"
+	ProjectStrucutreFile = "project-structure.json" // TODO: fix typo
 )
 
 var ProjectDataFile = "user_data.json"
