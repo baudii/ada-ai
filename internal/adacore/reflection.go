@@ -62,7 +62,7 @@ func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 
 func (ada *Ada) Improve(request string, response string) (*eval, error) {
 	var (
-		res    *eval                 = &eval{response, math.SmallestNonzeroFloat32}
+		res    *eval                 = &eval{response, float32(math.Inf(-1))}
 		curAns string                = response
 		msgs   []llms.MessageContent = make([]llms.MessageContent, 5)
 	)

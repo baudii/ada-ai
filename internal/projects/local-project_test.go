@@ -52,6 +52,7 @@ func TestMaterialize(t *testing.T) {
 		projroot  string
 		errmsg    string
 	}{
+		{map[string]any{"a": make(chan int)}, "p", "save project structure file"},
 		{map[string]any{"a": map[string]any{"b": float64(0), "c": float64(0), "d": float64(0)}, "b": float64(0)}, "p", ""},
 		{map[string]any{"a": map[string]any{"b": map[string]any{"c": true}}}, "p", "invalid structure: value must be either a map or float64, got"},
 		{map[string]any{"a": map[string]any{}}, "p", "remove existing project root"},

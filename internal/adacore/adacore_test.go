@@ -14,10 +14,10 @@ import (
 )
 
 type mockLLM struct {
-	generate func() (*llms.ContentResponse, error)
+	generate func(...any) (*llms.ContentResponse, error)
 }
 
-var defaultMock = func() (*llms.ContentResponse, error) {
+var defaultMock = func(...any) (*llms.ContentResponse, error) {
 	return &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "some response"}}}, nil
 }
 
@@ -26,7 +26,7 @@ func (m *mockLLM) Call(ctx context.Context, prompt string, options ...llms.CallO
 }
 
 func (m *mockLLM) GenerateContent(ctx context.Context, messages []llms.MessageContent, options ...llms.CallOption) (*llms.ContentResponse, error) {
-	return m.generate()
+	return m.generate(messages)
 }
 
 func TestNew(t *testing.T) {
@@ -58,10 +58,10 @@ func TestGenerateJSON(t *testing.T) {
 	tests := []struct {
 		cfg      Config
 		hasError bool
-		mockFunc func() (*llms.ContentResponse, error)
+		mockFunc func(...any) (*llms.ContentResponse, error)
 	}{
 		{Config{Timeout: "1m"}, false, defaultMock},
-		{Config{Timeout: "invalid"}, true, func() (*llms.ContentResponse, error) {
+		{Config{Timeout: "invalid"}, true, func(...any) (*llms.ContentResponse, error) {
 			return nil, errors.New("context deadline exceeded")
 		}},
 	}
@@ -107,5 +107,27 @@ func TestPromptFromTemplate(t *testing.T) {
 		res, err := ada.PromptFromTemplate(file, v.args...)
 		assert.Equal(t, v.hasErr, err != nil)
 		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
+	}
+}
+
+func TestResolveProjectPath(t *testing.T) {
+	tests := []struct {
+		root     string
+		projRoot string
+		username string
+		projname string
+	}{
+		{},
+	}
+
+	for _, v := range tests {
+		cfg := &Config{ProjRoot: v.projRoot}
+		ai := &mockLLM{}
+		ada := New(ai, cfg, WithRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
+		res := ada.ResolveProjectPath()
+		assert.Contains(t, res, v.root)
+		assert.Contains(t, res, v.username)
+		assert.Contains(t, res, v.projRoot)
+		assert.Contains(t, res, v.projname)
 	}
 }
