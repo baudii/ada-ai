@@ -106,6 +106,7 @@ func isMaterialized(m map[string]any, path string) bool {
 }
 
 func TestStructure(t *testing.T) {
+	t.Parallel()
 	p := &LocalProj{structure: map[string]any{}}
 	s := p.Structure()
 	assert.Equal(t, p.structure, s)

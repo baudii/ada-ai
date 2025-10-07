@@ -42,6 +42,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestRegisterFromFile(t *testing.T) {
+	t.Parallel()
 	tests := []bool{true, false}
 	for _, v := range tests {
 		dir := t.TempDir()

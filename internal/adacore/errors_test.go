@@ -7,6 +7,7 @@ import (
 )
 
 func TestError(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		err      error
 		expected string

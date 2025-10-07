@@ -55,6 +55,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestGenerateJSON(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		cfg      Config
 		hasError bool
@@ -111,6 +112,7 @@ func TestPromptFromTemplate(t *testing.T) {
 }
 
 func TestResolveProjectPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		root     string
 		projRoot string

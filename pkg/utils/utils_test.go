@@ -38,6 +38,7 @@ func TestAbsolutePath(t *testing.T) {
 }
 
 func TestDeepCopyMap(t *testing.T) {
+	t.Parallel()
 	s1 := struct{ s string }{"hello"}
 	s2 := struct{ s any }{"world"}
 	var (
@@ -82,6 +83,7 @@ func TestDeepCopyMap(t *testing.T) {
 }
 
 func TestMergeMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		dst      map[string]any
 		src      map[string]any
@@ -127,6 +129,7 @@ func TestMergeMap(t *testing.T) {
 }
 
 func TestPrintTree(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		m        map[string]any
 		expected []string

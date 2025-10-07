@@ -36,6 +36,7 @@ func TestSendWithReflection(t *testing.T) {
 }
 
 func TestImprove(t *testing.T) {
+	t.Parallel()
 	type tRetVal struct {
 		ret string
 		err error
@@ -46,19 +47,20 @@ func TestImprove(t *testing.T) {
 		depth   int
 		retval  *tRetVal
 		improve string
+		hasErr  bool
 	}{
-		{0b000, 1, nil, ""},
-		{0b001, 1, nil, ""},
-		{0b011, 1, nil, ""},
-		{0b111, 1, nil, ""},
+		{0b000, 1, nil, "", true},
+		{0b001, 1, nil, "", true},
+		{0b011, 1, nil, "", true},
+		{0b111, 1, nil, "", false},
 
-		{0b111, 1, &tRetVal{"", fmt.Errorf("err")}, ""},
-		{0b111, 1, &tRetVal{`{"scores":{"relevance":1,"accuracy":1,"completeness":1}}`, nil}, ""},
-		{0b111, 1, &tRetVal{`{"a": 1}`, nil}, ""},
-		{0b111, 1, &tRetVal{`{"a": 1}`, nil}, "fail"},
-		{0b111, 0, &tRetVal{`{"a": 1}`, nil}, "fail"},
-		{0b111, 1, &tRetVal{"", nil}, ""},
-		{0b111, 1, &tRetVal{"{\\}}", nil}, ""},
+		{0b111, 1, &tRetVal{"", fmt.Errorf("err")}, "", false},
+		{0b111, 1, &tRetVal{`{"scores":{"relevance":1,"accuracy":1,"completeness":1}}`, nil}, "", false},
+		{0b111, 1, &tRetVal{`{"a": 1}`, nil}, "", false},
+		{0b111, 1, &tRetVal{`{"a": 1}`, nil}, "fail", true},
+		{0b111, 0, &tRetVal{`{"a": 1}`, nil}, "fail", true},
+		{0b111, 1, &tRetVal{"", nil}, "", false},
+		{0b111, 1, &tRetVal{"{\\}}", nil}, "", false},
 	}
 
 	for _, v := range tests {
@@ -99,10 +101,10 @@ func TestImprove(t *testing.T) {
 			}
 		}
 		_, err = ada.Improve("", "")
-		if v.flags == 0b111 {
-			assert.NoError(t, err)
-		} else {
+		if v.hasErr {
 			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
 		}
 	}
 
