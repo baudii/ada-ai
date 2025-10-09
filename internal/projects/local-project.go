@@ -10,22 +10,28 @@ import (
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
+type projectPathResolver interface {
+	ResolveProjectPath() string
+}
+
 type LocalProj struct {
 	structure   map[string]any
 	projectRoot string
 }
 
 // New creates a new local project descriptor from structure that represents
-// the json folder structure of the project and base that determines the root
-// base folder of where the project will be created
+// the json folder structure of the project and a resolver that resolves the
+// base that determines the root folder of where the project will be created.
 //
 // It returns an error if the JSON cannot be unmarshaled or the base path
 // is invalid.
-func New(structure []byte, base string) (*LocalProj, error) {
+func New(structure []byte, resolver projectPathResolver) (*LocalProj, error) {
 	d := &LocalProj{}
 	if err := json.Unmarshal([]byte(structure), &d.structure); err != nil {
 		return nil, fmt.Errorf("unmarshal project structure: %w", err)
 	}
+
+	base := resolver.ResolveProjectPath()
 	if !filepath.IsAbs(base) {
 		return nil, fmt.Errorf("path %q is not absolute", base)
 	}

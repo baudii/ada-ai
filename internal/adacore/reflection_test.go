@@ -26,7 +26,7 @@ func TestSendWithReflection(t *testing.T) {
 	for _, v := range tests {
 		ai := &mockLLM{v.mockFunc}
 		cfg := &Config{Reflection: ReflectConfig{Depth: 3, Threshhold: 0.95}}
-		ada := New(ai, cfg)
+		ada := New(ai, WithConfig(cfg))
 		res, err := ada.SendReflect("some prompt")
 		if err == nil {
 			assert.Equal(t, []byte("some response"), res, "test: %v", v)
@@ -85,7 +85,7 @@ func TestImprove(t *testing.T) {
 		ai := &mockLLM{f}
 		cfg := &Config{Reflection: ReflectConfig{v.depth, threshold}}
 		root := t.TempDir()
-		ada := New(ai, cfg, WithPromptsRoot(root))
+		ada := New(ai, WithConfig(cfg), WithPromptsRoot(root))
 		prompts := []string{reflectPrompt, reflectShortPrompt, improvePrompt}
 		for i, pr := range prompts {
 			if ((1 << i) & v.flags) != 0 {

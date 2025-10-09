@@ -41,7 +41,7 @@ type templates struct {
 	improve      string
 }
 
-func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
+func (ada *ada) SendReflect(prompt string) ([]byte, error) {
 	resp, err := ada.GenerateJSON(prompt, nil)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 	return utils.TrimJSON(data)
 }
 
-func (ada *Ada) Improve(request string, response string) (*eval, error) {
+func (ada *ada) Improve(request string, response string) (*eval, error) {
 	var (
 		res    *eval                 = &eval{response, float32(math.Inf(-1))}
 		curAns string                = response
@@ -72,8 +72,8 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		return res, fmt.Errorf("load templates: %w", err)
 	}
 
-	for i := 0; i < ada.Cfg.Reflection.Depth; i++ {
-		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.Cfg.Reflection.Depth)
+	for i := 0; i < ada.Session.Cfg.Reflection.Depth; i++ {
+		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.Session.Cfg.Reflection.Depth)
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, request))
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, curAns))
 		reflection, err := ada.Reflect(templates.reflect, msgs)
@@ -90,7 +90,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 			res.ans = curAns
 		}
 
-		if res.score > ada.Cfg.Reflection.Threshhold {
+		if res.score > ada.Session.Cfg.Reflection.Threshhold {
 			slog.Debug("threshold met")
 			return res, nil
 		}
@@ -109,15 +109,15 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		curAns = resp.Choices[0].Content
 	}
 
-	if ada.Cfg.Reflection.Depth <= 0 {
-		return res, fmt.Errorf("reflection depth is set to %v", ada.Cfg.Reflection.Depth)
+	if ada.Session.Cfg.Reflection.Depth <= 0 {
+		return res, fmt.Errorf("reflection depth is set to %v", ada.Session.Cfg.Reflection.Depth)
 	}
 
-	slog.Error("failed to improve", "best", res.score, "threshold", ada.Cfg.Reflection.Threshhold)
+	slog.Error("failed to improve", "best", res.score, "threshold", ada.Session.Cfg.Reflection.Threshhold)
 	return res, nil
 }
 
-func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
+func (ada *ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
 	resp, err := ada.GenerateJSON(reflectPrompt, msgs)
 	if err != nil {
 		return nil, fmt.Errorf("reflect: %w", err)
@@ -138,7 +138,7 @@ func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 	return &r, nil
 }
 
-func (ada *Ada) loadTemplates() (*templates, error) {
+func (ada *ada) loadTemplates() (*templates, error) {
 	reflectTemplate, err := ada.PromptFromTemplate(reflectPrompt)
 	if err != nil {
 		return nil, err

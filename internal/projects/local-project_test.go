@@ -9,6 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type resolver struct {
+	path string
+}
+
+func (r *resolver) ResolveProjectPath() string {
+	return r.path
+}
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -34,7 +42,7 @@ func TestNew(t *testing.T) {
 			}
 		}
 		base := filepath.Join(d, v.base)
-		p, err := New([]byte(v.structure), base)
+		p, err := New([]byte(v.structure), &resolver{base})
 		if !v.isValidJson {
 			assert.ErrorContains(t, err, "unmarshal project structure", "test: %v", v)
 		} else if !v.isAbs {

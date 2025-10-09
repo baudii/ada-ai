@@ -38,9 +38,9 @@ func Run() {
 		slog.Info("succesffully parsed json configuration", "cfg", cfg)
 	}
 
-	options := getProjectData()
-
-	ada := adacore.New(ai, cfg, options...)
+	options := getOptions()
+	options = append(options, adacore.WithConfig(cfg))
+	ada := adacore.New(ai, options...)
 
 	input := utils.ReadInput("Provide project description")
 	step1Template, err := ada.PromptFromTemplate(adacore.ProjectStructurePrompt, ada.Session.Project.ProjName, input)
@@ -53,7 +53,7 @@ func Run() {
 		slog.Error("failed send reflect", "error", err)
 		os.Exit(1)
 	}
-	ld, err := projects.New(data, ada.ResolveProjectPath())
+	ld, err := projects.New(data, ada)
 	if err != nil {
 		slog.Error("failed to create new local project", "error", err)
 		os.Exit(1)
@@ -67,7 +67,7 @@ func Run() {
 	}
 }
 
-func getProjectData() []adacore.SessionOption {
+func getOptions() []adacore.SessionOption {
 	path := filepath.Join(common.DataPath, adacore.ProjectDataFile)
 	var options []adacore.SessionOption
 	options = append(options, adacore.WithProjectsRoot(common.ProjectsPath), adacore.WithPromptsRoot(common.PromptsPath))
