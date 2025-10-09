@@ -45,6 +45,7 @@ func TestNew(t *testing.T) {
 	for _, v := range tests {
 		v.opts = append(v.opts, WithConfig(v.cfg))
 		ada := New(ai, v.opts...)
+		assert.Nil(t, ada.Proj)
 		if v.cfg == nil {
 			assert.Equal(t, &defaultCfg, ada.Session.Cfg, "test: %v", v)
 		} else {

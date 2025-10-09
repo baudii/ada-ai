@@ -19,15 +19,14 @@ const (
 	reflectShortPrompt = "reflect-template-short.txt"
 	improvePrompt      = "improve-template.txt"
 
+	UserDataFile         = "user_data.json"         // TODO: Change the way user data is stored
 	ProjectStrucutreFile = "project-structure.json" // TODO: fix typo
 )
 
-var ProjectDataFile = "user_data.json"
-
 type ada struct {
 	ai      llms.Model
-	Session *session
-	Proj    Project
+	Session session
+	Proj    project
 }
 
 type Config struct {
@@ -42,12 +41,12 @@ type ProjectData struct {
 	// tech stack, architecture, project summary etc.
 }
 
-type SessionOption func(*session)
-
-type Project interface {
+type project interface {
 	Materialize() error
 	Structure() map[string]any
 }
+
+type SessionOption func(*session)
 
 type session struct {
 	Cfg          *Config
@@ -115,7 +114,7 @@ func New(ai llms.Model, opts ...SessionOption) *ada {
 		session.Cfg = &defaultCfg
 	}
 
-	return &ada{ai: ai, Session: session}
+	return &ada{ai: ai, Session: *session}
 }
 
 // ResolvePromptPath a path to the prompt from the prompts folder with
