@@ -59,7 +59,11 @@ func Run() {
 		os.Exit(1)
 	}
 	ada.Proj = ld
-	utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	err = utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	if err != nil {
+		slog.Error("failed to print the tree", "error", err)
+	}
+
 	err = ada.Proj.Materialize()
 	if err != nil {
 		slog.Error("failed to materialize project", "error", err)

@@ -90,7 +90,10 @@ func TestParseJSONFile(t *testing.T) {
 	for i, v := range tests {
 		path := filepath.Join(t.TempDir(), "ttt.json")
 		if v.hasFile {
-			os.WriteFile(path, []byte(v.json), 0644)
+			err := os.WriteFile(path, []byte(v.json), 0644)
+			if !assert.NoError(t, err) {
+				continue
+			}
 		}
 		res, err := ParseJSONFile[Valid](path)
 		if v.hasErr {

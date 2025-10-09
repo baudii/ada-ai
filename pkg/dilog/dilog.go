@@ -44,7 +44,7 @@ func Init(cfg *Config) {
 
 func WritelnToDw(msg string) {
 	if Dw != nil {
-		Dw.Write([]byte(msg + "\n"))
+		_, _ = Dw.Write([]byte(msg + "\n"))
 	}
 }
 

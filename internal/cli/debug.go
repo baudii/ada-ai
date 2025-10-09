@@ -62,8 +62,11 @@ func debugStep1(ai llms.Model) {
 	}
 	ada.Proj = ld
 
-	utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
-	ada.Proj.Materialize()
+	err = utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	if err != nil {
+		slog.Error("failed to print the tree", "error", err)
+	}
+	_ = ada.Proj.Materialize()
 }
 
 func debugProjectStructure(ai llms.Model) {
@@ -88,7 +91,10 @@ func debugProjectStructure(ai llms.Model) {
 	}
 
 	ada.Proj = ld
-	utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	err = utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
+	if err != nil {
+		slog.Error("failed to print the tree", "error", err)
+	}
 	err = ld.Materialize()
 	if err != nil {
 		slog.Error("error occured whe materializing", "error", err)

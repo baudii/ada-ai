@@ -28,7 +28,10 @@ func TestParseJSONFileToMap(t *testing.T) {
 	for i, v := range tests {
 		v.path = filepath.Join(v.path, "tmp.json")
 		if v.jsonContent != "" {
-			os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+			err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+			if !assert.NoError(t, err) {
+				continue
+			}
 		}
 
 		res, err := ParseJSONFileToMap(v.path)
@@ -84,8 +87,14 @@ func TestParseJSONConfigWithLocal(t *testing.T) {
 		v.path = filepath.Join(v.path, "tmp.json")
 		if v.jsonContent != "" {
 			localPath := InsertFsuffix(v.path, ".local")
-			os.WriteFile(v.path, []byte(v.jsonContent), 0644)
-			os.WriteFile(localPath, []byte(v.localJsonContent), 0644)
+			err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+			if !assert.NoError(t, err) {
+				continue
+			}
+			err = os.WriteFile(localPath, []byte(v.localJsonContent), 0644)
+			if !assert.NoError(t, err) {
+				continue
+			}
 		}
 
 		res, err := ParseJSONConfigWithLocal[config](v.path)

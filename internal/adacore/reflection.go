@@ -62,9 +62,9 @@ func (ada *ada) SendReflect(prompt string) ([]byte, error) {
 
 func (ada *ada) Improve(request string, response string) (*eval, error) {
 	var (
-		res    *eval                 = &eval{response, float32(math.Inf(-1))}
-		curAns string                = response
-		msgs   []llms.MessageContent = make([]llms.MessageContent, 5)
+		res    = &eval{response, float32(math.Inf(-1))}
+		curAns = response
+		msgs   = make([]llms.MessageContent, 5)
 	)
 
 	templates, err := ada.loadTemplates()

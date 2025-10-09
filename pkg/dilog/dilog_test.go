@@ -24,7 +24,7 @@ func TestInit(t *testing.T) {
 		getDate = origF
 		getFileName = origGf
 		getDw = origGetDw
-		Dw.file.Close()
+		_ = Dw.file.Close()
 		Dw = nil
 	})
 
@@ -80,7 +80,7 @@ func TestInit(t *testing.T) {
 				assert.Contains(t, w.(*bytes.Buffer).String(), "Message", "test: %v", i)
 			}
 		}(v.level, v.logFunc)
-		Dw.file.Close()
+		_ = Dw.file.Close()
 	}
 }
 
@@ -107,7 +107,7 @@ func TestWritelnToDw(t *testing.T) {
 	content, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, "Test message\n", string(content))
-	Dw.file.Close()
+	_ = Dw.file.Close()
 }
 
 func TestVariableFunctions(t *testing.T) {

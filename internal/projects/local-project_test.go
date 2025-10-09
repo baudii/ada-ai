@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type resolver struct {
@@ -73,11 +72,17 @@ func TestMaterializeFails(t *testing.T) {
 		a := path.Join(dir, "a")
 		switch v.err {
 		case "create file":
-			os.MkdirAll(a, 0744)
+			if err := os.MkdirAll(a, 0744); !assert.NoError(t, err) {
+				continue
+			}
 		case "create folder(s)":
 			f, err := os.Create(a)
-			require.NoError(t, err)
-			f.Close()
+			if !assert.NoError(t, err) {
+				continue
+			}
+			if err = f.Close(); !assert.NoError(t, err) {
+				continue
+			}
 		}
 		err := materialize(dir, v.m)
 		assert.ErrorContains(t, err, v.err, "test: %v", i)
@@ -106,7 +111,7 @@ func TestMaterialize(t *testing.T) {
 			if !assert.NoError(t, err, "test: %v", i) {
 				continue
 			}
-			t.Cleanup(func() { f.Close() })
+			t.Cleanup(func() { _ = f.Close() })
 		case "create project root folder":
 			d = ""
 		}

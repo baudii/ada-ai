@@ -93,7 +93,7 @@ func materialize(base string, structure map[string]any) error {
 			if err != nil {
 				return fmt.Errorf("create file: %w", err)
 			}
-			f.Close()
+			_ = f.Close()
 		default:
 			return fmt.Errorf("invalid structure: value must be either a map or float64, got %T", v)
 		}

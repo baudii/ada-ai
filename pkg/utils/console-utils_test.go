@@ -36,7 +36,7 @@ func TestReadInputInternal(t *testing.T) {
 		logger = origlg
 	})
 
-	var cnt int = 0
+	var cnt = 0
 	tests := []struct {
 		r         io.Reader
 		w         *bytes.Buffer

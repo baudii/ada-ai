@@ -38,7 +38,7 @@ func ParseJSONFileToMap(path string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var m map[string]any
 	if err := json.NewDecoder(f).Decode(&m); err != nil {

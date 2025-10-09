@@ -16,7 +16,11 @@ var (
 
 func ReadInput(msg string) string {
 	for {
-		fmt.Fprintf(writer, "%v > ", msg)
+		_, err := fmt.Fprintf(writer, "%v > ", msg)
+		if err != nil {
+			panic(fmt.Errorf("failed to write to the writer %v", writer))
+		}
+
 		scanner := bufio.NewScanner(reader)
 		var line string
 		if scanner.Scan() {

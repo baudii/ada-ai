@@ -144,7 +144,10 @@ func TestPrintTree(t *testing.T) {
 
 	for i, v := range tests {
 		w := &bytes.Buffer{}
-		PrintTree(w, v.m, "")
+		err := PrintTree(w, v.m, "")
+		if !assert.NoError(t, err) {
+			continue
+		}
 		assert.Contains(t, v.expected, w.String(), "test: %v", i)
 	}
 }

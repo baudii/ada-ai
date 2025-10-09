@@ -125,7 +125,7 @@ func deepCopyR(v reflect.Value) reflect.Value {
 //
 // The prefix argument is used internally to align child elements and should
 // normally be an empty string when called from outside.
-func PrintTree(w io.Writer, structure map[string]any, prefix string) {
+func PrintTree(w io.Writer, structure map[string]any, prefix string) error {
 	i := 0
 	for k, v := range structure {
 		i++
@@ -135,9 +135,17 @@ func PrintTree(w io.Writer, structure map[string]any, prefix string) {
 			conn = "└── "
 			nextPrefix = prefix + "    "
 		}
-		fmt.Fprintf(w, "%s%s%s\n", prefix, conn, k)
+		_, err := fmt.Fprintf(w, "%s%s%s\n", prefix, conn, k)
+		if err != nil {
+			return fmt.Errorf("writing to writer %v: %w", w, err)
+		}
 		if m, ok := v.(map[string]any); ok {
-			PrintTree(w, m, nextPrefix)
+			err := PrintTree(w, m, nextPrefix)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
