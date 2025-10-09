@@ -138,6 +138,7 @@ func TestPrintTree(t *testing.T) {
 			"├── a\n│   ├── c\n│   └── b\n└── b\n    └── c\n",
 			"├── a\n│   ├── b\n│   └── c\n└── b\n    └── c\n",
 			"├── b\n│   └── c\n└── a\n    ├── b\n    └── c\n",
+			"├── b\n│   └── c\n└── a\n    ├── c\n    └── b\n",
 		}},
 	}
 

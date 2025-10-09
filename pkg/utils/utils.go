@@ -114,6 +114,8 @@ func deepCopyR(v reflect.Value) reflect.Value {
 }
 
 // PrintTree writes a textual tree representation of the given structure to w.
+// NOTE: since map is unordered by nature, there is not guarantee of an order in
+// this function either.
 //
 // The structure is expected to be a nested map[string]any, where each key is
 // treated as a directory or file name, and nested maps represent subdirectories.
