@@ -37,7 +37,7 @@ func TestRegister(t *testing.T) {
 
 	for _, v := range tests {
 		_, err := Register(v.cfg)
-		assert.Equal(t, (err != nil), v.hasErr)
+		assert.Equal(t, (err != nil), v.hasErr, "test: %v", v)
 	}
 }
 
@@ -48,13 +48,13 @@ func TestRegisterFromFile(t *testing.T) {
 		dir := t.TempDir()
 		if !v {
 			err := os.WriteFile(filepath.Join(dir, configName), []byte(`{"provider": "ollama", "options": {"model":"some"}}`), 0644)
-			require.NoError(t, err)
+			require.NoError(t, err, "test: %v", v)
 		}
 		_, err := RegisterFromFile(dir)
 		if v {
-			assert.Error(t, err)
+			assert.Error(t, err, "test: %v", v)
 		} else {
-			assert.NoError(t, err)
+			assert.NoError(t, err, "test: %v", v)
 		}
 	}
 }

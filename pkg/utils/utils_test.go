@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAbsolutePath(t *testing.T) {
@@ -28,11 +27,11 @@ func TestAbsolutePath(t *testing.T) {
 		v.basePath = filepath.Join(v.basePath, "exe.exe")
 		executable := func() (string, error) { return v.basePath, v.err }
 		if v.err != nil {
-			require.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) })
+			assert.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) }, "test: %v", v)
 		} else {
 			ap := AbsolutePath(v.relPath, executable)
 			expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
-			require.Equal(t, expected, ap)
+			assert.Equal(t, expected, ap, "test: %v", v)
 		}
 	}
 }
@@ -67,9 +66,9 @@ func TestDeepCopyMap(t *testing.T) {
 	m1["e"] = "hello"
 	m1["f"] = &s2
 
-	require.Nil(t, m3)
-	require.Equal(t, map[string]any{"a": "zzz", "d": []int{100, 2, 3}, "e": "hello", "f": &s2, "g": nilSl, "h": nilMap, "i": nilPtr, "j": nilIfc}, m1)
-	require.Equal(t, map[string]any{
+	assert.Nil(t, m3)
+	assert.Equal(t, map[string]any{"a": "zzz", "d": []int{100, 2, 3}, "e": "hello", "f": &s2, "g": nilSl, "h": nilMap, "i": nilPtr, "j": nilIfc}, m1)
+	assert.Equal(t, map[string]any{
 		"a": "bbb",
 		"b": map[string]any{"c": 123, "s": nil},
 		"d": []int{1, 2, 3},
@@ -124,7 +123,7 @@ func TestMergeMap(t *testing.T) {
 
 	for _, v := range tests {
 		MergeMap(v.dst, v.src)
-		require.Equal(t, v.dst, v.expected)
+		assert.Equal(t, v.dst, v.expected, "test: %v", v)
 	}
 }
 
@@ -145,6 +144,6 @@ func TestPrintTree(t *testing.T) {
 	for _, v := range tests {
 		w := &bytes.Buffer{}
 		PrintTree(w, v.m, "")
-		assert.Contains(t, v.expected, w.String())
+		assert.Contains(t, v.expected, w.String(), "test: %v", v)
 	}
 }

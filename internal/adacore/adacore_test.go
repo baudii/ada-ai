@@ -45,12 +45,12 @@ func TestNew(t *testing.T) {
 	for _, v := range tests {
 		ada := New(ai, v.cfg, v.opts...)
 		if v.cfg == nil {
-			assert.Equal(t, &defaultCfg, ada.Cfg)
+			assert.Equal(t, &defaultCfg, ada.Cfg, "test: %v", v)
 		} else {
-			assert.Equal(t, v.cfg, ada.Cfg)
+			assert.Equal(t, v.cfg, ada.Cfg, "test: %v", v)
 		}
-		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot)
-		assert.Equal(t, v.expectedPD, ada.Session.Project)
+		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot, "test: %v", v)
+		assert.Equal(t, v.expectedPD, ada.Session.Project, "test: %v", v)
 	}
 }
 
@@ -71,10 +71,10 @@ func TestGenerateJSON(t *testing.T) {
 		ai := &mockLLM{v.mockFunc}
 		ada := New(ai, &v.cfg)
 		res, err := ada.GenerateJSON("test prompt", []llms.MessageContent{})
-		assert.Equal(t, v.hasError, err != nil)
+		assert.Equal(t, v.hasError, err != nil, "test: %v", v)
 		if !v.hasError {
-			assert.NotNil(t, res)
-			assert.Equal(t, "some response", res.Choices[0].Content)
+			assert.NotNil(t, res, "test: %v", v)
+			assert.Equal(t, "some response", res.Choices[0].Content, "test: %v", v)
 		}
 	}
 }
@@ -99,11 +99,11 @@ func TestPromptFromTemplate(t *testing.T) {
 		ada := New(&mockLLM{}, nil, WithPromptsRoot(tempdir))
 		if !v.hasErr {
 			err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
-			require.NoError(t, err)
+			require.NoError(t, err, "test: %v", v)
 		}
 		res, err := ada.PromptFromTemplate(file, v.args...)
-		assert.Equal(t, v.hasErr, err != nil)
-		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
+		assert.Equal(t, v.hasErr, err != nil, "test: %v", v)
+		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res, "test: %v", v)
 	}
 }
 
@@ -124,9 +124,9 @@ func TestResolveProjectPath(t *testing.T) {
 		ai := &mockLLM{}
 		ada := New(ai, cfg, WithProjectsRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
 		res := ada.ResolveProjectPath()
-		assert.Contains(t, res, v.root)
-		assert.Contains(t, res, v.username)
-		assert.Contains(t, res, v.projRoot)
-		assert.Contains(t, res, v.projname)
+		assert.Contains(t, res, v.root, "test: %v", v)
+		assert.Contains(t, res, v.username, "test: %v", v)
+		assert.Contains(t, res, v.projRoot, "test: %v", v)
+		assert.Contains(t, res, v.projname, "test: %v", v)
 	}
 }

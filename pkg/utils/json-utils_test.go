@@ -38,8 +38,8 @@ func TestTrimJSON(t *testing.T) {
 
 	for _, v := range tests {
 		res, err := TrimJSON(v.json)
-		require.Equal(t, err != nil, v.hasError)
-		require.Equal(t, res, v.trimmed)
+		assert.Equal(t, err != nil, v.hasError, "test: %v", v)
+		assert.Equal(t, res, v.trimmed, "test: %v", v)
 	}
 }
 
@@ -61,12 +61,12 @@ func TestSaveJSONToFile(t *testing.T) {
 	for _, v := range tests {
 		path := filepath.Join(t.TempDir(), "tmp.tmp")
 		err := SaveJSONToFile(v.content, path)
-		require.Equal(t, err != nil, v.hasErr)
+		assert.Equal(t, err != nil, v.hasErr, "test: %v", v)
 		if err == nil {
 			got, readErr := os.ReadFile(path)
-			require.Equal(t, readErr == nil, v.fileExist)
+			assert.Equal(t, readErr == nil, v.fileExist, "test: %v", v)
 			if readErr == nil {
-				require.Equal(t, []byte(v.result), got)
+				assert.Equal(t, []byte(v.result), got, "test: %v", v)
 			}
 		}
 	}
@@ -95,15 +95,13 @@ func TestParseJSONFile(t *testing.T) {
 		res, err := ParseJSONFile[Valid](path)
 		if v.hasErr {
 			if v.hasFile {
-				require.True(t, err != nil)
+				assert.Error(t, err, "test: %v", v)
 			} else {
-				require.True(t, os.IsNotExist(err))
+				assert.True(t, os.IsNotExist(err), "expected not exist error: test: %v", v)
 			}
 		} else {
-			require.NoError(t, err)
-		}
-		if err == nil {
-			require.Equal(t, *res, v.valid)
+			require.NoError(t, err, "test: %v", v)
+			assert.Equal(t, *res, v.valid, "test: %v", v)
 		}
 	}
 }
@@ -141,10 +139,10 @@ func TestMapToStruct(t *testing.T) {
 	for _, v := range tests {
 		res, err := MapToStruct[s](v.m)
 		if v.err == "" {
-			assert.NoError(t, err)
+			assert.NoError(t, err, "test: %v", v)
 		} else {
-			assert.ErrorContains(t, err, v.err)
+			assert.ErrorContains(t, err, v.err, "test: %v", v)
 		}
-		assert.Equal(t, v.expected, res)
+		assert.Equal(t, v.expected, res, "test: %v", v)
 	}
 }

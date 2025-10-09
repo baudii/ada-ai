@@ -29,8 +29,8 @@ func TestSendWithReflection(t *testing.T) {
 		ada := New(ai, cfg)
 		res, err := ada.SendReflect("some prompt")
 		if err == nil {
-			assert.Equal(t, []byte("some response"), res)
-			assert.True(t, (err != nil) == v.hasError)
+			assert.Equal(t, []byte("some response"), res, "test: %v", v)
+			assert.True(t, (err != nil) == v.hasError, "test: %v", v)
 		}
 	}
 }
@@ -94,14 +94,14 @@ func TestImprove(t *testing.T) {
 					bytes = []byte(v.improve)
 				}
 				err := os.WriteFile(filepath.Join(root, pr), bytes, 0644)
-				require.NoError(t, err)
+				require.NoError(t, err, "test: %v", v)
 			}
 		}
 		_, err := ada.Improve("", "")
 		if v.hasErr {
-			assert.Error(t, err)
+			assert.Error(t, err, "test: %v", v)
 		} else {
-			assert.NoError(t, err)
+			assert.NoError(t, err, "test: %v", v)
 		}
 	}
 

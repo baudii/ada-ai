@@ -9,5 +9,5 @@ import (
 
 func TestInit(t *testing.T) {
 	t.Parallel()
-	assert.True(t, filepath.IsAbs(Artifacts))
+	assert.True(t, filepath.IsAbs(Artifacts), "expected %q to be absolute path", Artifacts)
 }

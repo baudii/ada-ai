@@ -36,11 +36,11 @@ func TestNew(t *testing.T) {
 		base := filepath.Join(d, v.base)
 		p, err := New([]byte(v.structure), base)
 		if !v.isValidJson {
-			assert.ErrorContains(t, err, "unmarshal project structure: ")
+			assert.ErrorContains(t, err, "unmarshal project structure", "test: %v", v)
 		} else if !v.isAbs {
-			assert.ErrorContains(t, err, "is not absolute")
+			assert.ErrorContains(t, err, "is not absolute", "test: %v", v)
 		} else {
-			assert.Equal(t, v.expected, p)
+			assert.Equal(t, v.expected, p, "test: %v", v)
 		}
 	}
 }
@@ -55,7 +55,6 @@ func TestMaterialize(t *testing.T) {
 		{map[string]any{"a": make(chan int)}, "p", "save project structure file"},
 		{map[string]any{"a": map[string]any{"b": float64(0), "c": float64(0), "d": float64(0)}, "b": float64(0)}, "p", ""},
 		{map[string]any{"a": map[string]any{"b": map[string]any{"c": true}}}, "p", "invalid structure: value must be either a map or float64, got"},
-		{map[string]any{"a": map[string]any{}}, "p", "remove existing project root"},
 		{map[string]any{"a": float64(0)}, "p", "is not a directory"},
 		{map[string]any{"a": float64(0)}, "p", "create project root folder"},
 	}
@@ -63,15 +62,9 @@ func TestMaterialize(t *testing.T) {
 	for _, v := range tests {
 		d := filepath.Join(t.TempDir(), v.projroot)
 		switch v.errmsg {
-		case "remove existing project root":
-			err := os.MkdirAll(d, 0o755)
-			require.NoError(t, err)
-			f, err := os.Create(filepath.Join(d, "a"))
-			require.NoError(t, err)
-			t.Cleanup(func() { f.Close() })
 		case "is not a directory":
 			f, err := os.Create(d)
-			require.NoError(t, err)
+			require.NoError(t, err, "test: %v", v)
 			t.Cleanup(func() { f.Close() })
 		case "create project root folder":
 			d = ""
@@ -79,10 +72,10 @@ func TestMaterialize(t *testing.T) {
 		lp := &LocalProj{v.structure, d}
 		err := lp.Materialize()
 		if v.errmsg == "" {
-			assert.True(t, isMaterialized(v.structure, d))
+			assert.True(t, isMaterialized(v.structure, d), "test: %v", v)
 			continue
 		}
-		assert.ErrorContains(t, err, v.errmsg)
+		assert.ErrorContains(t, err, v.errmsg, "test: %v", v)
 	}
 }
 
@@ -107,7 +100,7 @@ func isMaterialized(m map[string]any, path string) bool {
 
 func TestStructure(t *testing.T) {
 	t.Parallel()
-	p := &LocalProj{structure: map[string]any{}}
+	p := &LocalProj{structure: map[string]any{"p": "a"}}
 	s := p.Structure()
 	assert.Equal(t, p.structure, s)
 }

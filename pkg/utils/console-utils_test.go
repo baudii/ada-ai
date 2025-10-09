@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 type errorReader struct {
@@ -59,12 +59,12 @@ func TestReadInputInternal(t *testing.T) {
 		res := ReadInput(v.msg)
 
 		if !v.logsErr {
-			require.True(t, len(v.logwriter.String()) == 0)
+			assert.True(t, len(v.logwriter.String()) == 0, "test: %v", v)
 		} else {
-			require.True(t, len(v.logwriter.String()) > 0)
+			assert.True(t, len(v.logwriter.String()) > 0, "test: %v", v)
 		}
 
-		require.Equal(t, v.expWr, v.w.String())
-		require.Equal(t, v.expRead, res)
+		assert.Equal(t, v.expWr, v.w.String(), "test: %v", v)
+		assert.Equal(t, v.expRead, res, "test: %v", v)
 	}
 }

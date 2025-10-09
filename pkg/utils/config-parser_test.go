@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseJSONFileToMap(t *testing.T) {
@@ -32,8 +32,8 @@ func TestParseJSONFileToMap(t *testing.T) {
 		}
 
 		res, err := ParseJSONFileToMap(v.path)
-		require.True(t, (err != nil) == v.hasErr)
-		require.Equal(t, v.expected, res)
+		assert.True(t, (err != nil) == v.hasErr, "test: %v", v)
+		assert.Equal(t, v.expected, res, "test: %v", v)
 	}
 }
 
@@ -89,7 +89,7 @@ func TestParseJSONConfigWithLocal(t *testing.T) {
 		}
 
 		res, err := ParseJSONConfigWithLocal[config](v.path)
-		require.True(t, (err != nil) == v.hasErr)
-		require.Equal(t, v.expected, res)
+		assert.True(t, (err != nil) == v.hasErr, "test: %v", v)
+		assert.Equal(t, v.expected, res, "test: %v", v)
 	}
 }
