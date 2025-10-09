@@ -39,23 +39,30 @@ func TestReadInputInternal(t *testing.T) {
 	var cnt = 0
 	tests := []struct {
 		r         io.Reader
-		w         *bytes.Buffer
+		w         io.Writer
 		logwriter *bytes.Buffer
 		msg       string
 		expRead   string
 		expWr     string
 		logsErr   bool
+		panics    bool
 	}{
-		{strings.NewReader("a"), &bytes.Buffer{}, &bytes.Buffer{}, "i", "a", "i > ", false},
-		{strings.NewReader("a\na"), &bytes.Buffer{}, &bytes.Buffer{}, "", "a", " > ", false},
-		{strings.NewReader("abc\nabc\nabc"), &bytes.Buffer{}, &bytes.Buffer{}, "abc", "abc", "abc > ", false},
-		{errorReader{r: strings.NewReader("f1"), cnt: &cnt}, &bytes.Buffer{}, &bytes.Buffer{}, "---", "f1", "--- > --- > ", true},
+		{strings.NewReader("a"), &bytes.Buffer{}, &bytes.Buffer{}, "i", "a", "i > ", false, false},
+		{strings.NewReader("a\na"), &bytes.Buffer{}, &bytes.Buffer{}, "", "a", " > ", false, false},
+		{strings.NewReader("abc\nabc\nabc"), &bytes.Buffer{}, &bytes.Buffer{}, "abc", "abc", "abc > ", false, false},
+		{errorReader{r: strings.NewReader("f1"), cnt: &cnt}, &bytes.Buffer{}, &bytes.Buffer{}, "---", "f1", "--- > --- > ", true, false},
+		{errorReader{r: strings.NewReader("f1"), cnt: &cnt}, &bytes.Buffer{}, &bytes.Buffer{}, "---", "f1", "--- > --- > ", true, true},
 	}
 
 	for i, v := range tests {
 		reader = v.r
 		writer = v.w
 		logger = slog.New(slog.NewTextHandler(v.logwriter, nil))
+		if v.panics {
+			writer = &mockWriter{func() (int, error) { return 0, fmt.Errorf("failed") }}
+			assert.Panics(t, func() { _ = ReadInput(v.msg) }, "test: %v", i)
+			continue
+		}
 		res := ReadInput(v.msg)
 
 		if !v.logsErr {
@@ -64,7 +71,10 @@ func TestReadInputInternal(t *testing.T) {
 			assert.True(t, len(v.logwriter.String()) > 0, "test: %v", i)
 		}
 
-		assert.Equal(t, v.expWr, v.w.String(), "test: %v", i)
+		b, ok := v.w.(*bytes.Buffer)
+		if assert.True(t, ok, "test: %v", i) {
+			assert.Equal(t, v.expWr, b.String(), "test: %v", i)
+		}
 		assert.Equal(t, v.expRead, res, "test: %v", i)
 	}
 }

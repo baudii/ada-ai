@@ -3,11 +3,20 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type mockWriter struct {
+	f func() (int, error)
+}
+
+func (m *mockWriter) Write(p []byte) (n int, err error) {
+	return m.f()
+}
 
 func TestAbsolutePath(t *testing.T) {
 	t.Parallel()
@@ -132,22 +141,38 @@ func TestPrintTree(t *testing.T) {
 	tests := []struct {
 		m        map[string]any
 		expected []string
+		hasErr   bool
 	}{
-		{map[string]any{"a": map[string]any{"b": 0}}, []string{"└── a\n    └── b\n"}},
+		{map[string]any{"a": map[string]any{"b": 0}}, []string{"└── a\n    └── b\n"}, false},
 		{map[string]any{"a": map[string]any{"b": 0, "c": 0}, "b": map[string]any{"c": 0}}, []string{
 			"├── a\n│   ├── c\n│   └── b\n└── b\n    └── c\n",
 			"├── a\n│   ├── b\n│   └── c\n└── b\n    └── c\n",
 			"├── b\n│   └── c\n└── a\n    ├── b\n    └── c\n",
 			"├── b\n│   └── c\n└── a\n    ├── c\n    └── b\n",
-		}},
+		}, false},
+		{map[string]any{"a": map[string]any{"b": 0, "c": 0}, "b": map[string]any{"c": 0}}, nil, true},
 	}
-
+	iter := 0
 	for i, v := range tests {
-		w := &bytes.Buffer{}
+		var w io.Writer = &bytes.Buffer{}
+		if v.hasErr {
+			w = &mockWriter{f: func() (int, error) {
+				if iter > 1 {
+					return 0, fmt.Errorf("some err")
+				}
+				iter++
+				return 0, nil
+			}}
+		}
 		err := PrintTree(w, v.m, "")
-		if !assert.NoError(t, err) {
+		if v.hasErr {
+			assert.Error(t, err, "test: %v", i)
 			continue
 		}
-		assert.Contains(t, v.expected, w.String(), "test: %v", i)
+		b, ok := w.(*bytes.Buffer)
+		if !assert.True(t, ok, "test: %v", i) {
+			continue
+		}
+		assert.Contains(t, v.expected, b.String(), "test: %v", i)
 	}
 }
