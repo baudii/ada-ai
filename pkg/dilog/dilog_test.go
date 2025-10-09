@@ -42,7 +42,7 @@ func TestInit(t *testing.T) {
 		{&Config{"Invalid/Timezone", filepath.Join(t.TempDir(), "t2.txt"), "test_log", "error"}, slog.LevelError, "2024-10-03", slog.Error, &bytes.Buffer{}, nil},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		w = v.w
 		if v.curDate != "" {
 			path := filepath.Join(v.cfg.Path, "random.log")
@@ -53,7 +53,7 @@ func TestInit(t *testing.T) {
 				path = v.cfg.Path
 			}
 			f, err := os.Create(path)
-			require.NoError(t, err, "test: %v", v)
+			require.NoError(t, err, "test: %v", i)
 			getDw = func(c *Config, l *time.Location) *dailyWriter {
 				return &dailyWriter{
 					path:     c.Path,
@@ -77,7 +77,7 @@ func TestInit(t *testing.T) {
 		func(l slog.Level, log func(string, ...any)) {
 			if slog.Default().Enabled(context.Background(), l) {
 				log("Message")
-				assert.Contains(t, w.(*bytes.Buffer).String(), "Message", "test: %v", v)
+				assert.Contains(t, w.(*bytes.Buffer).String(), "Message", "test: %v", i)
 			}
 		}(v.level, v.logFunc)
 		Dw.file.Close()

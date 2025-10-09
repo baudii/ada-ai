@@ -35,26 +35,26 @@ func TestRegister(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		_, err := Register(v.cfg)
-		assert.Equal(t, (err != nil), v.hasErr, "test: %v", v)
+		assert.Equal(t, (err != nil), v.hasErr, "test: %v", i)
 	}
 }
 
 func TestRegisterFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []bool{true, false}
-	for _, v := range tests {
+	for i, v := range tests {
 		dir := t.TempDir()
 		if !v {
 			err := os.WriteFile(filepath.Join(dir, configName), []byte(`{"provider": "ollama", "options": {"model":"some"}}`), 0644)
-			require.NoError(t, err, "test: %v", v)
+			require.NoError(t, err, "test: %v", i)
 		}
 		_, err := RegisterFromFile(dir)
 		if v {
-			assert.Error(t, err, "test: %v", v)
+			assert.Error(t, err, "test: %v", i)
 		} else {
-			assert.NoError(t, err, "test: %v", v)
+			assert.NoError(t, err, "test: %v", i)
 		}
 	}
 }

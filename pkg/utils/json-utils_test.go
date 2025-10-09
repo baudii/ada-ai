@@ -36,10 +36,10 @@ func TestTrimJSON(t *testing.T) {
 		{"abc", []byte("abc"), true},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		res, err := TrimJSON(v.json)
-		assert.Equal(t, err != nil, v.hasError, "test: %v", v)
-		assert.Equal(t, res, v.trimmed, "test: %v", v)
+		assert.Equal(t, err != nil, v.hasError, "test: %v", i)
+		assert.Equal(t, res, v.trimmed, "test: %v", i)
 	}
 }
 
@@ -58,15 +58,15 @@ func TestSaveJSONToFile(t *testing.T) {
 		{"{", "\"{\"", true, false},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		path := filepath.Join(t.TempDir(), "tmp.tmp")
 		err := SaveJSONToFile(v.content, path)
-		assert.Equal(t, err != nil, v.hasErr, "test: %v", v)
+		assert.Equal(t, err != nil, v.hasErr, "test: %v", i)
 		if err == nil {
 			got, readErr := os.ReadFile(path)
-			assert.Equal(t, readErr == nil, v.fileExist, "test: %v", v)
+			assert.Equal(t, readErr == nil, v.fileExist, "test: %v", i)
 			if readErr == nil {
-				assert.Equal(t, []byte(v.result), got, "test: %v", v)
+				assert.Equal(t, []byte(v.result), got, "test: %v", i)
 			}
 		}
 	}
@@ -87,7 +87,7 @@ func TestParseJSONFile(t *testing.T) {
 		{"{\"name\": \"alice\" }", Valid{"alice", 0, nil}, false, true},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		path := filepath.Join(t.TempDir(), "ttt.json")
 		if v.hasFile {
 			os.WriteFile(path, []byte(v.json), 0644)
@@ -95,13 +95,13 @@ func TestParseJSONFile(t *testing.T) {
 		res, err := ParseJSONFile[Valid](path)
 		if v.hasErr {
 			if v.hasFile {
-				assert.Error(t, err, "test: %v", v)
+				assert.Error(t, err, "test: %v", i)
 			} else {
 				assert.True(t, os.IsNotExist(err), "expected not exist error: test: %v", v)
 			}
 		} else {
-			require.NoError(t, err, "test: %v", v)
-			assert.Equal(t, *res, v.valid, "test: %v", v)
+			require.NoError(t, err, "test: %v", i)
+			assert.Equal(t, *res, v.valid, "test: %v", i)
 		}
 	}
 }
@@ -136,13 +136,13 @@ func TestMapToStruct(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		res, err := MapToStruct[s](v.m)
 		if v.err == "" {
-			assert.NoError(t, err, "test: %v", v)
+			assert.NoError(t, err, "test: %v", i)
 		} else {
-			assert.ErrorContains(t, err, v.err, "test: %v", v)
+			assert.ErrorContains(t, err, v.err, "test: %v", i)
 		}
-		assert.Equal(t, v.expected, res, "test: %v", v)
+		assert.Equal(t, v.expected, res, "test: %v", i)
 	}
 }

@@ -25,15 +25,15 @@ func TestParseJSONFileToMap(t *testing.T) {
 		}, "{\"a\":\"hello\", \"b\":\"world\",\"c\": {\"d\":100}}", false},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		v.path = filepath.Join(v.path, "tmp.json")
 		if v.jsonContent != "" {
 			os.WriteFile(v.path, []byte(v.jsonContent), 0644)
 		}
 
 		res, err := ParseJSONFileToMap(v.path)
-		assert.True(t, (err != nil) == v.hasErr, "test: %v", v)
-		assert.Equal(t, v.expected, res, "test: %v", v)
+		assert.True(t, (err != nil) == v.hasErr, "test: %v", i)
+		assert.Equal(t, v.expected, res, "test: %v", i)
 	}
 }
 
@@ -80,7 +80,7 @@ func TestParseJSONConfigWithLocal(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		v.path = filepath.Join(v.path, "tmp.json")
 		if v.jsonContent != "" {
 			localPath := InsertFsuffix(v.path, ".local")
@@ -89,7 +89,7 @@ func TestParseJSONConfigWithLocal(t *testing.T) {
 		}
 
 		res, err := ParseJSONConfigWithLocal[config](v.path)
-		assert.True(t, (err != nil) == v.hasErr, "test: %v", v)
-		assert.Equal(t, v.expected, res, "test: %v", v)
+		assert.True(t, (err != nil) == v.hasErr, "test: %v", i)
+		assert.Equal(t, v.expected, res, "test: %v", i)
 	}
 }

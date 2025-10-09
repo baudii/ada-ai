@@ -52,19 +52,19 @@ func TestReadInputInternal(t *testing.T) {
 		{errorReader{r: strings.NewReader("f1"), cnt: &cnt}, &bytes.Buffer{}, &bytes.Buffer{}, "---", "f1", "--- > --- > ", true},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		reader = v.r
 		writer = v.w
 		logger = slog.New(slog.NewTextHandler(v.logwriter, nil))
 		res := ReadInput(v.msg)
 
 		if !v.logsErr {
-			assert.True(t, len(v.logwriter.String()) == 0, "test: %v", v)
+			assert.True(t, len(v.logwriter.String()) == 0, "test: %v", i)
 		} else {
-			assert.True(t, len(v.logwriter.String()) > 0, "test: %v", v)
+			assert.True(t, len(v.logwriter.String()) > 0, "test: %v", i)
 		}
 
-		assert.Equal(t, v.expWr, v.w.String(), "test: %v", v)
-		assert.Equal(t, v.expRead, res, "test: %v", v)
+		assert.Equal(t, v.expWr, v.w.String(), "test: %v", i)
+		assert.Equal(t, v.expRead, res, "test: %v", i)
 	}
 }

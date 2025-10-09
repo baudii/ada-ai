@@ -32,7 +32,7 @@ func TestNew(t *testing.T) {
 		{`{"a":"b"}`, "fold", true, true, &LocalProj{structure: map[string]any{"a": "b"}, projectRoot: "fold"}},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		d := ""
 		if v.isAbs {
 			d = t.TempDir()
@@ -44,11 +44,11 @@ func TestNew(t *testing.T) {
 		base := filepath.Join(d, v.base)
 		p, err := New([]byte(v.structure), &resolver{base})
 		if !v.isValidJson {
-			assert.ErrorContains(t, err, "unmarshal project structure", "test: %v", v)
+			assert.ErrorContains(t, err, "unmarshal project structure", "test: %v", i)
 		} else if !v.isAbs {
-			assert.ErrorContains(t, err, "is not absolute", "test: %v", v)
+			assert.ErrorContains(t, err, "is not absolute", "test: %v", i)
 		} else {
-			assert.Equal(t, v.expected, p, "test: %v", v)
+			assert.Equal(t, v.expected, p, "test: %v", i)
 		}
 	}
 }
@@ -67,12 +67,12 @@ func TestMaterialize(t *testing.T) {
 		{map[string]any{"a": float64(0)}, "p", "create project root folder"},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		d := filepath.Join(t.TempDir(), v.projroot)
 		switch v.errmsg {
 		case "is not a directory":
 			f, err := os.Create(d)
-			require.NoError(t, err, "test: %v", v)
+			require.NoError(t, err, "test: %v", i)
 			t.Cleanup(func() { f.Close() })
 		case "create project root folder":
 			d = ""
@@ -80,10 +80,10 @@ func TestMaterialize(t *testing.T) {
 		lp := &LocalProj{v.structure, d}
 		err := lp.Materialize()
 		if v.errmsg == "" {
-			assert.True(t, isMaterialized(v.structure, d), "test: %v", v)
+			assert.True(t, isMaterialized(v.structure, d), "test: %v", i)
 			continue
 		}
-		assert.ErrorContains(t, err, v.errmsg, "test: %v", v)
+		assert.ErrorContains(t, err, v.errmsg, "test: %v", i)
 	}
 }
 

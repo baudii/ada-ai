@@ -23,14 +23,14 @@ func TestSendWithReflection(t *testing.T) {
 		{defaultMock, 0, true},
 		{defaultMock, 1, false},
 	}
-	for _, v := range tests {
+	for i, v := range tests {
 		ai := &mockLLM{v.mockFunc}
 		cfg := &Config{Reflection: ReflectConfig{Depth: 3, Threshhold: 0.95}}
 		ada := New(ai, WithConfig(cfg))
 		res, err := ada.SendReflect("some prompt")
 		if err == nil {
-			assert.Equal(t, []byte("some response"), res, "test: %v", v)
-			assert.True(t, (err != nil) == v.hasError, "test: %v", v)
+			assert.Equal(t, []byte("some response"), res, "test: %v", i)
+			assert.True(t, (err != nil) == v.hasError, "test: %v", i)
 		}
 	}
 }
@@ -63,7 +63,7 @@ func TestImprove(t *testing.T) {
 		{0b111, 1, &tRetVal{"{\\}}", nil}, "", false},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		f := defaultMock
 		if v.retval != nil {
 			f = func(args ...any) (content *llms.ContentResponse, err error) {
@@ -94,14 +94,14 @@ func TestImprove(t *testing.T) {
 					bytes = []byte(v.improve)
 				}
 				err := os.WriteFile(filepath.Join(root, pr), bytes, 0644)
-				require.NoError(t, err, "test: %v", v)
+				require.NoError(t, err, "test: %v", i)
 			}
 		}
 		_, err := ada.Improve("", "")
 		if v.hasErr {
-			assert.Error(t, err, "test: %v", v)
+			assert.Error(t, err, "test: %v", i)
 		} else {
-			assert.NoError(t, err, "test: %v", v)
+			assert.NoError(t, err, "test: %v", i)
 		}
 	}
 

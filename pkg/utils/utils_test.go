@@ -23,15 +23,15 @@ func TestAbsolutePath(t *testing.T) {
 		{"", "", fmt.Errorf("failed to get base")},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		v.basePath = filepath.Join(v.basePath, "exe.exe")
 		executable := func() (string, error) { return v.basePath, v.err }
 		if v.err != nil {
-			assert.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) }, "test: %v", v)
+			assert.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) }, "test: %v", i)
 		} else {
 			ap := AbsolutePath(v.relPath, executable)
 			expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
-			assert.Equal(t, expected, ap, "test: %v", v)
+			assert.Equal(t, expected, ap, "test: %v", i)
 		}
 	}
 }
@@ -121,9 +121,9 @@ func TestMergeMap(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		MergeMap(v.dst, v.src)
-		assert.Equal(t, v.dst, v.expected, "test: %v", v)
+		assert.Equal(t, v.dst, v.expected, "test: %v", i)
 	}
 }
 
@@ -142,9 +142,9 @@ func TestPrintTree(t *testing.T) {
 		}},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		w := &bytes.Buffer{}
 		PrintTree(w, v.m, "")
-		assert.Contains(t, v.expected, w.String(), "test: %v", v)
+		assert.Contains(t, v.expected, w.String(), "test: %v", i)
 	}
 }

@@ -14,7 +14,7 @@ func TestError(t *testing.T) {
 	}{
 		{&ProjExist{Path: "/some/path"}, "project already exists at /some/path"},
 	}
-	for _, v := range tests {
-		assert.Equal(t, v.expected, v.err.Error(), "test: %v", v)
+	for i, v := range tests {
+		assert.Equal(t, v.expected, v.err.Error(), "test: %v", i)
 	}
 }

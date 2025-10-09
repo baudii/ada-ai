@@ -42,18 +42,18 @@ func TestNew(t *testing.T) {
 		{&Config{}, []SessionOption{WithProjectsRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
 	}
 	ai := &mockLLM{}
-	for _, v := range tests {
+	for i, v := range tests {
 		v.opts = append(v.opts, WithConfig(v.cfg))
 		ada := New(ai, v.opts...)
 		assert.Nil(t, ada.Proj)
 		if v.cfg == nil {
-			assert.Equal(t, &defaultCfg, ada.Session.Cfg, "test: %v", v)
+			assert.Equal(t, &defaultCfg, ada.Session.Cfg, "test: %v", i)
 		} else {
-			assert.Equal(t, v.cfg, ada.Session.Cfg, "test: %v", v)
+			assert.Equal(t, v.cfg, ada.Session.Cfg, "test: %v", i)
 		}
-		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot, "test: %v", v)
-		assert.Equal(t, ada.Session.Project.UserName, v.expectedPD.UserName, "test: %v", v)
-		assert.Contains(t, ada.Session.Project.ProjName, v.expectedPD.ProjName, "test: %v", v)
+		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot, "test: %v", i)
+		assert.Equal(t, ada.Session.Project.UserName, v.expectedPD.UserName, "test: %v", i)
+		assert.Contains(t, ada.Session.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
 	}
 }
 
@@ -70,14 +70,14 @@ func TestGenerateJSON(t *testing.T) {
 		}},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		ai := &mockLLM{v.mockFunc}
 		ada := New(ai, WithConfig(&v.cfg))
 		res, err := ada.GenerateJSON("test prompt", []llms.MessageContent{})
-		assert.Equal(t, v.hasError, err != nil, "test: %v", v)
+		assert.Equal(t, v.hasError, err != nil, "test: %v", i)
 		if !v.hasError {
-			assert.NotNil(t, res, "test: %v", v)
-			assert.Equal(t, "some response", res.Choices[0].Content, "test: %v", v)
+			assert.NotNil(t, res, "test: %v", i)
+			assert.Equal(t, "some response", res.Choices[0].Content, "test: %v", i)
 		}
 	}
 }
@@ -97,16 +97,16 @@ func TestPromptFromTemplate(t *testing.T) {
 
 	file := "test_template.txt"
 
-	for _, v := range tests {
+	for i, v := range tests {
 		tempdir := t.TempDir()
 		ada := New(&mockLLM{}, WithPromptsRoot(tempdir))
 		if !v.hasErr {
 			err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
-			require.NoError(t, err, "test: %v", v)
+			require.NoError(t, err, "test: %v", i)
 		}
 		res, err := ada.PromptFromTemplate(file, v.args...)
-		assert.Equal(t, v.hasErr, err != nil, "test: %v", v)
-		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res, "test: %v", v)
+		assert.Equal(t, v.hasErr, err != nil, "test: %v", i)
+		assert.Equal(t, fmt.Sprintf(v.template, v.args...), res, "test: %v", i)
 	}
 }
 
@@ -122,14 +122,14 @@ func TestResolveProjectPath(t *testing.T) {
 		{},
 	}
 
-	for _, v := range tests {
+	for i, v := range tests {
 		cfg := &Config{}
 		ai := &mockLLM{}
 		ada := New(ai, WithConfig(cfg), WithProjectsRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
 		res := ada.ResolveProjectPath()
-		assert.Contains(t, res, v.root, "test: %v", v)
-		assert.Contains(t, res, v.username, "test: %v", v)
-		assert.Contains(t, res, v.projRoot, "test: %v", v)
-		assert.Contains(t, res, v.projname, "test: %v", v)
+		assert.Contains(t, res, v.root, "test: %v", i)
+		assert.Contains(t, res, v.username, "test: %v", i)
+		assert.Contains(t, res, v.projRoot, "test: %v", i)
+		assert.Contains(t, res, v.projname, "test: %v", i)
 	}
 }
