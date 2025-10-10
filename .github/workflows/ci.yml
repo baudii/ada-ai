@@ -1,0 +1,45 @@
+name: Go
+
+on: [ push, pull_request ]
+
+jobs:
+  main:
+    strategy:
+      matrix:
+        os: [ ubuntu-24.04, ubuntu-22.04, windows-2025, macos-15, macos-14, windows-2022 ]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '>=1.25.1'
+          cache: true
+  
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+          
+      - name: Build (quick sanity)
+        run: go build -v ./...
+        
+      - name: Vet
+        run: go vet -all ./...
+        
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5
+          args: --timeout=5m
+    
+      - name: Test
+        run: |
+          go test -v -coverprofile coverage.out ./...
+          go tool cover -func coverage.out
