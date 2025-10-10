@@ -40,6 +40,4 @@ jobs:
           args: --timeout=5m
     
       - name: Test
-        run: |
-          go test -v -coverprofile coverage.out ./...
-          go tool cover -func coverage.out
+        run: make test

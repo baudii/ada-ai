@@ -1,5 +1,6 @@
 APP          := ada-cli
 PKG          := ./cmd/$(APP)
+COVER        := coverage.out
 ARTIFACTS    := artifacts
 CONF_SRC     := data/configuration
 PRMPT_SRC    := data/prompts
@@ -25,7 +26,7 @@ endif
 
 EXECUTABLE := $(ARTIFACTS)/$(APP)$(EXE)
 
-.PHONY: all build copy run clean install
+.PHONY: all build copy run clean install test retest
 
 .DEFAULT_GOAL := all
 
@@ -34,7 +35,7 @@ all: build copy
 build:
 	@echo Building $(APP)...
 	@$(call MKDIR,$(ARTIFACTS))
-	@go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
+	go build -ldflags="-s -w" -o $(EXECUTABLE) $(PKG)
 
 copy:
 	@echo Copying data...
@@ -47,16 +48,20 @@ debug: build copy
 	@echo Running [flags: -debug, -stage=$(stage)] $(EXECUTABLE)...
 	@$(call RMDIR,$(DBG_DST))
 	@$(call COPY,$(DBG_SRC),$(DBG_DST))
-	@$(EXECUTABLE) -debug -stage=$(stage)
+	$(EXECUTABLE) -debug -stage=$(stage)
 
 run:
 	@echo Running $(EXECUTABLE)...
-	@$(EXECUTABLE)
+	$(EXECUTABLE)
 
 clean:
 	@echo Cleaning...
 	@$(call RMDIR,$(ARTIFACTS))
-	@go clean
+	go clean
 
-br: build run
-bcd: build copy debug
+test:
+	go test $(ARGS) -coverprofile $(COVER) ./...
+	go tool cover -func $(COVER)
+
+retest:
+	$(MAKE) test ARGS="-count=1"
