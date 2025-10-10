@@ -26,11 +26,13 @@ type ada struct {
 	Proj    project
 }
 
+// Config is the configuration for Ada AI workflow.
 type Config struct {
 	Timeout    string        `json:"requestTimeout"`
 	Reflection ReflectConfig `json:"reflection"`
 }
 
+// ProjectData is the context of the current project.
 type ProjectData struct {
 	UserName string `json:"userName"`
 	ProjName string `json:"projName"`
@@ -43,6 +45,9 @@ type project interface {
 	Structure() map[string]any
 }
 
+// SessionOptions is a set of options that can be used to configure
+// the session. It allows to set the root folders for projects and prompts,
+// as well as the configuration for the session.
 type SessionOption func(*session)
 
 type session struct {
@@ -60,9 +65,8 @@ var defaultCfg = Config{
 	},
 }
 
-// WithProjectsRoot sets the root folder for projects to be stored.
-// It will create user-specific and project-specific folders inside
-// and will use it in runtime.
+// WithProjectsRoot sets the root folder that will be used when resolving
+// project-specific directories during the session lifecycle.
 func WithProjectsRoot(path string) SessionOption {
 	return func(s *session) {
 		s.projectsRoot = path
@@ -91,10 +95,9 @@ func WithProjectData(p ProjectData) SessionOption {
 	}
 }
 
-// New initializes a new Ada instance with the provided LLM model and configuration.
-// If a user context is found in the user data file, it is loaded and associated with
-// the Ada instance. Otherwise, the context remains nil and expected to be set later
-// using AddProjCtx.
+// New initializes a new Ada instance with the provided LLM model and session
+// options. It applies defaults for user, project, and configuration values when
+// they are not supplied through the provided options.
 func New(ai llms.Model, opts ...SessionOption) *ada {
 	session := &session{}
 	for _, v := range opts {

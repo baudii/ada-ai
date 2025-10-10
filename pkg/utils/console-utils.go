@@ -14,6 +14,9 @@ var (
 	logger *slog.Logger = slog.Default()
 )
 
+// ReadInput reads a line from the reader and returns it as a string.
+// If there is an error reading from the reader, it logs the error and
+// prompts the user again.
 func ReadInput(msg string) string {
 	for {
 		_, err := fmt.Fprintf(writer, "%v > ", msg)

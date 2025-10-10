@@ -10,13 +10,13 @@ import (
 
 const configName string = "llm-provider.json"
 
-// Represents the structure of the LLM provider configuration file.
+// Config represents the structure of the LLM provider configuration file.
 type Config struct {
 	Provider string            `json:"provider"`
 	Options  map[string]string `json:"options"`
 }
 
-// Registers the LLM based on the specified configuration.
+// Register is used to register the LLM based on the specified configuration.
 func Register(cfg *Config) (llms.Model, error) {
 	switch cfg.Provider {
 	case "ollama":
@@ -26,10 +26,10 @@ func Register(cfg *Config) (llms.Model, error) {
 	}
 }
 
-// Registers the LLM based on the configuration parsed
-// from 'llm-provider.json' file located at path.
+// RegisterFromFile registers the LLM based on the configuration parsed
+// from 'llm-provider.json' file located at folder.
 //
-// Path will be joined with the current os.Executable() directory.
+// It is expected taht the provided folder stores a 'llm-provider.json' file.
 func RegisterFromFile(folder string) (llms.Model, error) {
 	path := filepath.Join(folder, configName)
 	cfg, err := utils.ParseJSONConfigWithLocal[Config](path)

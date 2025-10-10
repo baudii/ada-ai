@@ -27,12 +27,12 @@ type dailyWriter struct {
 	file    *os.File
 }
 
-// Stores global instance of *dailyWriter. Helpful when you need
+// Dw stores global instance of *dailyWriter. Helpful when you need
 // to write something directly into the log file. Otherwise, it is
 // preffered to use slog.Logger methods.
 var Dw *dailyWriter
 
-// Provides parallel-safe writing functionality to the *os.File stored
+// Write provides parallel-safe writing functionality to the *os.File stored
 // in dw.file. Performs a rotation by calling rotateIfNeeded() method
 // which rotates the target file if new date is different from dw.curDate.
 // Basically, this means that file is rotated every day according to dw.timezone.
