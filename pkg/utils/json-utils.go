@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// TrimJSON attempts to extract a valid JSON object from a given string.
+// It looks for the first occurrence of '{' and the last occurrence of '}'.
+// If both are found, it returns the substring between these indices (inclusive).
+// If either character is not found, it returns an error indicating that
+// the input is not a valid JSON.
 func TrimJSON(data string) ([]byte, error) {
 	start := strings.IndexByte(data, '{')
 	end := strings.LastIndexByte(data, '}')
@@ -16,6 +21,9 @@ func TrimJSON(data string) ([]byte, error) {
 	return []byte(data)[start : end+1], nil
 }
 
+// SaveJSONToFile marshals the given content into a pretty-printed JSON format
+// and writes it to the specified file path. It returns an error if the
+// marshalling or file writing fails.
 func SaveJSONToFile(content any, filePath string) error {
 	data, err := json.MarshalIndent(content, "", "\t")
 	if err != nil {
@@ -25,6 +33,9 @@ func SaveJSONToFile(content any, filePath string) error {
 	return os.WriteFile(filePath, data, 0o644)
 }
 
+// ParseJSONFile reads a JSON file from the specified filePath and unmarshals
+// its content into a struct of type T. It returns a pointer to the struct
+// and any error encountered during reading or unmarshalling.
 func ParseJSONFile[T any](filePath string) (*T, error) {
 	var res T
 	file, err := os.ReadFile(filePath)
@@ -40,7 +51,7 @@ func ParseJSONFile[T any](filePath string) (*T, error) {
 	return &res, nil
 }
 
-// Converts given map m into a struct of type T. Uses json marshalling
+// MapToStruct converts given map m into a struct of type T. Uses json marshalling
 // and unmarshalling under the hood.
 func MapToStruct[T any](m map[string]any) (*T, error) {
 	marshalled, err := json.Marshal(m)

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// Parses a file at basePath, then merges it with file at the same root folder but named
+// ParseJSONConfigWithLocal parses a file at basePath, then merges it with file at the same root folder but named
 // filename.local.ext where filename is a filename of basePath and ext is an extensions of basePath.
 // Then tries to parse local configuration and performs a merge by calling MergeMap(). All values of
 // local configuration file will overwrite the values from base configuration.
@@ -32,7 +32,8 @@ func ParseJSONConfigWithLocal[T any](basePath string) (*T, error) {
 	return MapToStruct[T](basecfg)
 }
 
-// Deserializes a JSON file into a map[string]any object.
+// ParseJSONFileToMap deserializes a JSON file into a map[string]any instance that
+// represents given JSON file.
 func ParseJSONFileToMap(path string) (map[string]any, error) {
 	f, err := os.Open(path)
 	if err != nil {

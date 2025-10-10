@@ -16,6 +16,11 @@ var defaultCfg adacore.Config = adacore.Config{
 	Timeout: "3m",
 }
 
+// Run initializes and runs the CLI application. It sets up the AI model,
+// configures the Ada AI workflow, and handles user input to generate and
+// materialize a project based on the provided description.
+//
+// It also manages configuration loading and error handling throughout the process.
 func Run() {
 	ai, err := ai.RegisterFromFile(common.ConfigPath)
 	if err != nil {

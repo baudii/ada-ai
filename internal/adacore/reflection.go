@@ -12,8 +12,9 @@ import (
 
 // ReflectConfig defines configuration parameters for the reflection algorithm.
 //
-// Depth controls how many iterations of reflection will be performed.
-// Threshold sets the minimum score (0.0–1.0) required to trigger reflection logic.
+// Depth controls how many maximum iterations of reflection will be performed.
+// Threshold sets the minimum score (0.0-1.0) required to early break from
+// reflection cycle.
 type ReflectConfig struct {
 	Depth      int     `json:"reflectionDepth"`
 	Threshhold float32 `json:"reflectionThreshold"`
@@ -41,6 +42,9 @@ type templates struct {
 	improve      string
 }
 
+// SendReflect sends a request to the LLM and then performs a
+// reflection and improvement of this response based on the configured
+// parameters.
 func (ada *ada) SendReflect(prompt string) ([]byte, error) {
 	resp, err := ada.GenerateJSON(prompt, nil)
 	if err != nil {
@@ -60,6 +64,10 @@ func (ada *ada) SendReflect(prompt string) ([]byte, error) {
 	return utils.TrimJSON(data)
 }
 
+// Improve takes an initial response and iteratively reflects on it
+// and attempts to improve it based on the reflection results. The process
+// continues until the reflection score meets or exceeds the configured
+// threshold or the maximum number of reflection cycles is reached.
 func (ada *ada) Improve(request string, response string) (*eval, error) {
 	var (
 		res    = &eval{response, float32(math.Inf(-1))}
@@ -117,6 +125,9 @@ func (ada *ada) Improve(request string, response string) (*eval, error) {
 	return res, nil
 }
 
+// Reflect sends the current conversation context to the LLM along with
+// a reflection prompt, asking the model to evaluate the previous response
+// and provide scores and improvement suggestions.
 func (ada *ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
 	resp, err := ada.GenerateJSON(reflectPrompt, msgs)
 	if err != nil {

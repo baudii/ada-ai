@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// Returns absolute that is calculated from the current
-// executable path. Panics if os.Executable() returns an error.
+// AbsolutePath returns an absolute path resolved relative to the directory
+// reported by the provided executable locator. It panics if the callback
+// returns an error.
 func AbsolutePath(relativePath string, executable func() (string, error)) string {
 	exe, err := executable()
 	if err != nil {
@@ -19,13 +20,16 @@ func AbsolutePath(relativePath string, executable func() (string, error)) string
 	return filepath.Join(filepath.Dir(exe), relativePath)
 }
 
+// InsertFsuffix inserts a postfix before the file extension
+// in the given path. If there is no extension, postfix
+// will be appended to the path.
 func InsertFsuffix(path string, postfix string) string {
 	ext := filepath.Ext(path)
 	name := strings.TrimSuffix(path, ext)
 	return name + postfix + ext
 }
 
-// Merges dst map with the values from src. If a value exists
+// MergeMap merges dst map with the values from src. If a value exists
 // in src, then it will be copied to dst. If dst already contains
 // this kev/value pair, it will be overwritten
 //
@@ -48,7 +52,7 @@ func MergeMap(dst, src map[string]any) {
 	}
 }
 
-// Creates a new map and recursively fills it with copy
+// DeepCopyMap creates a new map and recursively fills it with copy
 // of every value from src
 func DeepCopyMap(src map[string]any) map[string]any {
 	if src == nil {
@@ -66,7 +70,7 @@ func DeepCopyMap(src map[string]any) map[string]any {
 	return dst
 }
 
-// Creates a copy of given value using reflect and taking
+// DeepCopy creates a copy of given value using reflect and taking
 // into account its value type.
 func DeepCopy(v any) any {
 	return deepCopyR(reflect.ValueOf(v)).Interface()
@@ -120,8 +124,8 @@ func deepCopyR(v reflect.Value) reflect.Value {
 // The structure is expected to be a nested map[string]any, where each key is
 // treated as a directory or file name, and nested maps represent subdirectories.
 //
-// The output uses Unicode box-drawing characters (├──, └──, │) to visualize
-// the hierarchy, similar to the Unix `tree` command.
+// The output uses connector strings to visualize the hierarchy, similar to the
+// Unix `tree` command.
 //
 // The prefix argument is used internally to align child elements and should
 // normally be an empty string when called from outside.
