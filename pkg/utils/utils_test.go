@@ -152,12 +152,13 @@ func TestPrintTree(t *testing.T) {
 		}, false},
 		{map[string]any{"a": map[string]any{"b": 0, "c": 0}, "b": map[string]any{"c": 0}}, nil, true},
 	}
-	iter := 0
+
 	for i, v := range tests {
+		iter := 0
 		var w io.Writer = &bytes.Buffer{}
 		if v.hasErr {
 			w = &mockWriter{f: func() (int, error) {
-				if iter > 1 {
+				if iter > 0 {
 					return 0, fmt.Errorf("some err")
 				}
 				iter++
