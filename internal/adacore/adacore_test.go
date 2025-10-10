@@ -111,23 +111,24 @@ func TestPromptFromTemplate(t *testing.T) {
 }
 
 func TestResolveProjectPath(t *testing.T) {
-	// TODO: Add tests
 	t.Parallel()
 	tests := []struct {
-		root     string
 		projRoot string
 		username string
 		projname string
 	}{
-		{},
+		{"projroot", "username", "projname"},
 	}
 
 	for i, v := range tests {
 		cfg := &Config{}
 		ai := &mockLLM{}
-		ada := New(ai, WithConfig(cfg), WithProjectsRoot(v.root), WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
+		ada := New(ai,
+			WithConfig(cfg),
+			WithProjectsRoot(v.projRoot),
+			WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
+
 		res := ada.ResolveProjectPath()
-		assert.Contains(t, res, v.root, "test: %v", i)
 		assert.Contains(t, res, v.username, "test: %v", i)
 		assert.Contains(t, res, v.projRoot, "test: %v", i)
 		assert.Contains(t, res, v.projname, "test: %v", i)

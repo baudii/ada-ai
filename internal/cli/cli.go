@@ -72,7 +72,7 @@ func Run() {
 }
 
 func getOptions() []adacore.SessionOption {
-	path := filepath.Join(common.DataPath, adacore.UserDataFile)
+	path := filepath.Join(common.DataPath, "user_data.json")
 	var options []adacore.SessionOption
 	options = append(options, adacore.WithProjectsRoot(common.ProjectsPath), adacore.WithPromptsRoot(common.PromptsPath))
 	projectData, err := utils.ParseJSONFile[adacore.ProjectData](path)

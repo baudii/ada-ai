@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -68,9 +67,7 @@ func (d *localProj) Materialize() error {
 		return fmt.Errorf("create project root folder %q: %w", d.projectRoot, err)
 	}
 
-	// TODO: Since it's the only place where this package is using adacore, project structure file name
-	// or adacore.ProjectStrucutreFile should probably be injected.
-	if err := utils.SaveJSONToFile(d.structure, filepath.Join(d.projectRoot, adacore.ProjectStrucutreFile)); err != nil {
+	if err := utils.SaveJSONToFile(d.structure, filepath.Join(d.projectRoot, "project-structure.json")); err != nil {
 		return fmt.Errorf("save project structure file: %w", err)
 	}
 

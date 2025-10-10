@@ -18,9 +18,6 @@ const (
 	reflectPrompt      = "reflect-template.txt"
 	reflectShortPrompt = "reflect-template-short.txt"
 	improvePrompt      = "improve-template.txt"
-
-	UserDataFile         = "user_data.json"         // TODO: Change the way user data is stored
-	ProjectStrucutreFile = "project-structure.json" // TODO: fix typo
 )
 
 type ada struct {
