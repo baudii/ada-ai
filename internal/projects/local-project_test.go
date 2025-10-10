@@ -22,33 +22,32 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		structure   string
-		base        string
-		isValidJson bool
-		isAbs       bool
+		resolver    *resolver
 		expected    *localProj
+		expectError string
 	}{
-		{`}`, "a/b/c", false, false, nil},
-		{`{}`, "a/b/c", true, false, nil},
-		{`{"}`, "fold", false, true, nil},
-		{`{"a":"b"}`, "fold", true, true, &localProj{map[string]any{"a": "b"}, "fold", "", uniqueIndexFolder}},
+		{`{"a":"b"}`, &resolver{filepath.Join(t.TempDir(), "/a/b/c")}, &localProj{map[string]any{"a": "b"}, "/a/b/c", "", uniqueIndexFolder}, ""},
+		{`}`, &resolver{"/a/b/c"}, nil, "unmarshal project structure"},
+		{`{}`, &resolver{"a/b/c"}, nil, "is not absolute"},
+		{`{"a":"b"}`, &resolver{filepath.Join(t.TempDir(), "/b/c")}, nil, "create base path"},
 	}
 
 	for i, v := range tests {
-		d := ""
-		if v.isAbs {
-			d = t.TempDir()
-
-			if v.expected != nil {
-				v.expected.base = filepath.Join(d, v.expected.base)
+		switch v.expectError {
+		case "create base path":
+			// simulate base path creation failure by creating a file in the middle
+			// of the base path
+			f, err := os.Create(filepath.Dir(v.resolver.path))
+			if !assert.NoError(t, err, "test: %v", i) {
+				continue
 			}
+			_ = f.Close()
 		}
-		base := filepath.Join(d, v.base)
-		actualLocalProj, err := New([]byte(v.structure), &resolver{base})
-		if !v.isValidJson {
-			assert.ErrorContains(t, err, "unmarshal project structure", "test: %v", i)
-		} else if !v.isAbs {
-			assert.ErrorContains(t, err, "is not absolute", "test: %v", i)
-		} else {
+		actualLocalProj, err := New([]byte(v.structure), v.resolver)
+		if v.expectError != "" {
+			assert.ErrorContains(t, err, v.expectError, "test: %v", i)
+		} else if assert.NoError(t, err, "test: %v", i) {
+			v.expected.base = v.resolver.path
 			v.expected.uniqFoldName = nil
 			actualLocalProj.uniqFoldName = nil
 			assert.Equal(t, v.expected, actualLocalProj, "test: %v", i)

@@ -85,7 +85,7 @@ func getOptions() []adacore.SessionOption {
 		username := utils.ReadInput("Provide nickname")
 		projname := utils.ReadInput("Provide project name")
 		projectData = &adacore.ProjectData{UserName: username, ProjName: projname}
-		err = utils.SaveJSONToFile(projname, path)
+		err = utils.SaveJSONToFile(projectData, path)
 		if err != nil {
 			slog.Error("failed to save project data", "error", err)
 		}

@@ -38,7 +38,7 @@ func TestNew(t *testing.T) {
 		expectedPD   ProjectData
 	}{
 		{nil, []SessionOption{WithProjectsRoot("root")}, "root", ProjectData{"unknown_user", "project_"}},
-		{&Config{"a", ReflectConfig{1, 2}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
+		{&Config{"a", ReflectConfig{1, 2}, CallOptConfig{0.4, true}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
 		{&Config{}, []SessionOption{WithProjectsRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
 	}
 	ai := &mockLLM{}
@@ -73,7 +73,7 @@ func TestGenerateJSON(t *testing.T) {
 	for i, v := range tests {
 		ai := &mockLLM{v.mockFunc}
 		ada := New(ai, WithConfig(&v.cfg))
-		res, err := ada.GenerateJSON("test prompt", []llms.MessageContent{})
+		res, err := ada.GenerateContent("test prompt", []llms.MessageContent{})
 		assert.Equal(t, v.hasError, err != nil, "test: %v", i)
 		if !v.hasError {
 			assert.NotNil(t, res, "test: %v", i)

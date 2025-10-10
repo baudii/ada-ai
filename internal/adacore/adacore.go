@@ -30,6 +30,7 @@ type ada struct {
 type Config struct {
 	Timeout    string        `json:"requestTimeout"`
 	Reflection ReflectConfig `json:"reflection"`
+	CallOpts   CallOptConfig `json:"call-options"`
 }
 
 // ProjectData is the context of the current project.
@@ -38,6 +39,11 @@ type ProjectData struct {
 	ProjName string `json:"projName"`
 	// TODO: Maybe add additional project context like
 	// tech stack, architecture, project summary etc.
+}
+
+type CallOptConfig struct {
+	Temperature float64 `json:"temperature"`
+	JSONMode    bool    `json:"jsonMode"`
 }
 
 type project interface {
@@ -55,6 +61,7 @@ type session struct {
 	Project      ProjectData
 	projectsRoot string
 	promptsRoot  string
+	callOpts     []llms.CallOption
 }
 
 var defaultCfg = Config{
@@ -85,6 +92,14 @@ func WithPromptsRoot(path string) SessionOption {
 func WithConfig(cfg *Config) SessionOption {
 	return func(s *session) {
 		s.Cfg = cfg
+		if cfg != nil {
+			if cfg.CallOpts.Temperature != 0 {
+				s.callOpts = append(s.callOpts, llms.WithTemperature(cfg.CallOpts.Temperature))
+			}
+			if cfg.CallOpts.JSONMode {
+				s.callOpts = append(s.callOpts, llms.WithJSONMode())
+			}
+		}
 	}
 }
 
@@ -129,10 +144,10 @@ func (ada *ada) ResolveProjectPath() string {
 	return filepath.Join(ada.Session.projectsRoot, ada.Session.Project.UserName, ada.Session.Project.ProjName)
 }
 
-// GenerateJSON sends a prompt along with a series of messages to the LLM
-// and expects a JSON response. It uses the timeout specified in the Ada configuration.
-// If the timeout is invalid, it defaults to 3 minutes.
-func (ada *ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
+// GenerateContent sends a prompt along with a series of messages to the LLM
+// and expects a response. It uses the options and timeout specified in the
+// Ada configuration. If the timeout is invalid, it defaults to 3 minutes.
+func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(ada.Session.Cfg.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
@@ -141,7 +156,7 @@ func (ada *ada) GenerateJSON(prompt string, msgs []llms.MessageContent) (*llms.C
 
 	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithJSONMode())
+	res, err := ada.ai.GenerateContent(ctx, msgs, ada.Session.callOpts...)
 	cf()
 	return res, err
 }

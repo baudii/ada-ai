@@ -4,5 +4,9 @@
     "reflection": {
         "reflectionDepth": 2,
         "reflectionThreshold": 0.95
+    },
+    "call-options": {
+        "jsonMode": true,
+        "temperature": 0.5
     }
 }

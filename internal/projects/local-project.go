@@ -24,6 +24,7 @@ type localProj struct {
 // New creates a new local project descriptor from structure that represents
 // the json folder structure of the project and a resolver that resolves the
 // base that determines the root folder of where the project will be created.
+// The base path must be absolute and will be created if it doesn't exist.
 //
 // It returns an error if the JSON cannot be unmarshaled or the base path
 // is invalid.
@@ -36,6 +37,10 @@ func New(structure []byte, resolver projectPathResolver) (*localProj, error) {
 	base := resolver.ResolveProjectPath()
 	if !filepath.IsAbs(base) {
 		return nil, fmt.Errorf("path %q is not absolute", base)
+	}
+
+	if err := os.MkdirAll(base, 0744); err != nil {
+		return nil, fmt.Errorf("create base path: %w", err)
 	}
 
 	d.base = base
