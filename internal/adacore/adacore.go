@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -40,8 +41,8 @@ type Option func(Options) Options
 type ProjectData struct {
 	UserName string `json:"userName"`
 	ProjName string `json:"projName"`
-	// TODO: Maybe add additional project context like
-	// tech stack, architecture, project summary etc.
+	Language string `json:"language"`
+	Summary  string `json:"summary"`
 }
 
 type project interface {
@@ -75,6 +76,12 @@ func New(ai llms.Model, opts ...Option) *ada {
 
 // AddProjectData sets the current project data in the Ada session.
 func (ada *ada) AddProjectData(pd ProjectData) {
+	if pd.UserName == "" {
+		pd.UserName = "unknown_user"
+	}
+	if pd.ProjName == "" {
+		pd.ProjName = fmt.Sprintf("project_%s", uuid.NewString())
+	}
 	ada.Project = pd
 }
 

@@ -37,20 +37,16 @@ func TestNew(t *testing.T) {
 		expectedRoot string
 		expectedPD   ProjectData
 	}{
-		{&Options{ProjectsRoot: "root"}, ProjectData{"unknown_user", "project_"}, "root", ProjectData{"unknown_user", "project_"}},
-		{&Options{Timeout: "a", Reflection: ReflectConfig{1, 2}, ModelCallOpts: llms.CallOptions{Temperature: 0.4, JSONMode: true}}, ProjectData{"name", "proj"}, "", ProjectData{"name", "proj"}},
-		{&Options{ProjectsRoot: "root"}, ProjectData{"name", "proj"}, "root", ProjectData{"name", "proj"}},
+		{&Options{ProjectsRoot: "root"}, ProjectData{}, "root", ProjectData{UserName: "unknown_user", ProjName: "project_"}},
+		{&Options{Timeout: "a", Reflection: ReflectConfig{1, 2}, ModelCallOpts: llms.CallOptions{Temperature: 0.4, JSONMode: true}}, ProjectData{UserName: "name", ProjName: "proj"}, "", ProjectData{UserName: "name", ProjName: "proj"}},
+		{&Options{ProjectsRoot: "root"}, ProjectData{UserName: "name", ProjName: "proj"}, "root", ProjectData{UserName: "name", ProjName: "proj"}},
 	}
 	ai := &mockLLM{}
 	for i, v := range tests {
 		ada := New(ai, WithOptions(*v.options))
 		ada.AddProjectData(v.projData)
 		assert.Nil(t, ada.Proj)
-		if v.options == nil {
-			assert.Equal(t, options, ada.Opts, "test: %v", i)
-		} else {
-			assert.Equal(t, *v.options, ada.Opts, "test: %v", i)
-		}
+		assert.Equal(t, *v.options, ada.Opts, "test: %v", i)
 		assert.Equal(t, v.expectedRoot, ada.Opts.ProjectsRoot, "test: %v", i)
 		assert.Equal(t, ada.Project.UserName, v.expectedPD.UserName, "test: %v", i)
 		assert.Contains(t, ada.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
