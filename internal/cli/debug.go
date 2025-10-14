@@ -37,16 +37,16 @@ func enableDebugging(ai llms.Model) {
 }
 
 func debugStep1(ai llms.Model) {
-	ada := adacore.New(
-		ai,
-		nil,
-		adacore.WithProjectsRoot(common.ProjectsPath),
-		adacore.WithPromptsRoot(common.PromptsPath),
-		adacore.WithProjectData(debugProjData))
+	opts := adacore.Options{
+		PromptsRoot:  common.PromptsPath,
+		ProjectsRoot: common.ProjectsPath,
+	}
+	ada := adacore.New(ai, nil, adacore.WithOptions(opts))
+	ada.AddProjectData(debugProjData)
 
 	utils.ReadInput("Press Enter to continue")
 
-	template, err := ada.PromptFromTemplate(adacore.ProjectStructurePrompt, ada.Session.Project.ProjName, desc)
+	template, err := ada.PromptFromTemplate(common.ProjectStructurePrompt, ada.Project.ProjName, desc)
 	if err != nil {
 		log.Fatal("failed to get step1 prompt from template", "error", err)
 	}
@@ -76,10 +76,12 @@ func debugProjectStructure(ai llms.Model) {
 		panic(err)
 	}
 
-	ada := adacore.New(ai, nil,
-		adacore.WithProjectsRoot(common.ProjectsPath),
-		adacore.WithProjectData(debugProjData),
-		adacore.WithPromptsRoot(common.PromptsPath))
+	opts := adacore.Options{
+		PromptsRoot:  common.PromptsPath,
+		ProjectsRoot: common.ProjectsPath,
+	}
+	ada := adacore.New(ai, nil, adacore.WithOptions(opts))
+	ada.AddProjectData(debugProjData)
 
 	if f, err = utils.TrimJSON(string(f)); err != nil {
 		panic(err)

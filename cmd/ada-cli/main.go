@@ -3,18 +3,14 @@ package main
 import (
 	"flag"
 	"log/slog"
-	"path/filepath"
 
+	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/cli"
-	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/pkg/dilog"
-	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 func main() {
-	initLogger()
 	parseFlags()
-	cli.Run()
+	app.Run(cli.New())
 }
 
 func parseFlags() {
@@ -25,18 +21,4 @@ func parseFlags() {
 	slog.Debug("debug flags parsed", "debug", *dbg, "stage", *stage)
 	cli.Debug = *dbg
 	cli.DebugStage = *stage
-}
-
-func initLogger() {
-	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
-	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](cfgPath)
-	if err != nil {
-		cfg = &dilog.Config{
-			Timezone: "local",
-			Path:     "logs",
-			Prefix:   "ada",
-		}
-	}
-
-	dilog.Init(cfg)
 }

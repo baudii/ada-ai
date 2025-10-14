@@ -32,47 +32,47 @@ func (m *mockLLM) GenerateContent(ctx context.Context, messages []llms.MessageCo
 func TestNew(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		cfg          *Config
-		opts         []SessionOption
+		options      *Options
+		projData     ProjectData
 		expectedRoot string
 		expectedPD   ProjectData
 	}{
-		{nil, []SessionOption{WithProjectsRoot("root")}, "root", ProjectData{"unknown_user", "project_"}},
-		{&Config{"a", ReflectConfig{1, 2}, CallOptConfig{0.4, true}}, []SessionOption{WithProjectData(ProjectData{"name", "proj"})}, "", ProjectData{"name", "proj"}},
-		{&Config{}, []SessionOption{WithProjectsRoot("root"), WithProjectData(ProjectData{"name", "proj"})}, "root", ProjectData{"name", "proj"}},
+		{&Options{ProjectsRoot: "root"}, ProjectData{"unknown_user", "project_"}, "root", ProjectData{"unknown_user", "project_"}},
+		{&Options{Timeout: "a", Reflection: ReflectConfig{1, 2}, ModelCallOpts: llms.CallOptions{Temperature: 0.4, JSONMode: true}}, ProjectData{"name", "proj"}, "", ProjectData{"name", "proj"}},
+		{&Options{ProjectsRoot: "root"}, ProjectData{"name", "proj"}, "root", ProjectData{"name", "proj"}},
 	}
 	ai := &mockLLM{}
 	for i, v := range tests {
-		v.opts = append(v.opts, WithConfig(v.cfg))
-		ada := New(ai, v.opts...)
+		ada := New(ai, WithOptions(*v.options))
+		ada.AddProjectData(v.projData)
 		assert.Nil(t, ada.Proj)
-		if v.cfg == nil {
-			assert.Equal(t, &defaultCfg, ada.Session.Cfg, "test: %v", i)
+		if v.options == nil {
+			assert.Equal(t, options, ada.Opts, "test: %v", i)
 		} else {
-			assert.Equal(t, v.cfg, ada.Session.Cfg, "test: %v", i)
+			assert.Equal(t, *v.options, ada.Opts, "test: %v", i)
 		}
-		assert.Equal(t, v.expectedRoot, ada.Session.projectsRoot, "test: %v", i)
-		assert.Equal(t, ada.Session.Project.UserName, v.expectedPD.UserName, "test: %v", i)
-		assert.Contains(t, ada.Session.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
+		assert.Equal(t, v.expectedRoot, ada.Opts.ProjectsRoot, "test: %v", i)
+		assert.Equal(t, ada.Project.UserName, v.expectedPD.UserName, "test: %v", i)
+		assert.Contains(t, ada.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
 	}
 }
 
 func TestGenerateJSON(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		cfg      Config
+		cfg      Options
 		hasError bool
 		mockFunc func(...any) (*llms.ContentResponse, error)
 	}{
-		{Config{Timeout: "1m"}, false, defaultMock},
-		{Config{Timeout: "invalid"}, true, func(...any) (*llms.ContentResponse, error) {
+		{Options{Timeout: "1m"}, false, defaultMock},
+		{Options{Timeout: "invalid"}, true, func(...any) (*llms.ContentResponse, error) {
 			return nil, errors.New("context deadline exceeded")
 		}},
 	}
 
 	for i, v := range tests {
 		ai := &mockLLM{v.mockFunc}
-		ada := New(ai, WithConfig(&v.cfg))
+		ada := New(ai, WithOptions(v.cfg))
 		res, err := ada.GenerateContent("test prompt", []llms.MessageContent{})
 		assert.Equal(t, v.hasError, err != nil, "test: %v", i)
 		if !v.hasError {
@@ -99,7 +99,7 @@ func TestPromptFromTemplate(t *testing.T) {
 
 	for i, v := range tests {
 		tempdir := t.TempDir()
-		ada := New(&mockLLM{}, WithPromptsRoot(tempdir))
+		ada := New(&mockLLM{}, WithOptions(Options{PromptsRoot: tempdir}))
 		if !v.hasErr {
 			err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
 			require.NoError(t, err, "test: %v", i)
@@ -121,13 +121,10 @@ func TestResolveProjectPath(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		cfg := &Config{}
+		cfg := Options{ProjectsRoot: v.projRoot}
 		ai := &mockLLM{}
-		ada := New(ai,
-			WithConfig(cfg),
-			WithProjectsRoot(v.projRoot),
-			WithProjectData(ProjectData{UserName: v.username, ProjName: v.projname}))
-
+		ada := New(ai, WithOptions(cfg))
+		ada.AddProjectData(ProjectData{UserName: v.username, ProjName: v.projname})
 		res := ada.ResolveProjectPath()
 		assert.Contains(t, res, v.username, "test: %v", i)
 		assert.Contains(t, res, v.projRoot, "test: %v", i)

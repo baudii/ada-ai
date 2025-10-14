@@ -8,13 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
 )
 
 const (
-	ProjectStructurePrompt = "project-structure-template.txt"
-
 	reflectPrompt      = "reflect-template.txt"
 	reflectShortPrompt = "reflect-template-short.txt"
 	improvePrompt      = "improve-template.txt"
@@ -22,16 +19,22 @@ const (
 
 type ada struct {
 	ai      llms.Model
-	Session session
+	Opts    Options
+	Project ProjectData
 	Proj    project
 }
 
-// Config is the configuration for Ada AI workflow.
-type Config struct {
-	Timeout    string        `json:"requestTimeout"`
-	Reflection ReflectConfig `json:"reflection"`
-	CallOpts   CallOptConfig `json:"call-options"`
+// Options is the configuration for Ada AI workflow.
+type Options struct {
+	Timeout       string           `json:"requestTimeout"`
+	ProjectsRoot  string           `json:"projectsRoot"`
+	PromptsRoot   string           `json:"promptsRoot"`
+	Reflection    ReflectConfig    `json:"reflection"`
+	ModelCallOpts llms.CallOptions `json:"call-options"`
 }
+
+// SessionOption is a function that modifies the Ada session configuration.
+type Option func(Options) Options
 
 // ProjectData is the context of the current project.
 type ProjectData struct {
@@ -41,30 +44,12 @@ type ProjectData struct {
 	// tech stack, architecture, project summary etc.
 }
 
-type CallOptConfig struct {
-	Temperature float64 `json:"temperature"`
-	JSONMode    bool    `json:"jsonMode"`
-}
-
 type project interface {
 	Materialize() error
 	Structure() map[string]any
 }
 
-// SessionOptions is a set of options that can be used to configure
-// the session. It allows to set the root folders for projects and prompts,
-// as well as the configuration for the session.
-type SessionOption func(*session)
-
-type session struct {
-	Cfg          *Config
-	Project      ProjectData
-	projectsRoot string
-	promptsRoot  string
-	callOpts     []llms.CallOption
-}
-
-var defaultCfg = Config{
+var options = Options{
 	Timeout: "3m",
 	Reflection: ReflectConfig{
 		Depth:      3,
@@ -72,91 +57,52 @@ var defaultCfg = Config{
 	},
 }
 
-// WithProjectsRoot sets the root folder that will be used when resolving
-// project-specific directories during the session lifecycle.
-func WithProjectsRoot(path string) SessionOption {
-	return func(s *session) {
-		s.projectsRoot = path
+// WithOptions sets the entire options struct.
+func WithOptions(opts Options) Option {
+	return func(o Options) Options {
+		return opts
 	}
 }
 
-// WithPromptsRoot sets the root folder of where the ada should search
-// for prompt templates.
-func WithPromptsRoot(path string) SessionOption {
-	return func(s *session) {
-		s.promptsRoot = path
+// New creates a new Ada AI workflow instance with the provided LLM model and options.
+func New(ai llms.Model, opts ...Option) *ada {
+	for _, o := range opts {
+		options = o(options)
 	}
+
+	return &ada{ai: ai, Opts: options}
 }
 
-// WithConfig sets the configuration for current session.
-func WithConfig(cfg *Config) SessionOption {
-	return func(s *session) {
-		s.Cfg = cfg
-		if cfg != nil {
-			if cfg.CallOpts.Temperature != 0 {
-				s.callOpts = append(s.callOpts, llms.WithTemperature(cfg.CallOpts.Temperature))
-			}
-			if cfg.CallOpts.JSONMode {
-				s.callOpts = append(s.callOpts, llms.WithJSONMode())
-			}
-		}
-	}
-}
-
-// WithProjectData sets the project data in the current session.
-func WithProjectData(p ProjectData) SessionOption {
-	return func(s *session) {
-		s.Project = p
-	}
-}
-
-// New initializes a new Ada instance with the provided LLM model and session
-// options. It applies defaults for user, project, and configuration values when
-// they are not supplied through the provided options.
-func New(ai llms.Model, opts ...SessionOption) *ada {
-	session := &session{}
-	for _, v := range opts {
-		v(session)
-	}
-
-	if session.Project.UserName == "" {
-		session.Project.UserName = "unknown_user"
-	}
-	if session.Project.ProjName == "" {
-		session.Project.ProjName = fmt.Sprintf("project_%s", uuid.NewString())
-	}
-	if session.Cfg == nil {
-		session.Cfg = &defaultCfg
-	}
-
-	return &ada{ai: ai, Session: *session}
+// AddProjectData sets the current project data in the Ada session.
+func (ada *ada) AddProjectData(pd ProjectData) {
+	ada.Project = pd
 }
 
 // ResolvePromptPath a path to the prompt from the prompts folder with
 // given filename.
 func (ada *ada) ResolvePromptPath(filename string) string {
-	return filepath.Join(ada.Session.promptsRoot, filename)
+	return filepath.Join(ada.Opts.PromptsRoot, filename)
 }
 
 // ResolveProjectPath resolves a project root folder path, based using
 // current project and user context.
 func (ada *ada) ResolveProjectPath() string {
-	return filepath.Join(ada.Session.projectsRoot, ada.Session.Project.UserName, ada.Session.Project.ProjName)
+	return filepath.Join(ada.Opts.ProjectsRoot, ada.Project.UserName, ada.Project.ProjName)
 }
 
 // GenerateContent sends a prompt along with a series of messages to the LLM
 // and expects a response. It uses the options and timeout specified in the
 // Ada configuration. If the timeout is invalid, it defaults to 3 minutes.
 func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
-	dur, err := time.ParseDuration(ada.Session.Cfg.Timeout)
+	dur, err := time.ParseDuration(ada.Opts.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
-		slog.Warn("failed to parse duration from config: using default", "duration", ada.Session.Cfg.Timeout, "default", dur)
+		slog.Warn("failed to parse duration from config: using default", "duration", ada.Opts.Timeout, "default", dur)
 	}
 
 	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ada.ai.GenerateContent(ctx, msgs, ada.Session.callOpts...)
+	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCallOpts))
 	cf()
 	return res, err
 }
