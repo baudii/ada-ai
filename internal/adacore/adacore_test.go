@@ -38,7 +38,7 @@ func TestNew(t *testing.T) {
 		expectedPD   ProjectData
 	}{
 		{&Options{ProjectsRoot: "root"}, ProjectData{}, "root", ProjectData{UserName: "unknown_user", ProjName: "project_"}},
-		{&Options{Timeout: "a", Reflection: ReflectConfig{1, 2}, ModelCallOpts: llms.CallOptions{Temperature: 0.4, JSONMode: true}}, ProjectData{UserName: "name", ProjName: "proj"}, "", ProjectData{UserName: "name", ProjName: "proj"}},
+		{&Options{Timeout: "a", Reflection: ReflectConfig{1, 2}, ModelCall: llms.CallOptions{Temperature: 0.4, JSONMode: true}}, ProjectData{UserName: "name", ProjName: "proj"}, "", ProjectData{UserName: "name", ProjName: "proj"}},
 		{&Options{ProjectsRoot: "root"}, ProjectData{UserName: "name", ProjName: "proj"}, "root", ProjectData{UserName: "name", ProjName: "proj"}},
 	}
 	ai := &mockLLM{}

@@ -2,13 +2,11 @@ package app
 
 import (
 	"log/slog"
-	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/projects"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -17,6 +15,7 @@ var defaultCfg adacore.Options = adacore.Options{
 }
 
 type Runner interface {
+	Projdata(chan adacore.ProjectData)
 }
 
 // Run initializes and runs the CLI application. It sets up the AI model,
@@ -49,40 +48,10 @@ func Run(runner Runner) {
 	}
 
 	ada := adacore.New(ai, adacore.WithOptions(*opts))
+	c := make(chan adacore.ProjectData)
+	go runner.Projdata(c)
+	data := <-c
+	ada.AddProjectData(data)
 
-	input := utils.ReadInput("Provide project description")
-	step1Template, err := ada.PromptFromTemplate(common.ProjectStructurePrompt, ada.Project.ProjName, input)
-	if err != nil {
-		slog.Error("failed to get step1 prompt from template", "error", err)
-		os.Exit(1)
-	}
-	data, err := ada.SendReflect(step1Template)
-	if err != nil {
-		slog.Error("failed send reflect", "error", err)
-		os.Exit(1)
-	}
-	ld, err := projects.New(data, ada)
-	if err != nil {
-		slog.Error("failed to create new local project", "error", err)
-		os.Exit(1)
-	}
-	ada.Proj = ld
-	err = utils.PrintTree(os.Stdout, ada.Proj.Structure(), "")
-	if err != nil {
-		slog.Error("failed to print the tree", "error", err)
-	}
-
-	err = ada.Proj.Materialize()
-	if err != nil {
-		slog.Error("failed to materialize project", "error", err)
-		os.Exit(1)
-	}
+	slog.Info("starting Ada AI session", "user", ada.Project.UserName, "project", ada.Project.ProjName)
 }
-
-// c := make(chan adacore.SessionOption)
-// go runner.Options(c)
-// var options []adacore.SessionOption
-// for v := range c {
-// 	options = append(options, v)
-// }
-// options = append(options, adacore.WithConfig(opts))

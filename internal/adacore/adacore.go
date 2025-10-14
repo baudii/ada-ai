@@ -27,11 +27,11 @@ type ada struct {
 
 // Options is the configuration for Ada AI workflow.
 type Options struct {
-	Timeout       string           `json:"requestTimeout"`
-	ProjectsRoot  string           `json:"projectsRoot"`
-	PromptsRoot   string           `json:"promptsRoot"`
-	Reflection    ReflectConfig    `json:"reflection"`
-	ModelCallOpts llms.CallOptions `json:"call-options"`
+	Timeout      string           `json:"requestTimeout"`
+	ProjectsRoot string           `json:"projectsRoot"`
+	PromptsRoot  string           `json:"promptsRoot"`
+	Reflection   ReflectConfig    `json:"reflection"`
+	ModelCall    llms.CallOptions `json:"call-options"`
 }
 
 // SessionOption is a function that modifies the Ada session configuration.
@@ -97,6 +97,13 @@ func (ada *ada) ResolveProjectPath() string {
 	return filepath.Join(ada.Opts.ProjectsRoot, ada.Project.UserName, ada.Project.ProjName)
 }
 
+// GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
+// It calls GenerateContent with the provided system prompt.
+func (ada *ada) GenerateWithSys(sys string, user string) (*llms.ContentResponse, error) {
+	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
+	return ada.GenerateContent(user, msgs)
+}
+
 // GenerateContent sends a prompt along with a series of messages to the LLM
 // and expects a response. It uses the options and timeout specified in the
 // Ada configuration. If the timeout is invalid, it defaults to 3 minutes.
@@ -109,7 +116,7 @@ func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llm
 
 	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
 	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCallOpts))
+	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCall))
 	cf()
 	return res, err
 }
