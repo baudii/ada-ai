@@ -30,10 +30,9 @@ func init() {
 	ConfigPath = filepath.Join(DataPath, "configuration")
 	DebuggingPath = filepath.Join(DataPath, "debugging")
 	PromptsPath = filepath.Join(DataPath, "prompts")
-	initLogger()
 }
 
-func initLogger() {
+func InitLogger() {
 	cfgPath := filepath.Join(ConfigPath, "dilog.json")
 	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](cfgPath)
 	if err != nil {

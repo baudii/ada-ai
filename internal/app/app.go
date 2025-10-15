@@ -1,14 +1,30 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"path/filepath"
+	"reflect"
+	"strings"
 
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
+
+var (
+	prod = prompt{
+		system: filepath.Join("product", "system.txt"),
+		human:  filepath.Join("product", "human.txt"),
+	}
+)
+
+type prompt struct {
+	system  string
+	human   string
+	reflect string
+}
 
 var defaultCfg adacore.Options = adacore.Options{
 	Timeout: "3m",
@@ -23,11 +39,10 @@ type Runner interface {
 // materialize a project based on the provided description.
 //
 // It also manages configuration loading and error handling throughout the process.
-func Run(runner Runner) {
+func Run(runner Runner) error {
 	ai, err := ai.RegisterFromFile(common.ConfigPath)
 	if err != nil {
-		slog.Error("failed to register llm", "error", err)
-		return
+		return fmt.Errorf("failed to register llm", "error", err)
 	}
 
 	var opts *adacore.Options
@@ -52,6 +67,40 @@ func Run(runner Runner) {
 	go runner.Projdata(c)
 	data := <-c
 	ada.AddProjectData(data)
+	slog.Info("starting app session", "user", ada.Project.UserName, "project", ada.Project.ProjName)
+	sys, err := ada.PromptFromTemplate(prod.system)
+	if err != nil {
+		return fmt.Errorf("load prod system template: %w", err)
+	}
 
-	slog.Info("starting Ada AI session", "user", ada.Project.UserName, "project", ada.Project.ProjName)
+	hum, err := ada.PromptFromTemplate(prod.human, stringify(data))
+	if err != nil {
+		return fmt.Errorf("load prod human template: %w", err)
+	}
+
+	resp, err := ada.GenerateWithSys(sys, hum)
+	if err != nil {
+		return fmt.Errorf("generate with sys: %w", err)
+	}
+
+	slog.Info(resp.Choices[0].Content)
+	return nil
+}
+
+func stringify(v adacore.ProjectData) string {
+	val := reflect.ValueOf(v)
+	typ := val.Type()
+
+	var b strings.Builder
+	for i := 0; i < val.NumField(); i++ {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		fieldName := typ.Field(i).Name
+		fieldValue := val.Field(i).Interface()
+		if fieldValue != "" {
+			fmt.Fprintf(&b, "- %s: %v", fieldName, fieldValue)
+		}
+	}
+	return b.String()
 }

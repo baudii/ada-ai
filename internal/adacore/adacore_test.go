@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,6 +52,30 @@ func TestNew(t *testing.T) {
 		assert.Equal(t, ada.Project.UserName, v.expectedPD.UserName, "test: %v", i)
 		assert.Contains(t, ada.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
 	}
+}
+
+func TestGenerateWithSys(t *testing.T) {
+	sysp, usp := "system prompt", "user prompt"
+	m := &mockLLM{func(a ...any) (*llms.ContentResponse, error) {
+		msgs, ok := a[0].([]llms.MessageContent)
+		if !ok || len(msgs) < 2 || len(msgs[0].Parts) == 0 || len(msgs[1].Parts) == 0 {
+			return nil, errors.New("wrong length or type of messages")
+		}
+		a1, ok1 := msgs[0].Parts[0].(llms.TextContent)
+		a2, ok2 := msgs[1].Parts[0].(llms.TextContent)
+		if !ok1 || !ok2 {
+			return nil, errors.New("invalid messages")
+		}
+		if !strings.Contains(a1.Text, sysp) || !strings.Contains(a2.Text, usp) {
+			return nil, errors.New("invalid messages")
+		}
+		return defaultMock(a...)
+	}}
+	ada := New(m, WithOptions(Options{Timeout: "1m"}))
+	res, err := ada.GenerateWithSys(sysp, usp)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Equal(t, "some response", res.Choices[0].Content)
 }
 
 func TestGenerateJSON(t *testing.T) {

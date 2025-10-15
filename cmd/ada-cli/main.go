@@ -10,7 +10,10 @@ import (
 
 func main() {
 	parseFlags()
-	app.Run(cli.New())
+	err := app.Run(cli.New())
+	if err != nil {
+		slog.Error("application error", "error", err)
+	}
 }
 
 func parseFlags() {

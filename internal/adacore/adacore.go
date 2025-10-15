@@ -114,7 +114,7 @@ func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llm
 		slog.Warn("failed to parse duration from config: using default", "duration", ada.Opts.Timeout, "default", dur)
 	}
 
-	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeSystem, prompt))
+	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, prompt))
 	ctx, cf := context.WithTimeout(context.Background(), dur)
 	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCall))
 	cf()
