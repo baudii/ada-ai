@@ -28,9 +28,9 @@ var (
 )
 
 type prompt struct {
-	system  string
-	human   string
-	reflect string
+	system string
+	human  string
+	//reflect string
 }
 
 var defaultCfg adacore.Options = adacore.Options{
