@@ -18,11 +18,11 @@ const (
 	improvePrompt      = "improve-template.txt"
 )
 
-type ada struct {
-	ai      llms.Model
-	Opts    Options
-	Project ProjectData
-	Proj    project
+type Ada struct {
+	ai       llms.Model
+	Opts     Options
+	Projdata ProjectData
+	Proj     project
 }
 
 // Options is the configuration for Ada AI workflow.
@@ -66,40 +66,40 @@ func WithOptions(opts Options) Option {
 }
 
 // New creates a new Ada AI workflow instance with the provided LLM model and options.
-func New(ai llms.Model, opts ...Option) *ada {
+func New(ai llms.Model, opts ...Option) *Ada {
 	for _, o := range opts {
 		options = o(options)
 	}
 
-	return &ada{ai: ai, Opts: options}
+	return &Ada{ai: ai, Opts: options}
 }
 
 // AddProjectData sets the current project data in the Ada session.
-func (ada *ada) AddProjectData(pd ProjectData) {
+func (ada *Ada) AddProjectData(pd ProjectData) {
 	if pd.UserName == "" {
 		pd.UserName = "unknown_user"
 	}
 	if pd.ProjName == "" {
 		pd.ProjName = fmt.Sprintf("project_%s", uuid.NewString())
 	}
-	ada.Project = pd
+	ada.Projdata = pd
 }
 
 // ResolvePromptPath a path to the prompt from the prompts folder with
 // given filename.
-func (ada *ada) ResolvePromptPath(filename string) string {
+func (ada *Ada) ResolvePromptPath(filename string) string {
 	return filepath.Join(ada.Opts.PromptsRoot, filename)
 }
 
 // ResolveProjectPath resolves a project root folder path, based using
 // current project and user context.
-func (ada *ada) ResolveProjectPath() string {
-	return filepath.Join(ada.Opts.ProjectsRoot, ada.Project.UserName, ada.Project.ProjName)
+func (ada *Ada) ResolveProjectPath() string {
+	return filepath.Join(ada.Opts.ProjectsRoot, ada.Projdata.UserName, ada.Projdata.ProjName)
 }
 
 // GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
 // It calls GenerateContent with the provided system prompt.
-func (ada *ada) GenerateWithSys(sys string, user string) (*llms.ContentResponse, error) {
+func (ada *Ada) GenerateWithSys(sys string, user string) (*llms.ContentResponse, error) {
 	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
 	return ada.GenerateContent(user, msgs)
 }
@@ -107,7 +107,7 @@ func (ada *ada) GenerateWithSys(sys string, user string) (*llms.ContentResponse,
 // GenerateContent sends a prompt along with a series of messages to the LLM
 // and expects a response. It uses the options and timeout specified in the
 // Ada configuration. If the timeout is invalid, it defaults to 3 minutes.
-func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
+func (ada *Ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(ada.Opts.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
@@ -123,7 +123,7 @@ func (ada *ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llm
 
 // PromptFromTemplate reads a prompt template file and formats it with the provided input.
 // It returns the formatted prompt string or an error if the file cannot be read.
-func (ada *ada) PromptFromTemplate(filename string, input ...any) (string, error) {
+func (ada *Ada) PromptFromTemplate(filename string, input ...any) (string, error) {
 	file := ada.ResolvePromptPath(filename)
 	template, err := os.ReadFile(file)
 	if err != nil {

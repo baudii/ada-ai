@@ -49,8 +49,8 @@ func TestNew(t *testing.T) {
 		assert.Nil(t, ada.Proj)
 		assert.Equal(t, *v.options, ada.Opts, "test: %v", i)
 		assert.Equal(t, v.expectedRoot, ada.Opts.ProjectsRoot, "test: %v", i)
-		assert.Equal(t, ada.Project.UserName, v.expectedPD.UserName, "test: %v", i)
-		assert.Contains(t, ada.Project.ProjName, v.expectedPD.ProjName, "test: %v", i)
+		assert.Equal(t, ada.Projdata.UserName, v.expectedPD.UserName, "test: %v", i)
+		assert.Contains(t, ada.Projdata.ProjName, v.expectedPD.ProjName, "test: %v", i)
 	}
 }
 

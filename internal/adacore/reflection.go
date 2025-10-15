@@ -45,7 +45,7 @@ type templates struct {
 // SendReflect sends a request to the LLM and then performs a
 // reflection and improvement of this response based on the configured
 // parameters.
-func (ada *ada) SendReflect(prompt string) ([]byte, error) {
+func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 	resp, err := ada.GenerateContent(prompt, nil)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (ada *ada) SendReflect(prompt string) ([]byte, error) {
 // and attempts to improve it based on the reflection results. The process
 // continues until the reflection score meets or exceeds the configured
 // threshold or the maximum number of reflection cycles is reached.
-func (ada *ada) Improve(request string, response string) (*eval, error) {
+func (ada *Ada) Improve(request string, response string) (*eval, error) {
 	var (
 		res    = &eval{response, float32(math.Inf(-1))}
 		curAns = response
@@ -128,7 +128,7 @@ func (ada *ada) Improve(request string, response string) (*eval, error) {
 // Reflect sends the current conversation context to the LLM along with
 // a reflection prompt, asking the model to evaluate the previous response
 // and provide scores and improvement suggestions.
-func (ada *ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
+func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
 	resp, err := ada.GenerateContent(reflectPrompt, msgs)
 	if err != nil {
 		return nil, fmt.Errorf("reflect: %w", err)
@@ -149,7 +149,7 @@ func (ada *ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 	return &r, nil
 }
 
-func (ada *ada) loadTemplates() (*templates, error) {
+func (ada *Ada) loadTemplates() (*templates, error) {
 	reflectTemplate, err := ada.PromptFromTemplate(reflectPrompt)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -13,10 +14,16 @@ import (
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
+const fold = "scheme"
+
 var (
-	prod = prompt{
-		system: filepath.Join("product", "system.txt"),
-		human:  filepath.Join("product", "human.txt"),
+	busn = prompt{
+		system: filepath.Join("business", "system.txt"),
+		human:  filepath.Join("business", "human.txt"),
+	}
+	tech = prompt{
+		system: filepath.Join("technical", "system.txt"),
+		human:  filepath.Join("technical", "human.txt"),
 	}
 )
 
@@ -31,7 +38,7 @@ var defaultCfg adacore.Options = adacore.Options{
 }
 
 type Runner interface {
-	Projdata(chan adacore.ProjectData)
+	Projdata(string, chan adacore.ProjectData)
 }
 
 // Run initializes and runs the CLI application. It sets up the AI model,
@@ -40,9 +47,30 @@ type Runner interface {
 //
 // It also manages configuration loading and error handling throughout the process.
 func Run(runner Runner) error {
+	udpath := filepath.Join(common.DataPath, "user_data.json")
+	ada, err := initAda(runner, udpath)
+	if err != nil {
+		return fmt.Errorf("initialize ada: %w", err)
+	}
+
+	res, err := getDescription(ada, "business-description.json", busn, stringify(ada.Projdata))
+	if err != nil {
+		return fmt.Errorf("project description: %w", err)
+	}
+
+	res, err = getDescription(ada, "technical-description.json", tech, res)
+	if err != nil {
+		return fmt.Errorf("technical description: %w", err)
+	}
+
+	slog.Info(res, "type", "technical description")
+	return nil
+}
+
+func initAda(runner Runner, udpath string) (*adacore.Ada, error) {
 	ai, err := ai.RegisterFromFile(common.ConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to register llm", "error", err)
+		return nil, fmt.Errorf("register llm: %w", err)
 	}
 
 	var opts *adacore.Options
@@ -64,27 +92,52 @@ func Run(runner Runner) error {
 
 	ada := adacore.New(ai, adacore.WithOptions(*opts))
 	c := make(chan adacore.ProjectData)
-	go runner.Projdata(c)
+	go runner.Projdata(udpath, c)
 	data := <-c
 	ada.AddProjectData(data)
-	slog.Info("starting app session", "user", ada.Project.UserName, "project", ada.Project.ProjName)
-	sys, err := ada.PromptFromTemplate(prod.system)
-	if err != nil {
-		return fmt.Errorf("load prod system template: %w", err)
+	slog.Info("starting app session", "user", ada.Projdata.UserName, "project", ada.Projdata.ProjName)
+	return ada, nil
+}
+
+func getDescription(ada *adacore.Ada, name string, p prompt, args ...any) (string, error) {
+	projpath := ada.ResolveProjectPath()
+	path := filepath.Join(projpath, fold, name)
+	_, err := os.Stat(path)
+	if err == nil {
+		slog.Info("project description already exists, skipping generation", "path", path)
+		res, err := os.ReadFile(path)
+		if err != nil {
+			slog.Error("failed to unmarshal existing project description", "error", err)
+		} else {
+			return string(res), nil
+		}
 	}
 
-	hum, err := ada.PromptFromTemplate(prod.human, stringify(data))
+	if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", fmt.Errorf("create project path: %w", err)
+	}
+
+	sys, err := ada.PromptFromTemplate(p.system)
 	if err != nil {
-		return fmt.Errorf("load prod human template: %w", err)
+		return "", fmt.Errorf("load prod system template: %w", err)
+	}
+
+	hum, err := ada.PromptFromTemplate(p.human, args...)
+	if err != nil {
+		return "", fmt.Errorf("load prod human template: %w", err)
 	}
 
 	resp, err := ada.GenerateWithSys(sys, hum)
 	if err != nil {
-		return fmt.Errorf("generate with sys: %w", err)
+		return "", fmt.Errorf("generate with sys: %w", err)
 	}
 
-	slog.Info(resp.Choices[0].Content)
-	return nil
+	err = os.WriteFile(path, []byte(resp.Choices[0].Content), 0644)
+	if err != nil {
+		return "", fmt.Errorf("write project description: %w", err)
+	}
+
+	return resp.Choices[0].Content, nil
 }
 
 func stringify(v adacore.ProjectData) string {
@@ -103,4 +156,5 @@ func stringify(v adacore.ProjectData) string {
 		}
 	}
 	return b.String()
+
 }
