@@ -143,5 +143,5 @@ func TestWrite_DefaultPrepareOpener(t *testing.T) {
 	f, err := os.ReadFile(filepath.Join(d, "m_2020-01-02.log"))
 	require.NoError(t, err)
 	require.Equal(t, "test", string(f))
-	dw.wc.Close() // Close the writer to avoid resource leaks
+	_ = dw.wc.Close() // Close the writer to avoid resource leaks
 }
