@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/baudii/ada-ai/pkg/dilog"
@@ -32,8 +33,8 @@ func TestLoadLogConfig(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
-		t.Run(v.cfgPath, func(t *testing.T) {
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			if !v.hasErr {
 				d := t.TempDir()
 				v.cfgPath = filepath.Join(d, v.cfgPath)
@@ -102,7 +103,7 @@ func TestDefaultSimpleLogger(t *testing.T) {
 		},
 	}
 	for i, v := range tests {
-		t.Run(string(rune(i)), func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			logger, err := DefaultSimpleLogger(v.cfg, v.opts...)
 			if v.hasErr {
 				require.Error(t, err)
