@@ -5,9 +5,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type resolver struct {
@@ -33,25 +35,25 @@ func TestNew(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		switch v.expectError {
-		case "create base path":
-			// simulate base path creation failure by creating a file in the middle
-			// of the base path
-			f, err := os.Create(filepath.Dir(v.resolver.path))
-			if !assert.NoError(t, err, "test: %v", i) {
-				continue
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			switch v.expectError {
+			case "create base path":
+				// simulate base path creation failure by creating a file in the middle
+				// of the base path
+				f, err := os.Create(filepath.Dir(v.resolver.path))
+				require.NoError(t, err)
+				_ = f.Close()
 			}
-			_ = f.Close()
-		}
-		actualLocalProj, err := New([]byte(v.structure), v.resolver)
-		if v.expectError != "" {
-			assert.ErrorContains(t, err, v.expectError, "test: %v", i)
-		} else if assert.NoError(t, err, "test: %v", i) {
-			v.expected.base = v.resolver.path
-			v.expected.uniqFoldName = nil
-			actualLocalProj.uniqFoldName = nil
-			assert.Equal(t, v.expected, actualLocalProj, "test: %v", i)
-		}
+			actualLocalProj, err := New([]byte(v.structure), v.resolver)
+			if v.expectError != "" {
+				assert.ErrorContains(t, err, v.expectError)
+			} else if assert.NoError(t, err) {
+				v.expected.base = v.resolver.path
+				v.expected.uniqFoldName = nil
+				actualLocalProj.uniqFoldName = nil
+				assert.Equal(t, v.expected, actualLocalProj)
+			}
+		})
 	}
 }
 
@@ -67,24 +69,22 @@ func TestMaterializeFails(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		dir := t.TempDir()
-		a := path.Join(dir, "a")
-		switch v.err {
-		case "create file":
-			if err := os.MkdirAll(a, 0744); !assert.NoError(t, err) {
-				continue
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			dir := t.TempDir()
+			a := path.Join(dir, "a")
+			switch v.err {
+			case "create file":
+				err := os.MkdirAll(a, 0744)
+				require.NoError(t, err)
+			case "create folder(s)":
+				f, err := os.Create(a)
+				require.NoError(t, err)
+				err = f.Close()
+				require.NoError(t, err)
 			}
-		case "create folder(s)":
-			f, err := os.Create(a)
-			if !assert.NoError(t, err) {
-				continue
-			}
-			if err = f.Close(); !assert.NoError(t, err) {
-				continue
-			}
-		}
-		err := materialize(dir, v.m)
-		assert.ErrorContains(t, err, v.err, "test: %v", i)
+			err := materialize(dir, v.m)
+			assert.ErrorContains(t, err, v.err)
+		})
 	}
 }
 
@@ -102,36 +102,32 @@ func TestMaterialize(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		d := t.TempDir()
-		switch v.errmsg {
-		case "get unique folder name: readdir":
-			v.errmsg = "any"
-			d = filepath.Join(d, "p")
-			f, err := os.Create(d)
-			if !assert.NoError(t, err, "test: %v", i) {
-				continue
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			d := t.TempDir()
+			switch v.errmsg {
+			case "get unique folder name: readdir":
+				v.errmsg = "any"
+				d = filepath.Join(d, "p")
+				f, err := os.Create(d)
+				require.NoError(t, err)
+				t.Cleanup(func() { _ = f.Close() })
+			case "create project root folder":
+				d = ""
 			}
-			t.Cleanup(func() { _ = f.Close() })
-		case "create project root folder":
-			d = ""
-		}
-		lp := &localProj{v.structure, d, "", v.uniqFold}
-		if v.errmsg == "" {
-			err := os.MkdirAll(path.Join(d, "0"), 0744)
-			if !assert.NoError(t, err) {
-				continue
+			lp := &localProj{v.structure, d, "", v.uniqFold}
+			if v.errmsg == "" {
+				err := os.MkdirAll(path.Join(d, "0"), 0744)
+				require.NoError(t, err)
 			}
-		}
-		err := lp.Materialize()
-		if v.errmsg == "" && assert.NoError(t, err, "test: %v", i) {
-			assert.True(t, isMaterialized(v.structure, lp.projectRoot), "test: %v", i)
-			continue
-		}
-		if v.errmsg == "any" {
-			assert.Error(t, err, "test: %v", i)
-		} else {
-			assert.ErrorContains(t, err, v.errmsg, "test: %v", i)
-		}
+			err := lp.Materialize()
+			if v.errmsg == "" && assert.NoError(t, err) {
+				assert.True(t, isMaterialized(v.structure, lp.projectRoot))
+			} else if v.errmsg == "any" {
+				assert.Error(t, err)
+			} else {
+				assert.ErrorContains(t, err, v.errmsg)
+			}
+		})
 	}
 }
 

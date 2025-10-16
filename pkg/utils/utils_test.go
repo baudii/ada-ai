@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,15 +34,17 @@ func TestAbsolutePath(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		v.basePath = filepath.Join(v.basePath, "exe.exe")
-		executable := func() (string, error) { return v.basePath, v.err }
-		if v.err != nil {
-			assert.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) }, "test: %v", i)
-		} else {
-			ap := AbsolutePath(v.relPath, executable)
-			expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
-			assert.Equal(t, expected, ap, "test: %v", i)
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			v.basePath = filepath.Join(v.basePath, "exe.exe")
+			executable := func() (string, error) { return v.basePath, v.err }
+			if v.err != nil {
+				assert.PanicsWithError(t, v.err.Error(), func() { AbsolutePath(v.relPath, executable) })
+			} else {
+				ap := AbsolutePath(v.relPath, executable)
+				expected := filepath.Join(filepath.Dir(v.basePath), v.relPath)
+				assert.Equal(t, expected, ap)
+			}
+		})
 	}
 }
 
@@ -131,8 +134,10 @@ func TestMergeMap(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		MergeMap(v.dst, v.src)
-		assert.Equal(t, v.dst, v.expected, "test: %v", i)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			MergeMap(v.dst, v.src)
+			assert.Equal(t, v.dst, v.expected)
+		})
 	}
 }
 
@@ -154,26 +159,28 @@ func TestPrintTree(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		iter := 0
-		var w io.Writer = &bytes.Buffer{}
-		if v.hasErr {
-			w = &mockWriter{f: func() (int, error) {
-				if iter > 0 {
-					return 0, fmt.Errorf("some err")
-				}
-				iter++
-				return 0, nil
-			}}
-		}
-		err := PrintTree(w, v.m, "")
-		if v.hasErr {
-			assert.Error(t, err, "test: %v", i)
-			continue
-		}
-		b, ok := w.(*bytes.Buffer)
-		if !assert.True(t, ok, "test: %v", i) {
-			continue
-		}
-		assert.Contains(t, v.expected, b.String(), "test: %v", i)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			iter := 0
+			var w io.Writer = &bytes.Buffer{}
+			if v.hasErr {
+				w = &mockWriter{f: func() (int, error) {
+					if iter > 0 {
+						return 0, fmt.Errorf("some err")
+					}
+					iter++
+					return 0, nil
+				}}
+			}
+			err := PrintTree(w, v.m, "")
+			if v.hasErr {
+				assert.Error(t, err)
+				return
+			}
+			b, ok := w.(*bytes.Buffer)
+			if !assert.True(t, ok) {
+				return
+			}
+			assert.Contains(t, v.expected, b.String())
+		})
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -54,18 +55,20 @@ func TestNewDailyWriter(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
-		d := t.TempDir()
-		dw, err := NewDailyWriter(d, v.opts...)
-		if v.err == "" {
-			assert.NoError(t, err)
-			assert.NotNil(t, dw)
-			assert.Equal(t, v.expected.prefix, dw.prefix)
-			assert.Equal(t, v.expected.loc, dw.loc)
-			assert.NotNil(t, dw.wc)
-		} else {
-			assert.ErrorContains(t, err, v.err)
-		}
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			d := t.TempDir()
+			dw, err := NewDailyWriter(d, v.opts...)
+			if v.err == "" {
+				assert.NoError(t, err)
+				assert.NotNil(t, dw)
+				assert.Equal(t, v.expected.prefix, dw.prefix)
+				assert.Equal(t, v.expected.loc, dw.loc)
+				assert.NotNil(t, dw.wc)
+			} else {
+				assert.ErrorContains(t, err, v.err)
+			}
+		})
 	}
 }
 
@@ -105,24 +108,26 @@ func TestWrite(t *testing.T) {
 		},
 	}
 
-	for _, v := range tests {
-		d := t.TempDir()
-		dw, err := NewDailyWriter(d, v.opts...)
-		require.NoError(t, err)
-		if v.swappath != "" {
-			dw.path = v.swappath
-			dw.curDate = "2022-01-01" // force rotation
-		}
-		n, err := dw.Write([]byte(v.input))
-		if v.err == "" {
-			if assert.NoError(t, err) {
-				assert.Equal(t, len(v.input), n)
-				buf := dw.wc.(mockWriteCloser).Writer.(*bytes.Buffer)
-				assert.Equal(t, v.expected, buf.String())
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			d := t.TempDir()
+			dw, err := NewDailyWriter(d, v.opts...)
+			require.NoError(t, err)
+			if v.swappath != "" {
+				dw.path = v.swappath
+				dw.curDate = "2022-01-01" // force rotation
 			}
-		} else {
-			assert.ErrorContains(t, err, v.err)
-		}
+			n, err := dw.Write([]byte(v.input))
+			if v.err == "" {
+				if assert.NoError(t, err) {
+					assert.Equal(t, len(v.input), n)
+					buf := dw.wc.(mockWriteCloser).Writer.(*bytes.Buffer)
+					assert.Equal(t, v.expected, buf.String())
+				}
+			} else {
+				assert.ErrorContains(t, err, v.err)
+			}
+		})
 	}
 }
 

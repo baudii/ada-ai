@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -55,26 +56,28 @@ func TestReadInputInternal(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		reader = v.r
-		writer = v.w
-		logger = slog.New(slog.NewTextHandler(v.logwriter, nil))
-		if v.panics {
-			writer = &mockWriter{func() (int, error) { return 0, fmt.Errorf("failed") }}
-			assert.Panics(t, func() { _ = ReadInput(v.msg) }, "test: %v", i)
-			continue
-		}
-		res := ReadInput(v.msg)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			reader = v.r
+			writer = v.w
+			logger = slog.New(slog.NewTextHandler(v.logwriter, nil))
+			if v.panics {
+				writer = &mockWriter{func() (int, error) { return 0, fmt.Errorf("failed") }}
+				assert.Panics(t, func() { _ = ReadInput(v.msg) })
+				return
+			}
+			res := ReadInput(v.msg)
 
-		if !v.logsErr {
-			assert.True(t, len(v.logwriter.String()) == 0, "test: %v", i)
-		} else {
-			assert.True(t, len(v.logwriter.String()) > 0, "test: %v", i)
-		}
+			if !v.logsErr {
+				assert.True(t, len(v.logwriter.String()) == 0)
+			} else {
+				assert.True(t, len(v.logwriter.String()) > 0)
+			}
 
-		b, ok := v.w.(*bytes.Buffer)
-		if assert.True(t, ok, "test: %v", i) {
-			assert.Equal(t, v.expWr, b.String(), "test: %v", i)
-		}
-		assert.Equal(t, v.expRead, res, "test: %v", i)
+			b, ok := v.w.(*bytes.Buffer)
+			if assert.True(t, ok) {
+				assert.Equal(t, v.expWr, b.String())
+			}
+			assert.Equal(t, v.expRead, res)
+		})
 	}
 }

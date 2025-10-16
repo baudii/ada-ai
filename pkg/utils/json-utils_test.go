@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,9 +38,11 @@ func TestTrimJSON(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		res, err := TrimJSON(v.json)
-		assert.Equal(t, err != nil, v.hasError, "test: %v", i)
-		assert.Equal(t, res, v.trimmed, "test: %v", i)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			res, err := TrimJSON(v.json)
+			assert.Equal(t, err != nil, v.hasError)
+			assert.Equal(t, res, v.trimmed)
+		})
 	}
 }
 
@@ -59,16 +62,18 @@ func TestSaveJSONToFile(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		path := filepath.Join(t.TempDir(), "tmp.tmp")
-		err := SaveJSONToFile(v.content, path)
-		assert.Equal(t, err != nil, v.hasErr, "test: %v", i)
-		if err == nil {
-			got, readErr := os.ReadFile(path)
-			assert.Equal(t, readErr == nil, v.fileExist, "test: %v", i)
-			if readErr == nil {
-				assert.Equal(t, []byte(v.result), got, "test: %v", i)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "tmp.tmp")
+			err := SaveJSONToFile(v.content, path)
+			assert.Equal(t, err != nil, v.hasErr)
+			if err == nil {
+				got, readErr := os.ReadFile(path)
+				assert.Equal(t, readErr == nil, v.fileExist)
+				if readErr == nil {
+					assert.Equal(t, []byte(v.result), got)
+				}
 			}
-		}
+		})
 	}
 }
 
@@ -88,24 +93,24 @@ func TestParseJSONFile(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		path := filepath.Join(t.TempDir(), "ttt.json")
-		if v.hasFile {
-			err := os.WriteFile(path, []byte(v.json), 0644)
-			if !assert.NoError(t, err) {
-				continue
-			}
-		}
-		res, err := ParseJSONFile[Valid](path)
-		if v.hasErr {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "ttt.json")
 			if v.hasFile {
-				assert.Error(t, err, "test: %v", i)
-			} else {
-				assert.True(t, os.IsNotExist(err), "expected not exist error: test: %v", v)
+				err := os.WriteFile(path, []byte(v.json), 0644)
+				require.NoError(t, err)
 			}
-		} else {
-			require.NoError(t, err, "test: %v", i)
-			assert.Equal(t, *res, v.valid, "test: %v", i)
-		}
+			res, err := ParseJSONFile[Valid](path)
+			if v.hasErr {
+				if v.hasFile {
+					assert.Error(t, err)
+				} else {
+					assert.True(t, os.IsNotExist(err), "expected not exist error: test: %v", v)
+				}
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, *res, v.valid)
+			}
+		})
 	}
 }
 
@@ -140,12 +145,14 @@ func TestMapToStruct(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		res, err := MapToStruct[s](v.m)
-		if v.err == "" {
-			assert.NoError(t, err, "test: %v", i)
-		} else {
-			assert.ErrorContains(t, err, v.err, "test: %v", i)
-		}
-		assert.Equal(t, v.expected, res, "test: %v", i)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			res, err := MapToStruct[s](v.m)
+			if v.err == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, v.err)
+			}
+			assert.Equal(t, v.expected, res)
+		})
 	}
 }

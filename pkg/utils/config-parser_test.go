@@ -3,9 +3,11 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseJSONFileToMap(t *testing.T) {
@@ -26,17 +28,17 @@ func TestParseJSONFileToMap(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		v.path = filepath.Join(v.path, "tmp.json")
-		if v.jsonContent != "" {
-			err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
-			if !assert.NoError(t, err) {
-				continue
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			v.path = filepath.Join(v.path, "tmp.json")
+			if v.jsonContent != "" {
+				err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+				require.NoError(t, err)
 			}
-		}
 
-		res, err := ParseJSONFileToMap(v.path)
-		assert.True(t, (err != nil) == v.hasErr, "test: %v", i)
-		assert.Equal(t, v.expected, res, "test: %v", i)
+			res, err := ParseJSONFileToMap(v.path)
+			assert.True(t, (err != nil) == v.hasErr)
+			assert.Equal(t, v.expected, res)
+		})
 	}
 }
 
@@ -84,21 +86,19 @@ func TestParseJSONConfigWithLocal(t *testing.T) {
 	}
 
 	for i, v := range tests {
-		v.path = filepath.Join(v.path, "tmp.json")
-		if v.jsonContent != "" {
-			localPath := InsertFsuffix(v.path, ".local")
-			err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
-			if !assert.NoError(t, err) {
-				continue
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			v.path = filepath.Join(v.path, "tmp.json")
+			if v.jsonContent != "" {
+				localPath := InsertFsuffix(v.path, ".local")
+				err := os.WriteFile(v.path, []byte(v.jsonContent), 0644)
+				require.NoError(t, err)
+				err = os.WriteFile(localPath, []byte(v.localJsonContent), 0644)
+				require.NoError(t, err)
 			}
-			err = os.WriteFile(localPath, []byte(v.localJsonContent), 0644)
-			if !assert.NoError(t, err) {
-				continue
-			}
-		}
 
-		res, err := ParseJSONConfigWithLocal[config](v.path)
-		assert.True(t, (err != nil) == v.hasErr, "test: %v", i)
-		assert.Equal(t, v.expected, res, "test: %v", i)
+			res, err := ParseJSONConfigWithLocal[config](v.path)
+			assert.True(t, (err != nil) == v.hasErr)
+			assert.Equal(t, v.expected, res)
+		})
 	}
 }
