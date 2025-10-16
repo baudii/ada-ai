@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -30,18 +29,4 @@ func init() {
 	ConfigPath = filepath.Join(DataPath, "configuration")
 	DebuggingPath = filepath.Join(DataPath, "debugging")
 	PromptsPath = filepath.Join(DataPath, "prompts")
-}
-
-func InitLogger() {
-	cfgPath := filepath.Join(ConfigPath, "dilog.json")
-	cfg, err := utils.ParseJSONConfigWithLocal[dilog.Config](cfgPath)
-	if err != nil {
-		cfg = &dilog.Config{
-			Timezone: "local",
-			Path:     "logs",
-			Prefix:   "ada",
-		}
-	}
-
-	dilog.Init(cfg)
 }
