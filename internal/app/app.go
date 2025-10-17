@@ -87,7 +87,7 @@ func Run(ada *adacore.Ada, runner Runner) error {
 		return fmt.Errorf("create local project: %w", err)
 	}
 
-	slog.Debug("created local project", "project", lp)
+	slog.Debug("created local project")
 	err = utils.PrintTree(os.Stdout, lp.Structure(), "")
 	if err != nil {
 		return fmt.Errorf("print tree: %w", err)
