@@ -15,14 +15,17 @@ func registerGrok(m map[string]string) (llms.Model, error) {
 		return nil, fmt.Errorf("grok: options.model is required")
 	}
 
+	apikey := m["token"]
+	if apikey == "" {
+		return nil, fmt.Errorf("grok: options.token is required")
+	}
+
 	var opts []openai.Option
 	opts = append(opts, openai.WithModel(model))
+	opts = append(opts, openai.WithToken(apikey))
 
 	if v := m["url"]; v != "" {
 		opts = append(opts, openai.WithBaseURL(v))
-	}
-	if v := m["token"]; v != "" {
-		opts = append(opts, openai.WithToken(v))
 	}
 	if v := m["format"]; v == "json" {
 		opts = append(opts, openai.WithResponseFormat(openai.ResponseFormatJSON))

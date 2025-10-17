@@ -54,8 +54,8 @@ func TestRegister_grok(t *testing.T) {
 		hasErr bool
 	}{
 		{&Config{nil}, true},
-		{&Config{map[string]string{"model": "groq/compound", "url": "invalid"}}, false},
-		{&Config{map[string]string{"model": "groq/compound"}}, false},
+		{&Config{map[string]string{"model": "groq/compound"}}, true},
+		{&Config{map[string]string{"model": "groq/compound", "token": "api-key"}}, false},
 		{
 			// Full options as per grok.go defaults
 			&Config{
@@ -74,7 +74,7 @@ func TestRegister_grok(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			_, err := Register("grok", v.cfg)
-			assert.Equal(t, (err != nil), v.hasErr)
+			assert.Equal(t, v.hasErr, (err != nil))
 		})
 	}
 }
@@ -83,17 +83,18 @@ func TestRegisterFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		provider string
+		json     string
 		hasErr   bool
 	}{
-		{"ollama", false},
-		{"grok", false},
-		{"unsupported", true},
+		{"ollama", `{"options": {"model":"some"}}`, false},
+		{"grok", `{"options": {"model":"some", "token": "api-key"}}`, false},
+		{"unsupported", "", true},
 	}
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			dir := t.TempDir()
 			if !v.hasErr {
-				err := os.WriteFile(filepath.Join(dir, configName), []byte(`{"options": {"model":"some"}}`), 0644)
+				err := os.WriteFile(filepath.Join(dir, configName), []byte(v.json), 0644)
 				require.NoError(t, err)
 			}
 			_, err := RegisterFromFile(v.provider, dir)
