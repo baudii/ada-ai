@@ -18,14 +18,14 @@ func main() {
 	cfg := common.LoadLogConfig(cfgPath)
 	logger, err := common.DefaultSimpleLogger(cfg)
 	if err != nil {
-		log.Fatal("failed to create logger", "error", err)
+		log.Fatalf("failed to create logger: %v", err)
 	}
 
 	logger.Info("starting application")
 	runner := cli.New()
 	ada, err := app.InitAda(*provider, runner)
 	if err != nil {
-		log.Fatal("failed to initialize ada: %w", err)
+		log.Fatalf("failed to initialize ada: %v", err)
 	}
 
 	err = app.Run(ada, runner)

@@ -27,10 +27,8 @@ func Register(provider string, cfg *Config) (llms.Model, error) {
 	}
 }
 
-// RegisterFromFile registers the LLM based on the configuration parsed
-// from 'llm-provider.json' file located at folder.
-//
-// It is expected taht the provided folder stores a 'llm-provider.json' file.
+// RegisterFromFile registers the LLM using the configuration from a file
+// for the specified provider.
 func RegisterFromFile(provider, folder string) (llms.Model, error) {
 	path := filepath.Join(folder, configName)
 	cfg, err := utils.ParseJSONConfigWithLocal[Config](path)
