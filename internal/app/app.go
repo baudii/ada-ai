@@ -51,13 +51,7 @@ type Runner interface {
 // materialize a project based on the provided description.
 //
 // It also manages configuration loading and error handling throughout the process.
-func Run(runner Runner) error {
-	ada, err := initAda(runner)
-	if err != nil {
-		return fmt.Errorf("initialize ada: %w", err)
-	}
-
-	slog.Debug("ada initialized")
+func Run(ada *adacore.Ada, runner Runner) error {
 	busnessDesc, err := sendInstructions(ada, busn, ada.Projdata.ProjName, ada.Projdata.Summary)
 	if err != nil {
 		return fmt.Errorf("business description: %w", err)
@@ -107,8 +101,8 @@ func Run(runner Runner) error {
 	return nil
 }
 
-func initAda(runner Runner) (*adacore.Ada, error) {
-	ai, err := ai.RegisterFromFile(common.ConfigPath)
+func InitAda(provider string, runner Runner) (*adacore.Ada, error) {
+	ai, err := ai.RegisterFromFile(provider, common.AiConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("register llm: %w", err)
 	}

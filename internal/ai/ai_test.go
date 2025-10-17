@@ -10,19 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRegister(t *testing.T) {
+func TestRegister_invalid(t *testing.T) {
+	t.Parallel()
+	_, err := Register("random", &Config{nil})
+	require.Error(t, err)
+}
+
+func TestRegister_ollama(t *testing.T) {
 	tests := []struct {
 		cfg    *Config
 		hasErr bool
 	}{
-		{&Config{"unknown", nil}, true},
-		{&Config{"ollama", nil}, true},
-		{&Config{"ollama", map[string]string{"model": "gemma3:4b", "url": "invalid"}}, false},
-		{&Config{"ollama", map[string]string{"model": "gemma3:4b"}}, false},
+		{&Config{nil}, true},
+		{&Config{map[string]string{"model": "gemma3:4b", "url": "invalid"}}, false},
+		{&Config{map[string]string{"model": "gemma3:4b"}}, false},
 		{
 			// Full options as per ollama.go defaults
 			&Config{
-				"ollama",
 				map[string]string{
 					"model":           "gemma3:4b",
 					"url":             "http://localhost:11434",
@@ -38,24 +42,63 @@ func TestRegister(t *testing.T) {
 
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			_, err := Register(v.cfg)
+			_, err := Register("ollama", v.cfg)
 			assert.Equal(t, (err != nil), v.hasErr)
+		})
+	}
+}
+
+func TestRegister_grok(t *testing.T) {
+	tests := []struct {
+		cfg    *Config
+		hasErr bool
+	}{
+		{&Config{nil}, true},
+		{&Config{map[string]string{"model": "groq/compound"}}, true},
+		{&Config{map[string]string{"model": "groq/compound", "token": "api-key"}}, false},
+		{
+			// Full options as per grok.go defaults
+			&Config{
+				map[string]string{
+					"model":        "groq/compound",
+					"url":          "https://api.groq.com/openai/v1",
+					"token":        "your-api-key",
+					"format":       "json",
+					"http_timeout": "60s",
+				},
+			},
+			false,
+		},
+	}
+
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, err := Register("grok", v.cfg)
+			assert.Equal(t, v.hasErr, (err != nil))
 		})
 	}
 }
 
 func TestRegisterFromFile(t *testing.T) {
 	t.Parallel()
-	tests := []bool{true, false}
+	tests := []struct {
+		provider string
+		json     string
+		hasErr   bool
+	}{
+		{"ollama", `{"options": {"model":"some"}}`, false},
+		{"grok", `{"options": {"model":"some", "token": "api-key"}}`, false},
+		{"unsupported", "", true},
+	}
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			dir := t.TempDir()
-			if !v {
-				err := os.WriteFile(filepath.Join(dir, configName), []byte(`{"provider": "ollama", "options": {"model":"some"}}`), 0644)
+			if !v.hasErr {
+				err := os.WriteFile(filepath.Join(dir, configName), []byte(v.json), 0644)
 				require.NoError(t, err)
 			}
-			_, err := RegisterFromFile(dir)
-			if v {
+			_, err := RegisterFromFile(v.provider, dir)
+			if v.hasErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
