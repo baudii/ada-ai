@@ -28,7 +28,7 @@ func TestNew(t *testing.T) {
 		expected    *localProj
 		expectError string
 	}{
-		{`{"a":"b"}`, &resolver{filepath.Join(t.TempDir(), "/a/b/c")}, &localProj{map[string]any{"a": "b"}, "/a/b/c", "", uniqueIndexFolder}, ""},
+		{`{"a":"b"}`, &resolver{filepath.Join(t.TempDir(), "/a/b/c")}, &localProj{structure: map[string]any{"a": "b"}, base: "/a/b/c", uniqFoldName: uniqueIndexFolder}, ""},
 		{`}`, &resolver{"/a/b/c"}, nil, "unmarshal project structure"},
 		{`{}`, &resolver{"a/b/c"}, nil, "is not absolute"},
 		{`{"a":"b"}`, &resolver{filepath.Join(t.TempDir(), "/b/c")}, nil, "create base path"},
@@ -82,7 +82,7 @@ func TestMaterializeFails(t *testing.T) {
 				err = f.Close()
 				require.NoError(t, err)
 			}
-			err := materialize(dir, v.m)
+			err := materializeStructure(dir, v.m)
 			assert.ErrorContains(t, err, v.err)
 		})
 	}
@@ -114,7 +114,12 @@ func TestMaterialize(t *testing.T) {
 			case "create project root folder":
 				d = ""
 			}
-			lp := &localProj{v.structure, d, "", v.uniqFold}
+			lp := &localProj{
+				structure:    v.structure,
+				projectRoot:  "",
+				base:         d,
+				uniqFoldName: v.uniqFold,
+			}
 			if v.errmsg == "" {
 				err := os.MkdirAll(path.Join(d, "0"), 0744)
 				require.NoError(t, err)

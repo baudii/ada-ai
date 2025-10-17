@@ -10,15 +10,25 @@ import (
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
+type Desc struct {
+	filename string
+	content  []byte
+}
+
 type projectPathResolver interface {
 	ResolveProjectPath() string
 }
 
 type localProj struct {
-	structure    map[string]any
 	base         string
 	projectRoot  string
+	structure    map[string]any
+	descs        []Desc
 	uniqFoldName func(string) (string, error)
+}
+
+func NewDesc(filename string, content []byte) Desc {
+	return Desc{filename: filename, content: content}
 }
 
 // New creates a new local project descriptor from structure that represents
@@ -28,9 +38,9 @@ type localProj struct {
 //
 // It returns an error if the JSON cannot be unmarshaled or the base path
 // is invalid.
-func New(structure []byte, resolver projectPathResolver) (*localProj, error) {
-	d := &localProj{}
-	if err := json.Unmarshal([]byte(structure), &d.structure); err != nil {
+func New(structure []byte, resolver projectPathResolver, descs ...Desc) (*localProj, error) {
+	d := &localProj{descs: descs}
+	if err := json.Unmarshal(structure, &d.structure); err != nil {
 		return nil, fmt.Errorf("unmarshal project structure: %w", err)
 	}
 
@@ -72,14 +82,14 @@ func (d *localProj) Materialize() error {
 		return fmt.Errorf("create project root folder %q: %w", d.projectRoot, err)
 	}
 
-	if err := utils.SaveJSONToFile(d.structure, filepath.Join(d.projectRoot, "project-structure.json")); err != nil {
-		return fmt.Errorf("save project structure file: %w", err)
+	if err := d.materializeNav(); err != nil {
+		return fmt.Errorf("setup nav: %w", err)
 	}
 
-	return materialize(d.projectRoot, d.structure)
+	return materializeStructure(d.projectRoot, d.structure)
 }
 
-func materialize(base string, structure map[string]any) error {
+func materializeStructure(base string, structure map[string]any) error {
 	for name, v := range structure {
 		path := filepath.Join(base, name)
 		switch r := v.(type) {
@@ -87,7 +97,7 @@ func materialize(base string, structure map[string]any) error {
 			if err := os.MkdirAll(path, 0o755); err != nil {
 				return fmt.Errorf("create folder(s): %w", err)
 			}
-			if err := materialize(path, r); err != nil {
+			if err := materializeStructure(path, r); err != nil {
 				return err
 			}
 		case float64:
@@ -117,4 +127,24 @@ func uniqueIndexFolder(base string) (string, error) {
 	}
 
 	return strconv.Itoa(max + 1), nil
+}
+
+func (d *localProj) materializeNav() error {
+	navPath := filepath.Join(d.projectRoot, "nav")
+	if err := os.MkdirAll(navPath, 0755); err != nil {
+		return fmt.Errorf("create nav folder: %w", err)
+	}
+
+	if err := utils.SaveJSONToFile(d.structure, filepath.Join(navPath, "project-structure.json")); err != nil {
+		return fmt.Errorf("save project structure file: %w", err)
+	}
+
+	for _, desc := range d.descs {
+		path := filepath.Join(navPath, desc.filename)
+		if err := os.WriteFile(path, desc.content, 0644); err != nil {
+			return fmt.Errorf("create nav file %q: %w", desc.filename, err)
+		}
+	}
+
+	return nil
 }

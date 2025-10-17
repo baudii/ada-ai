@@ -17,7 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to create logger", "error", err)
 	}
-
+	slog.SetDefault(logger)
 	logger.Info("starting application")
 	err = app.Run(cli.New())
 	if err != nil {

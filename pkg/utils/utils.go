@@ -117,6 +117,39 @@ func deepCopyR(v reflect.Value) reflect.Value {
 	}
 }
 
+// Stringify returns a string representation of the given struct value. Each
+// field is represented on a new line in the format "- FieldName: FieldValue".
+// Fields with empty string values are omitted from the output.
+func Stringify(v any) string {
+	val := reflect.ValueOf(v)
+	typ := val.Type()
+
+	var b strings.Builder
+	for i := 0; i < val.NumField(); i++ {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		fieldName := typ.Field(i).Name
+		fieldValue := val.Field(i).Interface()
+		fmt.Fprintf(&b, "- %s: %v", fieldName, fieldValue)
+	}
+	return b.String()
+}
+
+// UlistMd returns a markdown-formatted unordered list of the provided items.
+// Each item is prefixed with an asterisk (*) and a space, and items are
+// separated by newlines.
+func UlistMd(items ...any) string {
+	var b strings.Builder
+	for i, v := range items {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		fmt.Fprintf(&b, "* %v", v)
+	}
+	return b.String()
+}
+
 // PrintTree writes a textual tree representation of the given structure to w.
 // NOTE: since map is unordered by nature, there is not guarantee of an order in
 // this function either.

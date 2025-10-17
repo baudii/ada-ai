@@ -184,3 +184,35 @@ func TestPrintTree(t *testing.T) {
 		})
 	}
 }
+
+func TestStringify(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    any
+		expected string
+	}{
+		{struct{ A string }{"foo"}, "- A: foo"},
+		{struct {
+			A string
+			B int
+		}{"foo", 42}, "- A: foo\n- B: 42"},
+		{struct {
+			A *any
+			B *any
+		}{nil, nil}, "- A: <nil>\n- B: <nil>"},
+		{struct {
+			A string
+			B int
+		}{"foo", 0}, "- A: foo\n- B: 0"},
+		{struct {
+			A string
+			B int
+		}{"", 42}, "- A: \n- B: 42"},
+	}
+
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			assert.Equal(t, v.expected, Stringify(v.input))
+		})
+	}
+}
