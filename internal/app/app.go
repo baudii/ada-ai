@@ -46,13 +46,7 @@ type Runner interface {
 // materialize a project based on the provided description.
 //
 // It also manages configuration loading and error handling throughout the process.
-func Run(runner Runner) error {
-	udpath := filepath.Join(common.DataPath, "user_data.json")
-	ada, err := initAda(runner, udpath)
-	if err != nil {
-		return fmt.Errorf("initialize ada: %w", err)
-	}
-
+func Run(ada *adacore.Ada, runner Runner) error {
 	res, err := getDescription(ada, "business-description.json", busn, stringify(ada.Projdata))
 	if err != nil {
 		return fmt.Errorf("project description: %w", err)
@@ -67,8 +61,8 @@ func Run(runner Runner) error {
 	return nil
 }
 
-func initAda(runner Runner, udpath string) (*adacore.Ada, error) {
-	ai, err := ai.RegisterFromFile(common.ConfigPath)
+func InitAda(provider string, runner Runner) (*adacore.Ada, error) {
+	ai, err := ai.RegisterFromFile(provider, common.AiConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("register llm: %w", err)
 	}
@@ -90,6 +84,7 @@ func initAda(runner Runner, udpath string) (*adacore.Ada, error) {
 		opts.ProjectsRoot = common.ProjectsPath
 	}
 
+	udpath := filepath.Join(common.DataPath, "user_data.json")
 	ada := adacore.New(ai, adacore.WithOptions(*opts))
 	c := make(chan adacore.ProjectData)
 	go runner.Projdata(udpath, c)

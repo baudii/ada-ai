@@ -15,6 +15,7 @@ var (
 
 	DataPath      = filepath.Join(Artifacts, "data")
 	ConfigPath    = filepath.Join(DataPath, "configuration")
+	AiConfigPath  = filepath.Join(ConfigPath, "ai")
 	DebuggingPath = filepath.Join(DataPath, "debugging")
 	PromptsPath   = filepath.Join(DataPath, "prompts")
 )

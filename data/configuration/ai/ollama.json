@@ -1,5 +1,4 @@
 {
-  "provider": "ollama",
   "options": {
     "model": "gemma3:4b",
     "url": "http://localhost:11434",
