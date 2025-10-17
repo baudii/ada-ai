@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"log/slog"
 	"path/filepath"
@@ -11,6 +12,8 @@ import (
 )
 
 func main() {
+	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
+	flag.Parse()
 	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
 	cfg := common.LoadLogConfig(cfgPath)
 	logger, err := common.DefaultSimpleLogger(cfg)
@@ -19,7 +22,13 @@ func main() {
 	}
 
 	logger.Info("starting application")
-	err = app.Run(cli.New())
+	runner := cli.New()
+	ada, err := app.InitAda(*provider, runner)
+	if err != nil {
+		log.Fatal("failed to initialize ada: %w", err)
+	}
+
+	err = app.Run(ada, runner)
 	if err != nil {
 		slog.Error("application error", "error", err)
 	}

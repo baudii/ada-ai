@@ -12,17 +12,18 @@ const configName string = "llm-provider.json"
 
 // Config represents the structure of the LLM provider configuration file.
 type Config struct {
-	Provider string            `json:"provider"`
-	Options  map[string]string `json:"options"`
+	Options map[string]string `json:"options"`
 }
 
 // Register is used to register the LLM based on the specified configuration.
-func Register(cfg *Config) (llms.Model, error) {
-	switch cfg.Provider {
+func Register(provider string, cfg *Config) (llms.Model, error) {
+	switch provider {
 	case "ollama":
 		return registerOllama(cfg.Options)
+	case "grok":
+		return registerGrok(cfg.Options)
 	default:
-		return nil, fmt.Errorf("unsupported llm provider: %q", cfg.Provider)
+		return nil, fmt.Errorf("unsupported llm provider: %q", provider)
 	}
 }
 
@@ -30,12 +31,12 @@ func Register(cfg *Config) (llms.Model, error) {
 // from 'llm-provider.json' file located at folder.
 //
 // It is expected taht the provided folder stores a 'llm-provider.json' file.
-func RegisterFromFile(folder string) (llms.Model, error) {
+func RegisterFromFile(provider, folder string) (llms.Model, error) {
 	path := filepath.Join(folder, configName)
 	cfg, err := utils.ParseJSONConfigWithLocal[Config](path)
 	if err != nil {
 		return nil, fmt.Errorf("parse llm config %q: %w", path, err)
 	}
 
-	return Register(cfg)
+	return Register(provider, cfg)
 }
