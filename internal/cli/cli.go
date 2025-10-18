@@ -19,12 +19,12 @@ func New() app.Runner {
 	return cliApp{utils.ReadInput}
 }
 
-// Projdata retrieves project data from a JSON file or prompts the user for input
+// ReadProjdata retrieves project data from a JSON file or prompts the user for input
 // if the file does not exist or cannot be parsed. It sends the project data
 // through the provided channel and closes the channel when done.
-func (cli cliApp) Projdata(ch chan adacore.ProjectData) {
-	path := filepath.Join(common.DataPath, "user_data.json")
+func (cli cliApp) ReadProjdata(ch chan adacore.ProjectData) {
 	defer close(ch)
+	path := filepath.Join(common.DataPath, "user_data.json")
 	projectData, err := utils.ParseJSONFile[adacore.ProjectData](path)
 	if err != nil {
 		username := cli.read("Provide nickname")

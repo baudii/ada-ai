@@ -1,6 +1,7 @@
 {
     "requestTimeout": "3m",
-    "projRoot": ".projects",
+    "projectsRoot": "",
+    "promptsRoot": "",
     "reflection": {
         "reflectionDepth": 2,
         "reflectionThreshold": 0.95
