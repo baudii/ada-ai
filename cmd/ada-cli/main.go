@@ -28,9 +28,9 @@ func main() {
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
-	app := app.New(*deg)
+	app := app.New(app.WithDegree(*deg), app.WithNew(*new))
 	utils.MustErr(app.InitAda(*provider))
-	utils.MustErr(app.InitProject(*new))
+	utils.MustErr(app.InitProject())
 	app.ReceiveProjdata(cli.New())
 	if err := app.Run(context.Background()); err != nil {
 		log.Fatalf("runtime error: %v", err)

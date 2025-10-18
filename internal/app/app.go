@@ -15,37 +15,80 @@ import (
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/internal/projects"
 	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
-
-const ext = "json"
 
 const (
 	business  = "business"
 	technical = "technical"
 	scope     = "scope"
 	filler    = "filler"
+	ext       = "json"
 )
 
 var navNames = [4]string{business, technical, scope, projects.Structure}
 
-type Runner interface {
-	ReadProjdata(chan adacore.ProjectData)
-}
-
 type app struct {
-	deg    int
+	deg       int
+	new       bool
+	cfgroot   string
+	aicfgroot string
+
 	ada    *adacore.Ada
 	runner Runner
 	proj   projects.Project
 }
 
-// New creates a new application instance with the specified degree of concurrency.
-func New(deg int) *app {
-	if deg < 1 {
-		deg = 1
+type option func(*app)
+
+// Runner defines an interface for reading project data.
+type Runner interface {
+	ReadProjdata(chan adacore.ProjectData)
+}
+
+// WithAIConfigRoot sets the AI configuration root path for the application. default is
+// set from the variable common.AiConfigPath.
+func WithAIConfigRoot(path string) option {
+	return func(a *app) {
+		a.aicfgroot = path
 	}
-	return &app{deg: deg}
+}
+
+// WithConfigRoot sets the configuration root path for the application. default is
+// set from the variable common.ConfigPath.
+func WithConfigRoot(path string) option {
+	return func(a *app) {
+		a.cfgroot = path
+	}
+}
+
+// WithNew sets whether to create a new project folder or reuse an existing one.
+// Default is false (reuse existing).
+func WithNew(new bool) option {
+	return func(a *app) {
+		a.new = new
+	}
+}
+
+// WithDegree sets the maximum degree of concurrency for the application.
+func WithDegree(deg int) option {
+	return func(a *app) {
+		a.deg = deg
+	}
+}
+
+// New creates a new application instance with the provided options.
+func New(opts ...option) *app {
+	a := &app{
+		deg:       1,
+		cfgroot:   common.ConfigPath,
+		aicfgroot: common.AiConfigPath,
+	}
+	for _, o := range opts {
+		o(a)
+	}
+	return a
 }
 
 // InitAda initializes the Ada AI model with the specified LLM provider
@@ -53,30 +96,25 @@ func New(deg int) *app {
 // text AI model, and configures the Ada workflow with the provided options.
 func (a *app) InitAda(provider string) error {
 	slog.Info("initializing ada", "provider", provider)
-	path := filepath.Join(common.AiConfigPath, fmt.Sprintf("%s.json", provider))
+	path := filepath.Join(a.aicfgroot, fmt.Sprintf("%s.json", provider))
 	cfg, err := utils.ParseJSONConfigWithLocal[ai.Config](path)
 	if err != nil {
 		return fmt.Errorf("parse llm config %q: %w", path, err)
 	}
 
-	jsonAI, err := ai.RegisterJSON(provider, cfg.Options)
+	ai, err := ai.Register(provider, cfg.Options)
 	if err != nil {
-		return fmt.Errorf("register json ai %q: %w", provider, err)
+		return fmt.Errorf("register ai %q: %w", provider, err)
 	}
 
-	textAI, err := ai.Register(provider, cfg.Options)
-	if err != nil {
-		return fmt.Errorf("register normal ai %q: %w", provider, err)
-	}
-
-	optsPath := filepath.Join(common.ConfigPath, "ada.json")
+	optsPath := filepath.Join(a.cfgroot, "ada.json")
 	opts, err := utils.ParseJSONConfigWithLocal[adacore.Options](optsPath)
 	if err != nil {
 		return fmt.Errorf("parse ada options %q: %w", optsPath, err)
 	}
 	applyAdaDefaults(opts)
 
-	a.ada = adacore.New(jsonAI, adacore.WithModel("text", textAI), adacore.WithOptions(*opts))
+	a.ada = adacore.New(ai, adacore.WithOptions(*opts))
 	return nil
 }
 
@@ -84,23 +122,20 @@ func (a *app) InitAda(provider string) error {
 // in the Ada session. It determines the project path and creates a new
 // local project instance, incrementing the project folder index if
 // the 'new' flag is set.
-func (a *app) InitProject(new bool) error {
-	slog.Info("initializing project", "new", new)
+func (a *app) InitProject() error {
+	slog.Info("initializing project")
 	projPath := a.ada.ResolveProjectPath()
 	lastIdx, err := projects.LastFolder(projPath)
 	if err != nil {
 		return fmt.Errorf("determine last folder: %w", err)
 	}
-
-	if new {
+	if a.new {
 		lastIdx++
 	}
-
 	lp, err := projects.New(filepath.Join(projPath, strconv.Itoa(lastIdx)))
 	if err != nil {
 		return fmt.Errorf("create local project: %w", err)
 	}
-
 	a.proj = lp
 	slog.Debug("created local project", "instance", lp)
 	return nil
@@ -133,7 +168,7 @@ func (a *app) Run(ctx context.Context) error {
 		return fmt.Errorf("print project tree: %w", err)
 	}
 
-	if err := a.materializeProject(ctx); err != nil {
+	if err := a.MaterializeProject(ctx); err != nil {
 		return fmt.Errorf("materialize project: %w", err)
 	}
 
@@ -141,13 +176,12 @@ func (a *app) Run(ctx context.Context) error {
 	return nil
 }
 
-func (a *app) materializeProject(ctx context.Context) error {
+func (a *app) MaterializeProject(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(a.deg)
-
 	if err := a.proj.Materialize(
 		func(path string) error {
 			g.Go(func() error {
@@ -162,16 +196,11 @@ func (a *app) materializeProject(ctx context.Context) error {
 		return fmt.Errorf("materialize project: %w", err)
 	}
 
-	if err := g.Wait(); err != nil {
-		return fmt.Errorf("materialize project: %w", err)
-	}
-
-	return nil
+	return g.Wait()
 }
 
-// AddNavs generates and adds navigation files to the local project. It checks for existing
-// navigation files and generates new ones using the Ada AI model if they are not found.
-// The generated navigation files are added to the project for later use.
+// AddNavs adds navigation files to the project. It checks for existing
+// navigation files and generates new ones if they are not found.
 func (a *app) AddNavs() error {
 	m := make(map[string][]any)
 	m[business] = []any{a.ada.Projdata.ProjName, a.ada.Projdata.Summary}
@@ -187,7 +216,7 @@ func (a *app) AddNavs() error {
 		if !a.proj.TryLoadNav(filename, &res) {
 			slog.Debug("generating new nav file", "file", filename)
 			args := m[navName]
-			res, err = a.sendInstructions(context.Background(), "main", navName, args...)
+			res, err = a.sendInstructions(context.Background(), navName, args, llms.WithJSONMode())
 			if err != nil {
 				return fmt.Errorf("business description: %w", err)
 			}
@@ -203,7 +232,7 @@ func (a *app) AddNavs() error {
 
 func (a *app) fileGen(ctx context.Context, path string) error {
 	slog.Debug("generating file", "path", path)
-	res, err := a.sendInstructions(ctx, "text", filler, []any{0, 1, 2, 3, path}...)
+	res, err := a.sendInstructions(ctx, filler, []any{0, 1, 2, 3, path})
 	if err != nil {
 		return fmt.Errorf("generate file %q: %w", path, err)
 	}
@@ -214,7 +243,7 @@ func (a *app) fileGen(ctx context.Context, path string) error {
 	return nil
 }
 
-func (a *app) sendInstructions(ctx context.Context, aiKey, p string, args ...any) ([]byte, error) {
+func (a *app) sendInstructions(ctx context.Context, p string, args []any, opts ...llms.CallOption) ([]byte, error) {
 	args, err := a.injectNavContent(args...)
 	if err != nil {
 		return nil, fmt.Errorf("inject nav content %q: %w", p, err)
@@ -225,7 +254,7 @@ func (a *app) sendInstructions(ctx context.Context, aiKey, p string, args ...any
 		return nil, fmt.Errorf("system and human prompts: %w", err)
 	}
 
-	resp, err := a.ada.GenerateWithSys(ctx, aiKey, sys, hum)
+	resp, err := a.ada.GenerateWithSys(ctx, sys, hum, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("generate with sys: %w", err)
 	}

@@ -11,14 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRegisterJSON(t *testing.T) {
-	t.Parallel()
-	m := map[string]string{}
-	_, err := RegisterJSON("invalid", m)
-	assert.Equal(t, "json", m["format"])
-	require.Error(t, err)
-}
-
 func TestRegister_invalid(t *testing.T) {
 	t.Parallel()
 	_, err := Register("random", map[string]string{})

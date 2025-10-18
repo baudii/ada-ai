@@ -13,14 +13,11 @@ type Config struct {
 	Options map[string]string `json:"options"`
 }
 
-// RegisterJSON is used to register the LLM for JSON output based on the specified configuration.
-func RegisterJSON(provider string, options map[string]string) (llms.Model, error) {
-	options["format"] = "json"
-	return Register(provider, options)
-}
+// options defines a function type for modifying LLM registration options.
+type options func(map[string]string)
 
 // Register is used to register the LLM based on the specified configuration.
-func Register(provider string, options map[string]string) (llms.Model, error) {
+func Register(provider string, options map[string]string, opts ...options) (llms.Model, error) {
 	switch provider {
 	case "ollama":
 		return registerOllama(options)
