@@ -13,7 +13,7 @@ import (
 	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/projects"
+	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -27,7 +27,7 @@ const (
 	ext       = "json"
 )
 
-var navNames = [4]string{business, technical, scope, projects.Structure}
+var navNames = [4]string{business, technical, scope, project.Structure}
 
 type app struct {
 	deg       int
@@ -37,7 +37,7 @@ type app struct {
 
 	ada    *adacore.Ada
 	runner Runner
-	proj   projects.Project
+	proj   project.Manager
 }
 
 type option func(*app)
@@ -125,14 +125,14 @@ func (a *app) InitAda(provider string) error {
 func (a *app) InitProject() error {
 	slog.Info("initializing project")
 	projPath := a.ada.ResolveProjectPath()
-	lastIdx, err := projects.LastFolder(projPath)
+	lastIdx, err := project.LastFolder(projPath)
 	if err != nil {
 		return fmt.Errorf("determine last folder: %w", err)
 	}
 	if a.new {
 		lastIdx++
 	}
-	lp, err := projects.New(filepath.Join(projPath, strconv.Itoa(lastIdx)))
+	lp, err := project.New(filepath.Join(projPath, strconv.Itoa(lastIdx)))
 	if err != nil {
 		return fmt.Errorf("create local project: %w", err)
 	}
@@ -176,6 +176,9 @@ func (a *app) Run(ctx context.Context) error {
 	return nil
 }
 
+// MaterializeProject generates and creates the project files
+// concurrently based on the project structure defined in the
+// project instance.
 func (a *app) MaterializeProject(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -189,7 +192,7 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 			})
 			return nil
 		},
-		projects.DefaultFolderHandler,
+		project.DefaultFolderHandler,
 	); err != nil {
 		cancel()
 		_ = g.Wait()
@@ -206,7 +209,7 @@ func (a *app) AddNavs() error {
 	m[business] = []any{a.ada.Projdata.ProjName, a.ada.Projdata.Summary}
 	m[technical] = []any{a.ada.Projdata.Language, 0}
 	m[scope] = []any{0, 1}
-	m[projects.Structure] = []any{0, 1, 2}
+	m[project.Structure] = []any{0, 1, 2}
 
 	var res []byte
 	var err error

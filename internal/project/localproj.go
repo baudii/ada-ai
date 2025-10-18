@@ -1,4 +1,4 @@
-package projects
+package project
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ var (
 	}
 )
 
-type Project interface {
+type Manager interface {
 	NavHandler
 	Structure() map[string]any
 	Materialize(hfile, hfold handler) error
