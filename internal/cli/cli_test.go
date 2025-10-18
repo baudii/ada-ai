@@ -39,7 +39,7 @@ func TestProjData(t *testing.T) {
 		}
 	}}
 	ch := make(chan adacore.ProjectData)
-	go c.Projdata(ch)
+	go c.ReadProjdata(ch)
 	pd, ok := <-ch
 	require.True(t, ok)
 	assert.Equal(t, expected, pd)

@@ -48,7 +48,6 @@ func TestNew(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ada := New(ai, WithOptions(*v.options))
 			ada.AddProjectData(v.projData)
-			assert.Nil(t, ada.Proj)
 			assert.Equal(t, *v.options, ada.Opts)
 			assert.Equal(t, v.expectedRoot, ada.Opts.ProjectsRoot)
 			assert.Equal(t, ada.Projdata.UserName, v.expectedPD.UserName)

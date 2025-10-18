@@ -18,11 +18,12 @@ const (
 	improvePrompt      = "improve-template.txt"
 )
 
+// Ada is the main struct for Ada AI workflow, encapsulating LLM models,
+// configuration options, and project context.
 type Ada struct {
 	AIs      map[string]llms.Model
 	Opts     Options
 	Projdata ProjectData
-	Proj     project
 }
 
 // Options is the configuration for Ada AI workflow.
@@ -43,11 +44,6 @@ type ProjectData struct {
 	ProjName string `json:"projName"`
 	Language string `json:"language"`
 	Summary  string `json:"summary"`
-}
-
-type project interface {
-	Materialize() error
-	Structure() map[string]any
 }
 
 var defaultOpts = Options{
