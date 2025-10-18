@@ -128,7 +128,7 @@ func TraverseStructure(base string, structure map[string]any, hfile, hfold handl
 func LastFolder(base string) (int, error) {
 	entries, err := os.ReadDir(base)
 	if err != nil {
-		return -2, err
+		return -2, fmt.Errorf("reading directory %w", err)
 	}
 	max := -1
 	for _, v := range entries {

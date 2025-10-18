@@ -131,7 +131,7 @@ func TestLastFolder_Fails(t *testing.T) {
 	require.NoError(t, err)
 	_ = f.Close()
 	_, err = LastFolder(dir)
-	assert.ErrorContains(t, err, "The system cannot find the path")
+	assert.ErrorContains(t, err, "reading directory")
 }
 
 func TestLastFolder(t *testing.T) {
