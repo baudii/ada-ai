@@ -19,7 +19,7 @@ const (
 )
 
 type Ada struct {
-	ai       llms.Model
+	AIs      map[string]llms.Model
 	Opts     Options
 	Projdata ProjectData
 	Proj     project
@@ -34,8 +34,8 @@ type Options struct {
 	ModelCall    llms.CallOptions `json:"call-options"`
 }
 
-// SessionOption is a function that modifies the Ada session configuration.
-type Option func(Options) Options
+// Option is a function that configures Ada AI workflow.
+type Option func(*Ada)
 
 // ProjectData is the context of the current project.
 type ProjectData struct {
@@ -50,7 +50,7 @@ type project interface {
 	Structure() map[string]any
 }
 
-var options = Options{
+var defaultOpts = Options{
 	Timeout: "3m",
 	Reflection: ReflectConfig{
 		Depth:      3,
@@ -60,18 +60,37 @@ var options = Options{
 
 // WithOptions sets the entire options struct.
 func WithOptions(opts Options) Option {
-	return func(o Options) Options {
-		return opts
+	return func(ada *Ada) {
+		ada.Opts = opts
 	}
 }
 
-// New creates a new Ada AI workflow instance with the provided LLM model and options.
+// WithModel adds another LLM model under a specific key. Key "main" is reserved
+// for the primary model used in most operations. Additional models can be added
+// for specialized tasks.
+func WithModel(key string, model llms.Model) Option {
+	return func(ada *Ada) {
+		ada.AIs[key] = model
+	}
+}
+
+// New creates a new Ada AI workflow instance with the provided LLM model
+// and optional configurations. It initializes the Ada struct and applies any
+// provided options to customize its behavior. The main LLM model is stored
+// under the "main" key in the AIs map.
 func New(ai llms.Model, opts ...Option) *Ada {
-	for _, o := range opts {
-		options = o(options)
+	ada := &Ada{
+		AIs:  make(map[string]llms.Model),
+		Opts: defaultOpts,
 	}
 
-	return &Ada{ai: ai, Opts: options}
+	ada.AIs["main"] = ai
+
+	for _, o := range opts {
+		o(ada)
+	}
+
+	return ada
 }
 
 // AddProjectData sets the current project data in the Ada session.
@@ -99,15 +118,15 @@ func (ada *Ada) ResolveProjectPath() string {
 
 // GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
 // It calls GenerateContent with the provided system prompt.
-func (ada *Ada) GenerateWithSys(sys string, user string) (*llms.ContentResponse, error) {
+func (ada *Ada) GenerateWithSys(ctx context.Context, aiKey, sys, user string) (*llms.ContentResponse, error) {
 	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
-	return ada.GenerateContent(user, msgs)
+	return ada.GenerateContent(ctx, aiKey, user, msgs)
 }
 
 // GenerateContent sends a prompt along with a series of messages to the LLM
 // and expects a response. It uses the options and timeout specified in the
 // Ada configuration. If the timeout is invalid, it defaults to 3 minutes.
-func (ada *Ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
+func (ada *Ada) GenerateContent(ctx context.Context, aiKey, prompt string, msgs []llms.MessageContent) (*llms.ContentResponse, error) {
 	dur, err := time.ParseDuration(ada.Opts.Timeout)
 	if err != nil {
 		dur = time.Minute * 3
@@ -115,9 +134,9 @@ func (ada *Ada) GenerateContent(prompt string, msgs []llms.MessageContent) (*llm
 	}
 
 	msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, prompt))
-	ctx, cf := context.WithTimeout(context.Background(), dur)
-	res, err := ada.ai.GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCall))
-	cf()
+	ctx, cancel := context.WithTimeout(ctx, dur)
+	res, err := ada.AIs[aiKey].GenerateContent(ctx, msgs, llms.WithOptions(ada.Opts.ModelCall))
+	cancel()
 	return res, err
 }
 

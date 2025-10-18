@@ -11,23 +11,23 @@ import (
 var (
 	Artifacts = "artifacts"
 
-	ProjectsPath = filepath.Join(Artifacts, ".projects")
-
-	DataPath      = filepath.Join(Artifacts, "data")
-	ConfigPath    = filepath.Join(DataPath, "configuration")
-	AiConfigPath  = filepath.Join(ConfigPath, "ai")
-	DebuggingPath = filepath.Join(DataPath, "debugging")
-	PromptsPath   = filepath.Join(DataPath, "prompts")
+	ProjectsPath  string
+	DataPath      string
+	ConfigPath    string
+	AiConfigPath  string
+	DebuggingPath string
+	PromptsPath   string
 )
 
 const ProjectStructurePrompt = "project-structure-template.txt"
 
 func init() {
 	Artifacts = utils.AbsolutePath("", os.Executable)
-	ProjectsPath = filepath.Join(Artifacts, ".projects")
 
+	ProjectsPath = filepath.Join(Artifacts, ".projects")
 	DataPath = filepath.Join(Artifacts, "data")
 	ConfigPath = filepath.Join(DataPath, "configuration")
+	AiConfigPath = filepath.Join(ConfigPath, "ai")
 	DebuggingPath = filepath.Join(DataPath, "debugging")
 	PromptsPath = filepath.Join(DataPath, "prompts")
 }

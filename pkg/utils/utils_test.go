@@ -185,6 +185,24 @@ func TestPrintTree(t *testing.T) {
 	}
 }
 
+func TestUlistMd(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    []any
+		expected string
+	}{
+		{[]any{"one"}, "* one"},
+		{[]any{"one", 1, true}, "* one\n* 1\n* true"},
+		{[]any{}, ""},
+		{nil, ""},
+	}
+	for i, v := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			assert.Equal(t, v.expected, UlistMd(v.input...))
+		})
+	}
+}
+
 func TestStringify(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

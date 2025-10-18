@@ -14,12 +14,12 @@ type Config struct {
 }
 
 // Register is used to register the LLM based on the specified configuration.
-func Register(provider string, cfg *Config) (llms.Model, error) {
+func Register(provider string, options map[string]string) (llms.Model, error) {
 	switch provider {
 	case "ollama":
-		return registerOllama(cfg.Options)
+		return registerOllama(options)
 	case "grok":
-		return registerGrok(cfg.Options)
+		return registerGrok(options)
 	default:
 		return nil, fmt.Errorf("unsupported llm provider: %q", provider)
 	}
@@ -34,5 +34,5 @@ func RegisterFromFile(provider, folder string) (llms.Model, error) {
 		return nil, fmt.Errorf("parse llm config %q: %w", path, err)
 	}
 
-	return Register(provider, cfg)
+	return Register(provider, cfg.Options)
 }

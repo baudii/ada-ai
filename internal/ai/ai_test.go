@@ -13,7 +13,7 @@ import (
 
 func TestRegister_invalid(t *testing.T) {
 	t.Parallel()
-	_, err := Register("random", &Config{nil})
+	_, err := Register("random", map[string]string{})
 	require.Error(t, err)
 }
 
@@ -43,7 +43,7 @@ func TestRegister_ollama(t *testing.T) {
 
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			_, err := Register("ollama", v.cfg)
+			_, err := Register("ollama", v.cfg.Options)
 			assert.Equal(t, (err != nil), v.hasErr)
 		})
 	}
@@ -74,7 +74,7 @@ func TestRegister_grok(t *testing.T) {
 
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			_, err := Register("grok", v.cfg)
+			_, err := Register("grok", v.cfg.Options)
 			assert.Equal(t, v.hasErr, (err != nil))
 		})
 	}
