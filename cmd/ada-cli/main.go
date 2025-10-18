@@ -13,6 +13,7 @@ import (
 
 func main() {
 	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
+	new := flag.Bool("new", false, "create a new project folder even if one exists")
 	flag.Parse()
 	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
 	cfg := common.LoadLogConfig(cfgPath)
@@ -28,7 +29,7 @@ func main() {
 		log.Fatalf("failed to initialize ada: %v", err)
 	}
 
-	err = app.Run(ada, runner)
+	err = app.Run(ada, runner, *new)
 	if err != nil {
 		slog.Error("application error", "error", err)
 	}

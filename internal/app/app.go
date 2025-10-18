@@ -14,29 +14,8 @@ import (
 )
 
 var (
-	busn = prompt{
-		system: filepath.Join("business", "system.txt"),
-		human:  filepath.Join("business", "human.txt"),
-	}
-	scope = prompt{
-		system: filepath.Join("scope", "system.txt"),
-		human:  filepath.Join("scope", "human.txt"),
-	}
-	tech = prompt{
-		system: filepath.Join("technical", "system.txt"),
-		human:  filepath.Join("technical", "human.txt"),
-	}
-	projstruct = prompt{
-		system: filepath.Join("project-structure", "system.txt"),
-		human:  filepath.Join("project-structure", "human.txt"),
-	}
+	new bool = false
 )
-
-type prompt struct {
-	system string
-	human  string
-	//reflect string
-}
 
 var defaultCfg adacore.Options = adacore.Options{
 	Timeout: "3m",
@@ -51,8 +30,10 @@ type Runner interface {
 // materialize a project based on the provided description.
 //
 // It also manages configuration loading and error handling throughout the process.
-func Run(ada *adacore.Ada, runner Runner) error {
-	busnessDesc, err := sendInstructions(ada, busn, ada.Projdata.ProjName, ada.Projdata.Summary)
+//
+// Additional arguments can be passed to modify the behavior of the application.
+func Run(ada *adacore.Ada, runner Runner, args ...any) error {
+	parseArgs(args...)
 	if err != nil {
 		return fmt.Errorf("business description: %w", err)
 	}
@@ -148,5 +129,13 @@ func sendInstructions(ada *adacore.Ada, p prompt, args ...any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate with sys: %w", err)
 	}
-	return resp.Choices[0].Content, nil
+func parseArgs(args ...any) {
+	for _, v := range args {
+		switch v := v.(type) {
+		case bool:
+			new = v
+		default:
+			panic("unknown argument")
+		}
+	}
 }
