@@ -52,7 +52,7 @@ debug: build copy
 
 run:
 	@echo Running $(EXECUTABLE)...
-	$(EXECUTABLE)
+	$(EXECUTABLE) ${ARGS}
 
 clean:
 	@echo Cleaning...
@@ -60,8 +60,9 @@ clean:
 	go clean
 
 test:
-	go test $(ARGS) -coverprofile $(COVER) ./...
+	go test -coverprofile $(COVER) ./...
 	go tool cover -func $(COVER)
 
 retest:
-	$(MAKE) test ARGS="-count=1"
+	go test -count=1 -coverprofile $(COVER) ./...
+	go tool cover -func $(COVER)

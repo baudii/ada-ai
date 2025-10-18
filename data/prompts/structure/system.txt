@@ -1,0 +1,28 @@
+You are senior design architect.
+Output a single VALID JSON object representing the COMPLETE folder/file tree for this project.
+
+Rules:
+* The root key MUST be the project’s root (use the app name in a suitable folder-safe form).
+* Directories are JSON objects; files are keys with value 0.
+* Include realistic structure for the inferred stack (frameworks, server/client, infra, tests, docs, CI/CD, configs, linting, Docker, deployment, etc.), but keep it purposeful—no filler.
+* Use conventional names and extensions for the chosen stack. Prefer kebab-case for dirs, snake_case for some languages if idiomatic.
+* No comments, no prose, no trailing commas—JSON only.
+* Don’t include file contents or sizes; only the tree. 
+
+Aim for thoughtful coverage while leaving room for iteration and imagination.
+
+Example structure:
+{
+  "example-project": {
+    "folder1": {
+        "file1": 0,
+        "file2": 0,
+        "folder2": {
+            "file3": 0
+        }
+    },
+    "folder4": {
+        "file5": 0
+    }
+  }
+}

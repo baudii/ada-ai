@@ -75,7 +75,7 @@ func TestGenerateWithSys(t *testing.T) {
 		return defaultMock(a...)
 	}}
 	ada := New(m, WithOptions(Options{Timeout: "1m"}))
-	res, err := ada.GenerateWithSys(sysp, usp)
+	res, err := ada.GenerateWithSys(context.Background(), "main", sysp, usp)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	assert.Equal(t, "some response", res.Choices[0].Content)
@@ -98,7 +98,7 @@ func TestGenerateJSON(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ai := &mockLLM{v.mockFunc}
 			ada := New(ai, WithOptions(v.cfg))
-			res, err := ada.GenerateContent("test prompt", []llms.MessageContent{})
+			res, err := ada.GenerateContent(context.Background(), "main", "test prompt", []llms.MessageContent{})
 			assert.Equal(t, v.hasError, err != nil)
 			if !v.hasError {
 				assert.NotNil(t, res)
