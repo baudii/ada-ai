@@ -22,15 +22,15 @@ func TestNew(t *testing.T) {
 		structureError string
 		expectError    string
 	}{
-		{`{"a":"b"}`, filepath.Join(t.TempDir(), "/a/b/c"), &localProj{structure: map[string]any{"a": "b"}, lastFolder: LastFolder, navs: make(map[string]nav)}, "", ""},
+		{`{"a":"b"}`, filepath.Join(t.TempDir(), "/a/b/c"), &localProj{structure: map[string]any{"a": "b"}, navs: make(map[string]nav)}, "", ""},
 		{`}`, filepath.Join(t.TempDir(), "/a/b/c"), nil, "invalid character", ""},
 		{`{}`, "a/b/c", nil, "", "is not absolute"},
-		{`{"a":"b"}`, filepath.Join(t.TempDir(), "/b/c"), nil, "", "create base path"},
+		{`{"a":"b"}`, filepath.Join(t.TempDir(), "/b/c"), nil, "", "create nav path:"},
 	}
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			switch v.expectError {
-			case "create base path":
+			case "create nav path:":
 				// simulate base path creation failure by creating a file in the middle
 				// of the base path
 				f, err := os.Create(filepath.Dir(v.path))
@@ -47,9 +47,7 @@ func TestNew(t *testing.T) {
 					return
 				}
 				v.expected.projectRoot = v.path
-				v.expected.navPath = navPath(v.path)
-				v.expected.lastFolder = nil
-				actualLocalProj.lastFolder = nil
+				v.expected.navPath = filepath.Join(v.path, "nav")
 				assert.Equal(t, v.expected, actualLocalProj)
 			}
 		})
@@ -90,8 +88,8 @@ func TestTraverseFails(t *testing.T) {
 func TestMaterialize_Unit(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		hfile handler
-		hfold handler
+		hfile Handler
+		hfold Handler
 		lproj *localProj
 		err   string
 	}{
@@ -122,35 +120,6 @@ func TestMaterialize_Unit(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestLastFolder_Fails(t *testing.T) {
-	t.Parallel()
-	dir := filepath.Join(t.TempDir(), "file.txt")
-	f, err := os.Create(dir)
-	require.NoError(t, err)
-	_ = f.Close()
-	_, err = LastFolder(dir)
-	assert.ErrorContains(t, err, "reading directory")
-}
-
-func TestLastFolder(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	folder1 := filepath.Join(dir, "0")
-	folder2 := filepath.Join(dir, "1")
-	folder3 := filepath.Join(dir, "2")
-	err := os.MkdirAll(folder1, 0755)
-	require.NoError(t, err)
-	err = os.MkdirAll(folder2, 0755)
-	require.NoError(t, err)
-	err = os.MkdirAll(folder3, 0755)
-	require.NoError(t, err)
-
-	last, err := LastFolder(dir)
-	require.NoError(t, err)
-
-	assert.Equal(t, 2, last)
 }
 
 func TestMaterialize_Integration(t *testing.T) {

@@ -3,10 +3,8 @@ package cli
 import (
 	"testing"
 
-	"github.com/baudii/ada-ai/internal/adacore"
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -18,7 +16,7 @@ func TestNew(t *testing.T) {
 
 func TestProjData(t *testing.T) {
 	t.Parallel()
-	expected := adacore.ProjectData{
+	expected := app.ProjectData{
 		UserName: "testuser",
 		ProjName: "testproject",
 		Language: "go",
@@ -38,9 +36,6 @@ func TestProjData(t *testing.T) {
 			return ""
 		}
 	}}
-	ch := make(chan adacore.ProjectData)
-	go c.ReadProjdata(ch)
-	pd, ok := <-ch
-	require.True(t, ok)
+	pd := c.ReadProjdata()
 	assert.Equal(t, expected, pd)
 }

@@ -1,4 +1,4 @@
-package adacore
+package ada
 
 import (
 	"fmt"
@@ -27,8 +27,7 @@ func TestSendWithReflection(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ai := &mockLLM{v.mockFunc}
-			opts := Options{Reflection: ReflectConfig{Depth: 3, Threshhold: 0.95}}
-			ada := New(ai, WithOptions(opts))
+			ada := New(ai, WithReflection(ReflectConfig{Depth: v.reflectinDepth, Threshhold: 0.95}))
 			res, err := ada.SendReflect("some prompt")
 			if err == nil {
 				assert.Equal(t, []byte("some response"), res)
@@ -88,8 +87,7 @@ func TestImprove(t *testing.T) {
 			}
 			root := t.TempDir()
 			ai := &mockLLM{f}
-			opts := Options{Reflection: ReflectConfig{v.depth, threshold}, PromptsRoot: root}
-			ada := New(ai, WithOptions(opts))
+			ada := New(ai, WithReflection(ReflectConfig{Depth: v.depth, Threshhold: threshold}), WithPromptsRoot(root))
 			prompts := []string{reflectPrompt, reflectShortPrompt, improvePrompt}
 			for i, pr := range prompts {
 				if ((1 << i) & v.flags) != 0 {

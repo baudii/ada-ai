@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"log/slog"
 	"path/filepath"
@@ -10,13 +11,14 @@ import (
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/cli"
 	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 func main() {
 	// Parse command-line flags
 	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
-	new := flag.Bool("new", false, "create a new project folder even if one exists")
+	mode := flag.Int("mode", 0, "project mode: 0=reuse existing, 1=create new, default is 0")
 	deg := flag.Int("deg", 1, "degree of concurrency for project materialization")
 	flag.Parse()
 
@@ -28,10 +30,12 @@ func main() {
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
-	app := app.New(app.WithDegree(*deg), app.WithNew(*new))
-	utils.MustErr(app.InitAda(*provider))
-	utils.MustErr(app.InitProject())
-	app.ReceiveProjdata(cli.New())
+	appOpts := utils.Must(app.ParseAppOptions(common.ConfigPath))
+	path := filepath.Join(common.AiConfigPath, fmt.Sprintf("%s.json", *provider))
+	c := cli.New().ReadProjdata()
+	app := app.New(app.WithDegree(*deg), app.WithMode(project.Mode(*mode)), app.WithOptions(appOpts), app.WithProjectData(c))
+	utils.MustErr(app.InitAda(*provider, path))
+	utils.MustErr(app.InitLocalProject())
 	if err := app.Run(context.Background()); err != nil {
 		log.Fatalf("runtime error: %v", err)
 	}

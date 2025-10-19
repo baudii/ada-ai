@@ -1,4 +1,4 @@
-package adacore
+package ada
 
 import (
 	"context"
@@ -82,8 +82,8 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		return res, fmt.Errorf("load templates: %w", err)
 	}
 
-	for i := 0; i < ada.Opts.Reflection.Depth; i++ {
-		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.Opts.Reflection.Depth)
+	for i := 0; i < ada.Reflection.Depth; i++ {
+		slog.Debug("reflect cycle start", "attempt", i+1, "depth", ada.Reflection.Depth)
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, request))
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, curAns))
 		reflection, err := ada.Reflect(templates.reflect, msgs)
@@ -100,7 +100,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 			res.ans = curAns
 		}
 
-		if res.score > ada.Opts.Reflection.Threshhold {
+		if res.score > ada.Reflection.Threshhold {
 			slog.Debug("threshold met")
 			return res, nil
 		}
@@ -120,11 +120,11 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 		curAns = resp.Choices[0].Content
 	}
 
-	if ada.Opts.Reflection.Depth <= 0 {
-		return res, fmt.Errorf("reflection depth is set to %v", ada.Opts.Reflection.Depth)
+	if ada.Reflection.Depth <= 0 {
+		return res, fmt.Errorf("reflection depth is set to %v", ada.Reflection.Depth)
 	}
 
-	slog.Error("failed to improve", "best", res.score, "threshold", ada.Opts.Reflection.Threshhold)
+	slog.Error("failed to improve", "best", res.score, "threshold", ada.Reflection.Threshhold)
 	return res, nil
 }
 

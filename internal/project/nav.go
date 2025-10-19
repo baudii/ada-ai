@@ -77,7 +77,3 @@ func (d *localProj) materializeNav() error {
 
 	return nil
 }
-
-func navPath(projRoot string) string {
-	return filepath.Join(projRoot, "nav")
-}
