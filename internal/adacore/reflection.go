@@ -47,6 +47,7 @@ type templates struct {
 // reflection and improvement of this response based on the configured
 // parameters.
 func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
+	// TODO: add context support
 	resp, err := ada.GenerateContent(context.Background(), prompt, nil)
 	if err != nil {
 		return nil, err
@@ -106,6 +107,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeHuman, templates.shortReflect))
 		msgs = append(msgs, llms.TextParts(llms.ChatMessageTypeAI, fmt.Sprintf("%v", reflection)))
+		// TODO: add context support
 		resp, err := ada.GenerateContent(context.Background(), templates.improve, msgs)
 		if err != nil {
 			return res, fmt.Errorf("generate improved prompt: %w", err)
@@ -130,6 +132,7 @@ func (ada *Ada) Improve(request string, response string) (*eval, error) {
 // a reflection prompt, asking the model to evaluate the previous response
 // and provide scores and improvement suggestions.
 func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*reflection, error) {
+	// TODO: add context support
 	resp, err := ada.GenerateContent(context.Background(), reflectPrompt, msgs)
 	if err != nil {
 		return nil, fmt.Errorf("reflect: %w", err)
