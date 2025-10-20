@@ -7,7 +7,7 @@ import (
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/project/folder"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +18,7 @@ type mockDirProvider struct {
 	err  error
 }
 
-func (m *mockDirProvider) ProjectFolder(base string, mode project.Mode) (string, error) {
+func (m *mockDirProvider) ProjectFolder(base string, mode folder.Mode) (string, error) {
 	return m.path, m.err
 }
 
@@ -44,7 +44,7 @@ func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
 	ada := ada.New(nil)
 	a := app.New(
 		app.WithGen(ada),
-		app.WithMode(project.CreateNew),
+		app.WithMode(folder.CreateNew),
 		app.WithDirProvider(&mockDirProvider{path: ""}),
 		app.WithOptions(&app.Options{
 			ProjectsRoot: t.TempDir(),
@@ -57,7 +57,7 @@ func TestInitLocalProject_Success(t *testing.T) {
 	t.Parallel()
 	ada := ada.New(nil)
 	a := app.New(app.WithGen(ada),
-		app.WithMode(project.CreateNew),
+		app.WithMode(folder.CreateNew),
 		app.WithDirProvider(&mockDirProvider{path: t.TempDir()}),
 		app.WithOptions(&app.Options{
 			ProjectsRoot: t.TempDir(),

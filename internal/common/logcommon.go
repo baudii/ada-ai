@@ -29,9 +29,8 @@ func LoadLogConfig(path string) *dilog.LogConfig {
 	return cfg
 }
 
-// DefaultSimpleLogger creates a default slog.Logger with a SimpleHandler writing
-// to both stdout and a daily rotating log file. The log configuration is loaded
-// from the specified JSON file path.
+// DefaultSimpleLogger creates a simple slog.Logger based on the provided
+// dilog.LogConfig and additional options.
 func DefaultSimpleLogger(cfg *dilog.LogConfig, opts ...dilog.Option) (*slog.Logger, error) {
 	opts = append(opts,
 		dilog.WithPrefix(cfg.Prefix),

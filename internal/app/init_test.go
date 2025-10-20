@@ -8,7 +8,7 @@ import (
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/project/folder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 	a := app.New(
 		app.WithDegree(5),
 		app.WithProject(nil),
-		app.WithMode(project.CreateNew),
+		app.WithMode(folder.CreateNew),
 		app.WithGen(nil),
 		app.WithDirProvider(nil),
 		app.WithProjectData(app.ProjectData{}),

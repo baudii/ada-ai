@@ -12,46 +12,35 @@ import (
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/project/local"
+	"github.com/baudii/ada-ai/internal/project/nav/store"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
 
+// Constants that define folder names containing prompts.
 const (
 	business  = "business"
 	technical = "technical"
 	scope     = "scope"
 	filler    = "filler"
-	ext       = "json"
 )
+
+const ext = "json"
 
 var navNames = [4]string{business, technical, scope, project.Structure}
 
 type app struct {
 	deg      int
-	mode     project.Mode
+	mode     folder.Mode
 	gen      Generator
 	dp       DirProvider
-	proj     project.Manager
+	proj     Manager
+	nav      NavHandler
 	projData ProjectData
 	opts     *Options
-}
-
-// Generator defines methods for generating AI content and handling prompts.
-type Generator interface {
-	PromptFromTemplate(filename string, input ...any) (string, error)
-	GenerateWithSys(ctx context.Context, sys, user string, callOptions ...llms.CallOption) (*llms.ContentResponse, error)
-}
-
-// DirProvider defines an interface for providing folder names based on a base path
-// and a flag indicating whether to create a new folder.
-type DirProvider interface {
-	ProjectFolder(base string, mode project.Mode) (string, error)
-}
-
-// Runner defines an interface for reading project data.
-type Runner interface {
-	ReadProjdata() ProjectData
 }
 
 // InitAda initializes the Ada AI model with the specified LLM provider
@@ -84,16 +73,21 @@ func (a *app) InitAda(provider, configPath string) error {
 func (a *app) InitLocalProject() error {
 	slog.Info("initializing project")
 	base := filepath.Join(a.opts.ProjectsRoot, a.projData.UserName, a.projData.ProjName)
-	path, err := a.dp.ProjectFolder(base, a.mode)
+	projRoot, err := a.dp.ProjectFolder(base, a.mode)
 	if err != nil {
 		return fmt.Errorf("project folder: %w", err)
 	}
-	lp, err := project.New(path)
+	n, err := store.New(projRoot)
 	if err != nil {
-		return fmt.Errorf("create local project %q: %w", path, err)
+		return fmt.Errorf("create nav store %q: %w", projRoot, err)
+	}
+
+	lp, err := local.New(projRoot, n)
+	if err != nil {
+		return fmt.Errorf("create local project %q: %w", projRoot, err)
 	}
 	a.proj = lp
-	slog.Debug("created local project", "path", path)
+	slog.Debug("created local project", "path", projRoot)
 	return nil
 }
 
@@ -132,7 +126,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 	for _, navName := range navNames {
 		filename := fmt.Sprintf("%v.%v", navName, ext)
 		slog.Debug("checking nav file", "file", filename)
-		if !a.proj.TryLoadNav(filename, &res) {
+		if !a.nav.TryLoadNav(filename, &res) {
 			slog.Debug("generating new nav file", "file", filename)
 			args := m[navName]
 			res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode())
@@ -141,7 +135,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 			}
 		}
 
-		if err := a.proj.AddNav(navName, ext, res); err != nil {
+		if err := a.nav.AddNav(navName, ext, res); err != nil {
 			return fmt.Errorf("add nav file %q: %w", filename, err)
 		}
 		slog.Debug("added nav file", "file", filename)
@@ -160,6 +154,7 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 	g.SetLimit(a.deg)
 	if err := a.proj.Materialize(
 		func(path string) error {
+			slog.Debug("handling file", "path", path)
 			g.Go(func() error {
 				return a.fileGen(ctx, path)
 			})
@@ -176,7 +171,6 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 }
 
 func (a *app) fileGen(ctx context.Context, path string) error {
-	slog.Debug("generating file", "path", path)
 	res, err := a.sendInstructions(ctx, filler, []any{0, 1, 2, 3, path})
 	if err != nil {
 		return fmt.Errorf("generate file %q: %w", path, err)
@@ -224,7 +218,8 @@ func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
 func (a *app) injectNavContent(args ...any) ([]any, error) {
 	for i := range args {
 		if idx, ok := args[i].(int); ok {
-			r, err := a.proj.NavContent(navNames[idx])
+			// TODO: remove
+			r, err := a.nav.NavContent(navNames[idx])
 			if err != nil {
 				return nil, fmt.Errorf("retrieve nav %q: %w", navNames[idx], err)
 			}

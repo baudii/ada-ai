@@ -6,7 +6,7 @@ import (
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/project/folder"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
@@ -52,7 +52,7 @@ func WithOptions(opts *Options) option {
 }
 
 // WithProject sets the project manager for the application.
-func WithProject(proj project.Manager) option {
+func WithProject(proj Manager) option {
 	return func(a *app) {
 		a.proj = proj
 	}
@@ -60,7 +60,7 @@ func WithProject(proj project.Manager) option {
 
 // WithMode sets whether to create a new project folder or reuse an existing one.
 // Default is false (reuse existing).
-func WithMode(mode project.Mode) option {
+func WithMode(mode folder.Mode) option {
 	return func(a *app) {
 		a.mode = mode
 	}

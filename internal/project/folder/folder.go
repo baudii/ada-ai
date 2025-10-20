@@ -1,4 +1,4 @@
-package project
+package folder
 
 import (
 	"fmt"
@@ -10,6 +10,8 @@ import (
 // Mode defines the folder naming strategy.
 type Mode int
 
+type DirReader func(name string) ([]fs.DirEntry, error)
+
 // Modes for folder naming strategy.
 const (
 	UseLatest Mode = iota
@@ -19,12 +21,12 @@ const (
 // seqDir implements the DirProvider interface to provide
 // sequentially numbered project folder names.
 type seqDir struct {
-	fs fs.ReadDirFS
+	read DirReader
 }
 
 // NewSeqDir creates a new seqDir instance with the provided ReadDirFS.
-func NewSeqDir(rfs fs.ReadDirFS) *seqDir {
-	return &seqDir{fs: rfs}
+func NewSeqDir(reader DirReader) *seqDir {
+	return &seqDir{read: reader}
 }
 
 // ProjectFolder returns the folder name based on the existing directories
@@ -33,7 +35,7 @@ func NewSeqDir(rfs fs.ReadDirFS) *seqDir {
 // it returns the highest existing integer-named folder or creates a new
 // one if none exist.
 func (d *seqDir) ProjectFolder(base string, mode Mode) (string, error) {
-	dirEntries, err := d.fs.ReadDir(base)
+	dirEntries, err := d.read(base)
 	if err != nil {
 		return "", fmt.Errorf("read dir %q: %w", base, err)
 	}
