@@ -3,7 +3,6 @@
     "model": "groq/compound",
     "url": "https://api.groq.com/openai/v1",
     "token": "your-api-key",
-    "format": "json",
     "http_timeout": "60s"
   }
 }
