@@ -12,6 +12,7 @@ type item struct {
 	content []byte
 }
 
+// New creates a new navigation item with the specified root path and content.
 func New(root string, content []byte) *item {
 	return &item{
 		root:    root,
@@ -19,10 +20,9 @@ func New(root string, content []byte) *item {
 	}
 }
 
-// NavContent retrieves the content of a navigation file by its key.
-// It returns the content as a byte slice and a boolean indicating whether
-// the file was found.
-func (n *item) NavContent() (string, error) {
+// CompactContent returns the compacted JSON string content of the
+// navigation item.
+func (n *item) CompactContent() (string, error) {
 	buf := &bytes.Buffer{}
 	if err := json.Compact(buf, n.content); err != nil {
 		return "", fmt.Errorf("compact content: %w", err)

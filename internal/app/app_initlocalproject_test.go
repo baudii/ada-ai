@@ -39,6 +39,24 @@ func TestInitLocalProject_FailsReadDir(t *testing.T) {
 	require.ErrorContains(t, err, "project folder")
 }
 
+func TestInitLocalProject_FailCreateStore(t *testing.T) {
+	t.Parallel()
+	ada := ada.New(nil)
+	d := filepath.Join(t.TempDir(), "file.txt")
+	f, err := os.Create(d)
+	require.NoError(t, err)
+	_ = f.Close()
+	a := app.New(
+		app.WithGen(ada),
+		app.WithMode(folder.CreateNew),
+		app.WithDirProvider(&mockDirProvider{path: d}),
+		app.WithOptions(&app.Options{
+			ProjectsRoot: t.TempDir(),
+		}))
+	err = a.InitLocalProject()
+	require.ErrorContains(t, err, "create nav store")
+}
+
 func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
 	t.Parallel()
 	ada := ada.New(nil)

@@ -1,9 +1,7 @@
 package app
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,7 +10,6 @@ import (
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/project"
-	"github.com/baudii/ada-ai/internal/project/folder"
 	"github.com/baudii/ada-ai/internal/project/local"
 	"github.com/baudii/ada-ai/internal/project/nav/store"
 	"github.com/baudii/ada-ai/pkg/utils"
@@ -29,19 +26,6 @@ const (
 )
 
 const ext = "json"
-
-var navNames = [4]string{business, technical, scope, project.Structure}
-
-type app struct {
-	deg      int
-	mode     folder.Mode
-	gen      Generator
-	dp       DirProvider
-	proj     Manager
-	nav      NavHandler
-	projData ProjectData
-	opts     *Options
-}
 
 // InitAda initializes the Ada AI model with the specified LLM provider
 // and configuration. It sets up both a JSON-capable AI model and a standard
@@ -72,8 +56,8 @@ func (a *app) InitAda(provider, configPath string) error {
 // the 'new' flag is set.
 func (a *app) InitLocalProject() error {
 	slog.Info("initializing project")
-	base := filepath.Join(a.opts.ProjectsRoot, a.projData.UserName, a.projData.ProjName)
-	projRoot, err := a.dp.ProjectFolder(base, a.mode)
+	base := filepath.Join(a.opts.ProjectsRoot, a.projectData.UserName, a.projectData.ProjName)
+	projRoot, err := a.folderer.ProjectFolder(base, a.mode)
 	if err != nil {
 		return fmt.Errorf("project folder: %w", err)
 	}
@@ -81,12 +65,12 @@ func (a *app) InitLocalProject() error {
 	if err != nil {
 		return fmt.Errorf("create nav store %q: %w", projRoot, err)
 	}
-
 	lp, err := local.New(projRoot, n)
 	if err != nil {
 		return fmt.Errorf("create local project %q: %w", projRoot, err)
 	}
-	a.proj = lp
+	a.materializer = lp
+	a.navHandler = n
 	slog.Debug("created local project", "path", projRoot)
 	return nil
 }
@@ -99,25 +83,23 @@ func (a *app) InitLocalProject() error {
 //
 // Additional arguments can be passed to modify the behavior of the application.
 func (a *app) Run(ctx context.Context) error {
-	slog.Info("starting app session", "user", a.projData.UserName, "project", a.projData.ProjName)
-	if err := a.AddNavs(ctx); err != nil {
+	slog.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
+	if err := a.AddNavs(ctx, defaultNavNames[:]); err != nil {
 		return fmt.Errorf("add navs: %w", err)
 	}
-
 	if err := a.MaterializeProject(ctx); err != nil {
 		return fmt.Errorf("materialize project: %w", err)
 	}
-
 	slog.Debug("project materialized")
 	return nil
 }
 
 // AddNavs adds navigation files to the project. It checks for existing
 // navigation files and generates new ones if they are not found.
-func (a *app) AddNavs(ctx context.Context) error {
+func (a *app) AddNavs(ctx context.Context, navNames []string) error {
 	m := make(map[string][]any)
-	m[business] = []any{a.projData.ProjName, a.projData.Summary}
-	m[technical] = []any{a.projData.Language, 0}
+	m[business] = []any{a.projectData.ProjName, a.projectData.Summary}
+	m[technical] = []any{a.projectData.Language, 0}
 	m[scope] = []any{0, 1}
 	m[project.Structure] = []any{0, 1, 2}
 
@@ -126,7 +108,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 	for _, navName := range navNames {
 		filename := fmt.Sprintf("%v.%v", navName, ext)
 		slog.Debug("checking nav file", "file", filename)
-		if !a.nav.TryLoadNav(filename, &res) {
+		if res, err = a.navHandler.LoadNav(filename); err != nil {
 			slog.Debug("generating new nav file", "file", filename)
 			args := m[navName]
 			res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode())
@@ -135,7 +117,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 			}
 		}
 
-		if err := a.nav.AddNav(navName, ext, res); err != nil {
+		if err := a.navHandler.AddNav(navName, ext, res); err != nil {
 			return fmt.Errorf("add nav file %q: %w", filename, err)
 		}
 		slog.Debug("added nav file", "file", filename)
@@ -152,7 +134,7 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(a.deg)
-	if err := a.proj.Materialize(
+	if err := a.materializer.Materialize(
 		func(path string) error {
 			slog.Debug("handling file", "path", path)
 			g.Go(func() error {
@@ -202,12 +184,12 @@ func (a *app) sendInstructions(ctx context.Context, p string, args []any, opts .
 }
 
 func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
-	sys, err := a.gen.PromptFromTemplate(filepath.Join(p, "system.txt"))
+	sys, err := a.gen.BuildPrompt(filepath.Join(p, "system.txt"))
 	if err != nil {
 		return "", "", fmt.Errorf("load system template: %w", err)
 	}
 
-	hum, err := a.gen.PromptFromTemplate(filepath.Join(p, "human.txt"), args...)
+	hum, err := a.gen.BuildPrompt(filepath.Join(p, "human.txt"), args...)
 	if err != nil {
 		return "", "", fmt.Errorf("load human template: %w", err)
 	}
@@ -218,17 +200,11 @@ func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
 func (a *app) injectNavContent(args ...any) ([]any, error) {
 	for i := range args {
 		if idx, ok := args[i].(int); ok {
-			// TODO: remove
-			r, err := a.nav.NavContent(navNames[idx])
+			r, err := a.navHandler.NavContent(defaultNavNames[idx])
 			if err != nil {
-				return nil, fmt.Errorf("retrieve nav %q: %w", navNames[idx], err)
+				return nil, fmt.Errorf("retrieve nav %q: %w", defaultNavNames[idx], err)
 			}
-
-			buf := &bytes.Buffer{}
-			if err := json.Compact(buf, r); err != nil {
-				return nil, fmt.Errorf("compact system prompt: %w", err)
-			}
-			args[i] = buf.String()
+			args[i] = r
 		}
 	}
 	return args, nil

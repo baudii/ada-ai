@@ -6,11 +6,27 @@ import (
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/internal/project/folder"
 	"github.com/baudii/ada-ai/pkg/utils"
 )
 
 const ConfigFile = "ada.json"
+
+var defaultNavNames = [4]string{business, technical, scope, project.Structure}
+
+type app struct {
+	deg          int
+	mode         folder.Mode
+	gen          generator
+	folderer     folderProvider
+	materializer materializer
+	navHandler   navigator
+	projectData  ProjectData
+	opts         *Options
+	navNames     []string
+	// TODO: inject logger
+}
 
 // Options is the configuration for Ada AI workflow.
 type Options struct {
@@ -31,16 +47,23 @@ type ProjectData struct {
 type option func(*app)
 
 // WithGen sets the Generator instance for the application to generate content.
-func WithGen(gen Generator) option {
+func WithGen(gen generator) option {
 	return func(a *app) {
 		a.gen = gen
 	}
 }
 
-// WithDirProvider sets the DirProvider for the application to provide project folder names.
-func WithDirProvider(dp DirProvider) option {
+// WithNavHandler sets the NavHandler for the application to manage navigation files.
+func WithNavHandler(n navigator) option {
 	return func(a *app) {
-		a.dp = dp
+		a.navHandler = n
+	}
+}
+
+// WithDirProvider sets the DirProvider for the application to provide project folder names.
+func WithDirProvider(dp folderProvider) option {
+	return func(a *app) {
+		a.folderer = dp
 	}
 }
 
@@ -52,9 +75,9 @@ func WithOptions(opts *Options) option {
 }
 
 // WithProject sets the project manager for the application.
-func WithProject(proj Manager) option {
+func WithProject(proj materializer) option {
 	return func(a *app) {
-		a.proj = proj
+		a.materializer = proj
 	}
 }
 
@@ -69,7 +92,14 @@ func WithMode(mode folder.Mode) option {
 // WithProjectData sets the project data for the application.
 func WithProjectData(data ProjectData) option {
 	return func(a *app) {
-		a.projData = data
+		a.projectData = data
+	}
+}
+
+// WithNavNames sets the names of the navigation files to be used in the application.
+func WithNavNames(names []string) option {
+	return func(a *app) {
+		a.navNames = names
 	}
 }
 
@@ -83,12 +113,12 @@ func WithDegree(deg int) option {
 // New creates a new application instance with the provided options.
 func New(opts ...option) *app {
 	a := &app{
-		deg: 1,
+		deg:      1,
+		navNames: defaultNavNames[:],
 	}
 	for _, o := range opts {
 		o(a)
 	}
-
 	return a
 }
 

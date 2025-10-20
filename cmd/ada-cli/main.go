@@ -33,7 +33,7 @@ func main() {
 	// Create and run the application
 	opts := utils.Must(app.ParseAppOptions(common.ConfigPath))
 	path := filepath.Join(common.AiConfigPath, fmt.Sprintf("%s.json", *provider))
-	c := cli.New().ReadProjdata()
+	c := cli.New().GetProjectData()
 	app := app.New(
 		app.WithDegree(*deg),
 		app.WithMode(folder.Mode(*mode)),

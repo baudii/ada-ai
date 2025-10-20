@@ -61,7 +61,8 @@ func TestParseAppOptions(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			d := t.TempDir()
-			os.WriteFile(filepath.Join(d, v.filename), []byte(v.contents), 0o644)
+			err := os.WriteFile(filepath.Join(d, v.filename), []byte(v.contents), 0o644)
+			require.NoError(t, err)
 			opts, err := app.ParseAppOptions(d)
 			if v.err != "" {
 				assert.ErrorContains(t, err, v.err)

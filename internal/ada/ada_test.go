@@ -130,7 +130,7 @@ func TestPromptFromTemplate(t *testing.T) {
 				err := os.WriteFile(filepath.Join(tempdir, file), []byte(v.template), 0644)
 				require.NoError(t, err)
 			}
-			res, err := ada.PromptFromTemplate(file, v.args...)
+			res, err := ada.BuildPrompt(file, v.args...)
 			assert.Equal(t, v.hasErr, err != nil)
 			assert.Equal(t, fmt.Sprintf(v.template, v.args...), res)
 		})

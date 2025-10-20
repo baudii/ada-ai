@@ -154,17 +154,17 @@ func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 }
 
 func (ada *Ada) loadTemplates() (*templates, error) {
-	reflectTemplate, err := ada.PromptFromTemplate(reflectPrompt)
+	reflectTemplate, err := ada.BuildPrompt(reflectPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	sReflectTemplate, err := ada.PromptFromTemplate(reflectShortPrompt)
+	sReflectTemplate, err := ada.BuildPrompt(reflectShortPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	improveTemplate, err := ada.PromptFromTemplate(improvePrompt)
+	improveTemplate, err := ada.BuildPrompt(improvePrompt)
 	if err != nil {
 		return nil, err
 	}

@@ -14,14 +14,14 @@ type cliApp struct {
 }
 
 // New creates a new instance of the CLI application that implements the Runner interface.
-func New() app.Runner {
+func New() *cliApp {
 	return &cliApp{utils.ReadInput}
 }
 
-// ReadProjdata retrieves project data from a JSON file or prompts the user for input
+// GetProjectData retrieves project data from a JSON file or prompts the user for input
 // if the file does not exist or cannot be parsed. It sends the project data
 // through the provided channel and closes the channel when done.
-func (cli *cliApp) ReadProjdata() app.ProjectData {
+func (cli *cliApp) GetProjectData() app.ProjectData {
 	path := filepath.Join(common.DataPath, "user_data.json")
 	projectData, err := utils.ParseJSONFile[app.ProjectData](path)
 	if err != nil {

@@ -11,7 +11,6 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 	c := New()
 	assert.NotNil(t, c)
-	assert.Implements(t, (*app.Runner)(nil), c)
 }
 
 func TestProjData(t *testing.T) {
@@ -36,6 +35,6 @@ func TestProjData(t *testing.T) {
 			return ""
 		}
 	}}
-	pd := c.ReadProjdata()
+	pd := c.GetProjectData()
 	assert.Equal(t, expected, pd)
 }

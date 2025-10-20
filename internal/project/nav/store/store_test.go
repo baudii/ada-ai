@@ -12,11 +12,16 @@ import (
 )
 
 type mockNavItem struct {
-	err error
+	content string
+	err     error
 }
 
 func (m *mockNavItem) Materialize() error {
 	return m.err
+}
+
+func (m *mockNavItem) CompactContent() (string, error) {
+	return m.content, m.err
 }
 
 func TestNew_DirCreationFailure(t *testing.T) {
@@ -27,6 +32,31 @@ func TestNew_DirCreationFailure(t *testing.T) {
 	_ = f.Close()
 	_, err = New(d)
 	require.ErrorContains(t, err, "create nav root")
+}
+
+func TestNavContent(t *testing.T) {
+	t.Parallel()
+	s := &store{items: map[string]navItem{"key1": &mockNavItem{content: "{}", err: nil}}}
+	tests := []struct {
+		name string
+		key  string
+		err  string
+	}{
+		{"valid nav content", "key1", ""},
+		{"invalid nav content", "key2", "not found"},
+	}
+
+	for _, v := range tests {
+		t.Run(v.name, func(t *testing.T) {
+			res, err := s.NavContent(v.key)
+			if v.err != "" {
+				assert.ErrorContains(t, err, v.err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, "{}", res)
+			}
+		})
+	}
 }
 
 func TestTree(t *testing.T) {
@@ -106,10 +136,9 @@ func TestTryLoadNav(t *testing.T) {
 	require.NoError(t, err)
 	err = n.Materialize()
 	require.NoError(t, err)
-	var res []byte
-	ok := n.TryLoadNav(fmt.Sprintf("%v.%v", fn, "txt"), &res)
-	require.True(t, ok)
+	res, err := n.LoadNav(fmt.Sprintf("%v.%v", fn, "txt"))
+	require.NoError(t, err)
 	assert.Equal(t, cont, res)
-	ok = n.TryLoadNav("file2.txt", &res)
-	require.False(t, ok)
+	_, err = n.LoadNav("file2.txt")
+	require.Error(t, err)
 }

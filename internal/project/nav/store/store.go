@@ -21,6 +21,7 @@ type store struct {
 
 type navItem interface {
 	Materialize() error
+	CompactContent() (string, error)
 }
 
 func New(root string) (*store, error) {
@@ -36,49 +37,57 @@ func New(root string) (*store, error) {
 	return n, nil
 }
 
-func (n *store) Tree() map[string]any {
-	return n.tree
+func (s *store) Tree() map[string]any {
+	return s.tree
 }
 
 // AddNav adds a navigation file to the local project descriptor. The filename
 // is the name of the file to be created under the "nav" folder, and content is
 // the byte content to be written to that file.
-func (n *store) AddNav(key, ext string, content []byte) error {
-	path := filepath.Join(n.root, fmt.Sprintf("%v.%v", key, ext))
+func (s *store) AddNav(key, ext string, content []byte) error {
+	path := filepath.Join(s.root, fmt.Sprintf("%v.%v", key, ext))
 	if key == project.Structure {
-		err := json.Unmarshal(content, &n.tree)
+		err := json.Unmarshal(content, &s.tree)
 		if err != nil {
 			return fmt.Errorf("parse structure content: %w", err)
 		}
 	}
 
-	n.items[key] = nav.New(path, content)
+	s.items[key] = nav.New(path, content)
 	return nil
 }
 
-// TryLoadNav loads the content of a navigation file from the nav folder.
-// It returns the content as a byte slice and a boolean indicating whether
-// the file was found and read successfully.
-func (n *store) TryLoadNav(filename string, dest *[]byte) bool {
-	path := filepath.Join(n.root, filename)
+// LoadNav retrieves a navigation file by its filename. It returns the file content
+// as a byte slice and a boolean indicating whether the file was found.
+func (s *store) LoadNav(filename string) ([]byte, error) {
+	path := filepath.Join(s.root, filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	*dest = data
-	return true
+	return data, nil
 }
 
-func (n *store) Materialize() error {
-	if err := os.MkdirAll(n.root, 0755); err != nil {
+// NavContent retrieves the content of a navigation file by its key.
+// It returns the content as a compacted JSON string.
+func (s *store) NavContent(key string) (string, error) {
+	item, ok := s.items[key]
+	if !ok {
+		return "", fmt.Errorf("nav item %q not found", key)
+	}
+	return item.CompactContent()
+}
+
+func (s *store) Materialize() error {
+	if err := os.MkdirAll(s.root, 0755); err != nil {
 		return fmt.Errorf("create nav folder: %w", err)
 	}
 
-	if err := utils.SaveJSONToFile(n.tree, filepath.Join(n.root, "structure.json")); err != nil {
+	if err := utils.SaveJSONToFile(s.tree, filepath.Join(s.root, "structure.json")); err != nil {
 		return fmt.Errorf("save project structure file: %w", err)
 	}
 
-	for _, v := range n.items {
+	for _, v := range s.items {
 		if err := v.Materialize(); err != nil {
 			return fmt.Errorf("create nav file: %w", err)
 		}

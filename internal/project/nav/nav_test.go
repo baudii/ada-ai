@@ -34,7 +34,7 @@ func TestNavContent(t *testing.T) {
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
 			n := New(t.TempDir(), []byte(v.content))
-			content, err := n.NavContent()
+			content, err := n.CompactContent()
 			if v.err != "" {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, v.err)

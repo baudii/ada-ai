@@ -50,9 +50,9 @@ func (ada *Ada) GenerateContent(ctx context.Context, prompt string, msgs []llms.
 	return res, err
 }
 
-// PromptFromTemplate reads a prompt template file and formats it with the provided input.
+// BuildPrompt reads a prompt template file and formats it with the provided input.
 // It returns the formatted prompt string or an error if the file cannot be read.
-func (ada *Ada) PromptFromTemplate(filename string, input ...any) (string, error) {
+func (ada *Ada) BuildPrompt(filename string, input ...any) (string, error) {
 	file := ada.prompt(filename)
 	template, err := os.ReadFile(file)
 	if err != nil {
