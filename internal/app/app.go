@@ -11,7 +11,7 @@ import (
 	"github.com/baudii/ada-ai/internal/ai"
 	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/internal/project/local"
-	"github.com/baudii/ada-ai/internal/project/nav/store"
+	"github.com/baudii/ada-ai/internal/project/nav"
 	"github.com/baudii/ada-ai/pkg/utils"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -61,16 +61,12 @@ func (a *app) InitLocalProject() error {
 	if err != nil {
 		return fmt.Errorf("project folder: %w", err)
 	}
-	n, err := store.New(projRoot)
-	if err != nil {
-		return fmt.Errorf("create nav store %q: %w", projRoot, err)
-	}
-	lp, err := local.New(projRoot, n)
+	lp, err := local.New(projRoot, nav.New())
 	if err != nil {
 		return fmt.Errorf("create local project %q: %w", projRoot, err)
 	}
 	a.materializer = lp
-	a.navHandler = n
+	a.navHandler = lp
 	slog.Debug("created local project", "path", projRoot)
 	return nil
 }
@@ -200,7 +196,7 @@ func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
 func (a *app) injectNavContent(args ...any) ([]any, error) {
 	for i := range args {
 		if idx, ok := args[i].(int); ok {
-			r, err := a.navHandler.NavContent(defaultNavNames[idx])
+			r, err := a.navHandler.Content(defaultNavNames[idx])
 			if err != nil {
 				return nil, fmt.Errorf("retrieve nav %q: %w", defaultNavNames[idx], err)
 			}

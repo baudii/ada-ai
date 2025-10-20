@@ -8,6 +8,7 @@ import (
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/project/local"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,10 +40,10 @@ func TestInitLocalProject_FailsReadDir(t *testing.T) {
 	require.ErrorContains(t, err, "project folder")
 }
 
-func TestInitLocalProject_FailCreateStore(t *testing.T) {
+func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
 	t.Parallel()
 	ada := ada.New(nil)
-	d := filepath.Join(t.TempDir(), "file.txt")
+	d := filepath.Join(t.TempDir(), local.NavFolder)
 	f, err := os.Create(d)
 	require.NoError(t, err)
 	_ = f.Close()
@@ -54,20 +55,6 @@ func TestInitLocalProject_FailCreateStore(t *testing.T) {
 			ProjectsRoot: t.TempDir(),
 		}))
 	err = a.InitLocalProject()
-	require.ErrorContains(t, err, "create nav store")
-}
-
-func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
-	t.Parallel()
-	ada := ada.New(nil)
-	a := app.New(
-		app.WithGen(ada),
-		app.WithMode(folder.CreateNew),
-		app.WithDirProvider(&mockDirProvider{path: ""}),
-		app.WithOptions(&app.Options{
-			ProjectsRoot: t.TempDir(),
-		}))
-	err := a.InitLocalProject()
 	require.ErrorContains(t, err, "create local project")
 }
 

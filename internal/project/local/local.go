@@ -1,22 +1,29 @@
 package local
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/project/nav"
 )
 
+var NavFolder = "nav"
+
 type local struct {
-	root  string
-	store navStore
+	tree    map[string]any
+	root    string
+	navRoot string
+	store   navStore
 }
 
 type navStore interface {
-	Materialize() error
-	Tree() map[string]any
-	AddNav(key, ext string, content []byte) error
+	Materialize(root string) error
+	Add(key, path string, content []byte)
+	Get(k string) (*nav.File, bool)
 }
 
 // New creates a new LocalProj instance with the given project root path.
@@ -33,8 +40,9 @@ func New(root string, store navStore) (*local, error) {
 	}
 
 	return &local{
-		root:  root,
-		store: store,
+		root:    root,
+		navRoot: filepath.Join(root, NavFolder),
+		store:   store,
 	}, nil
 }
 
@@ -46,10 +54,53 @@ func New(root string, store navStore) (*local, error) {
 //
 // If any part of the structure cannot be created or the JSON description cannot
 // be saved, an error is returned.
-func (d *local) Materialize(hfile, hfold project.Handler) error {
-	if err := d.store.Materialize(); err != nil {
+func (l *local) Materialize(hfile, hfold project.Handler) error {
+	if err := l.store.Materialize(l.navRoot); err != nil {
 		return fmt.Errorf("setup nav: %w", err)
 	}
 
-	return project.Traverse(d.root, d.store.Tree(), hfile, hfold)
+	return project.Traverse(l.root, l.tree, hfile, hfold)
+}
+
+// AddItem adds a navigation file to the local project descriptor. The filename
+// is the name of the file to be created under the "nav" folder, and content is
+// the byte content to be written to that file.
+func (l *local) AddNav(key, ext string, content []byte) error {
+	if key == project.Structure {
+		err := json.Unmarshal(content, &l.tree)
+		if err != nil {
+			return fmt.Errorf("parse structure content: %w", err)
+		}
+	}
+	l.store.Add(key, fmt.Sprintf("%v.%v", key, ext), content)
+	return nil
+}
+
+func (l *local) Tree() map[string]any {
+	return l.tree
+}
+
+// LoadNav retrieves a navigation file by its filename. It returns the file content
+// as a byte slice and a boolean indicating whether the file was found.
+func (l *local) LoadNav(filename string) ([]byte, error) {
+	path := filepath.Join(l.navRoot, filename)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// Content retrieves the content of a navigation file by its key.
+// It returns the content as a compacted JSON string.
+func (l *local) Content(key string) (string, error) {
+	item, ok := l.store.Get(key)
+	if !ok {
+		return "", fmt.Errorf("nav item %q not found", key)
+	}
+	buf := &bytes.Buffer{}
+	if err := json.Compact(buf, item.Content); err != nil {
+		return "", fmt.Errorf("compact content: %w", err)
+	}
+	return buf.String(), nil
 }

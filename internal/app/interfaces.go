@@ -30,5 +30,5 @@ type materializer interface {
 type navigator interface {
 	LoadNav(key string) ([]byte, error)
 	AddNav(key, ext string, content []byte) error
-	NavContent(key string) (string, error)
+	Content(key string) (string, error)
 }

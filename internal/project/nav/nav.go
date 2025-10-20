@@ -1,36 +1,49 @@
 package nav
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
-type item struct {
-	root    string
-	content []byte
+type store struct {
+	items map[string]*File
 }
 
-// New creates a new navigation item with the specified root path and content.
-func New(root string, content []byte) *item {
-	return &item{
-		root:    root,
-		content: content,
+type File struct {
+	Filename string
+	Content  []byte
+}
+
+func New() *store {
+	return &store{
+		items: make(map[string]*File),
 	}
 }
 
-// CompactContent returns the compacted JSON string content of the
-// navigation item.
-func (n *item) CompactContent() (string, error) {
-	buf := &bytes.Buffer{}
-	if err := json.Compact(buf, n.content); err != nil {
-		return "", fmt.Errorf("compact content: %w", err)
+func (s *store) Add(k, p string, c []byte) {
+	s.items[k] = &File{
+		Filename: p,
+		Content:  c,
 	}
-	return buf.String(), nil
 }
 
-// Materialize creates the navigation file on disk with its content.
-func (n *item) Materialize() error {
-	return os.WriteFile(n.root, n.content, 0644)
+func (s *store) Get(k string) (*File, bool) {
+	f, ok := s.items[k]
+	return f, ok
+}
+
+// Materialize writes the navigation files and structure to the filesystem.
+func (s *store) Materialize(root string) error {
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return fmt.Errorf("create nav folder: %w", err)
+	}
+
+	for _, v := range s.items {
+		if err := os.WriteFile(filepath.Join(root, v.Filename), v.Content, 0644); err != nil {
+			return fmt.Errorf("create nav file: %w", err)
+		}
+	}
+
+	return nil
 }
