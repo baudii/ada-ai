@@ -118,22 +118,13 @@ func TestAddNav(t *testing.T) {
 	}
 }
 
-// func TestLoadNav(t *testing.T) {
-// 	t.Parallel()
-// 	n, err := New(t.TempDir(), &mockStore{})
-// 	require.NoError(t, err)
-// 	fn := "file1"
-// 	cont := []byte("{}")
-// 	err = n.AddNav(fn, "txt", cont)
-// 	require.NoError(t, err)
-// 	err = n.Materialize(nil, nil)
-// 	require.NoError(t, err)
-// 	res, err := n.LoadNav(fmt.Sprintf("%v.%v", fn, "txt"))
-// 	require.NoError(t, err)
-// 	assert.Equal(t, cont, res)
-// 	_, err = n.LoadNav("file2.txt")
-// 	require.Error(t, err)
-// }
+func TestLoadNav_Fail(t *testing.T) {
+	t.Parallel()
+	lp, err := New(t.TempDir(), nav.New())
+	require.NoError(t, err)
+	_, err = lp.LoadNav("nonexistent.txt")
+	assert.ErrorContains(t, err, "read file")
+}
 
 func TestTree(t *testing.T) {
 	t.Parallel()

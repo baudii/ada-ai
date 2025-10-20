@@ -86,7 +86,7 @@ func (l *proj) LoadNav(filename string) ([]byte, error) {
 	path := filepath.Join(l.navRoot, filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 	return data, nil
 }

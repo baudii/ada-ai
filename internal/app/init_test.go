@@ -23,6 +23,8 @@ func TestNew(t *testing.T) {
 		app.WithDirProvider(nil),
 		app.WithProjectData(app.ProjectData{}),
 		app.WithOptions(&app.Options{}),
+		app.WithNavNames([]string{"a", "b"}),
+		app.WithNavHandler(nil),
 	)
 	require.NotNil(t, a)
 }
