@@ -137,7 +137,7 @@ func TestAddNav(t *testing.T) {
 
 func TestTree(t *testing.T) {
 	t.Parallel()
-	p := &local{tree: map[string]any{"p": "a"}}
+	p := &proj{tree: map[string]any{"p": "a"}}
 	s := p.Tree()
 	assert.Equal(t, p.tree, s)
 }
@@ -180,7 +180,7 @@ func TestContent(t *testing.T) {
 
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
-			s := &local{store: &mockStore{
+			s := &proj{store: &mockStore{
 				file: v.mockFile,
 			}}
 			if v.mockFile != nil {

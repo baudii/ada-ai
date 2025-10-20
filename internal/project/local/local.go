@@ -13,7 +13,7 @@ import (
 
 var NavFolder = "nav"
 
-type local struct {
+type proj struct {
 	tree    map[string]any
 	root    string
 	navRoot string
@@ -30,7 +30,7 @@ type navStore interface {
 // It initializes the navigation path and prepares the navs map.
 // An error is returned if the provided project root path is not absolute
 // or if the base navigation path cannot be created.
-func New(root string, store navStore) (*local, error) {
+func New(root string, store navStore) (*proj, error) {
 	if !filepath.IsAbs(root) {
 		return nil, fmt.Errorf("path %q is not absolute", root)
 	}
@@ -39,7 +39,7 @@ func New(root string, store navStore) (*local, error) {
 		return nil, fmt.Errorf("create nav path: %w", err)
 	}
 
-	return &local{
+	return &proj{
 		root:    root,
 		navRoot: filepath.Join(root, NavFolder),
 		store:   store,
@@ -54,7 +54,7 @@ func New(root string, store navStore) (*local, error) {
 //
 // If any part of the structure cannot be created or the JSON description cannot
 // be saved, an error is returned.
-func (l *local) Materialize(hfile, hfold project.Handler) error {
+func (l *proj) Materialize(hfile, hfold project.Handler) error {
 	if err := l.store.Materialize(l.navRoot); err != nil {
 		return fmt.Errorf("setup nav: %w", err)
 	}
@@ -65,7 +65,7 @@ func (l *local) Materialize(hfile, hfold project.Handler) error {
 // AddItem adds a navigation file to the local project descriptor. The filename
 // is the name of the file to be created under the "nav" folder, and content is
 // the byte content to be written to that file.
-func (l *local) AddNav(key, ext string, content []byte) error {
+func (l *proj) AddNav(key, ext string, content []byte) error {
 	if key == project.Structure {
 		err := json.Unmarshal(content, &l.tree)
 		if err != nil {
@@ -76,13 +76,13 @@ func (l *local) AddNav(key, ext string, content []byte) error {
 	return nil
 }
 
-func (l *local) Tree() map[string]any {
+func (l *proj) Tree() map[string]any {
 	return l.tree
 }
 
 // LoadNav retrieves a navigation file by its filename. It returns the file content
 // as a byte slice and a boolean indicating whether the file was found.
-func (l *local) LoadNav(filename string) ([]byte, error) {
+func (l *proj) LoadNav(filename string) ([]byte, error) {
 	path := filepath.Join(l.navRoot, filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -93,7 +93,7 @@ func (l *local) LoadNav(filename string) ([]byte, error) {
 
 // Content retrieves the content of a navigation file by its key.
 // It returns the content as a compacted JSON string.
-func (l *local) Content(key string) (string, error) {
+func (l *proj) Content(key string) (string, error) {
 	item, ok := l.store.Get(key)
 	if !ok {
 		return "", fmt.Errorf("nav item %q not found", key)
