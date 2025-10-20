@@ -66,7 +66,7 @@ func (a *app) InitLocalProject() error {
 		return fmt.Errorf("create local project %q: %w", projRoot, err)
 	}
 	a.materializer = lp
-	a.navHandler = lp
+	a.navigator = lp
 	slog.Debug("created local project", "path", projRoot)
 	return nil
 }
@@ -80,7 +80,7 @@ func (a *app) InitLocalProject() error {
 // Additional arguments can be passed to modify the behavior of the application.
 func (a *app) Run(ctx context.Context) error {
 	slog.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
-	if err := a.AddNavs(ctx, defaultNavNames[:]); err != nil {
+	if err := a.AddNavs(ctx); err != nil {
 		return fmt.Errorf("add navs: %w", err)
 	}
 	if err := a.MaterializeProject(ctx); err != nil {
@@ -92,7 +92,7 @@ func (a *app) Run(ctx context.Context) error {
 
 // AddNavs adds navigation files to the project. It checks for existing
 // navigation files and generates new ones if they are not found.
-func (a *app) AddNavs(ctx context.Context, navNames []string) error {
+func (a *app) AddNavs(ctx context.Context) error {
 	m := make(map[string][]any)
 	m[business] = []any{a.projectData.ProjName, a.projectData.Summary}
 	m[technical] = []any{a.projectData.Language, 0}
@@ -101,19 +101,21 @@ func (a *app) AddNavs(ctx context.Context, navNames []string) error {
 
 	var res []byte
 	var err error
-	for _, navName := range navNames {
+	for _, navName := range a.navNames {
 		filename := fmt.Sprintf("%v.%v", navName, ext)
 		slog.Debug("checking nav file", "file", filename)
-		if res, err = a.navHandler.LoadNav(filename); err != nil {
+		if res, err = a.navigator.LoadNav(filename); err != nil {
 			slog.Debug("generating new nav file", "file", filename)
-			args := m[navName]
-			res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode())
-			if err != nil {
+			args, ok := m[navName]
+			if !ok {
+				return fmt.Errorf("no args for nav %q", navName)
+			}
+			if res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode()); err != nil {
 				return fmt.Errorf("business description: %w", err)
 			}
 		}
 
-		if err := a.navHandler.AddNav(navName, ext, res); err != nil {
+		if err := a.navigator.AddNav(navName, ext, res); err != nil {
 			return fmt.Errorf("add nav file %q: %w", filename, err)
 		}
 		slog.Debug("added nav file", "file", filename)
@@ -196,7 +198,7 @@ func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
 func (a *app) injectNavContent(args ...any) ([]any, error) {
 	for i := range args {
 		if idx, ok := args[i].(int); ok {
-			r, err := a.navHandler.Content(defaultNavNames[idx])
+			r, err := a.navigator.Content(defaultNavNames[idx])
 			if err != nil {
 				return nil, fmt.Errorf("retrieve nav %q: %w", defaultNavNames[idx], err)
 			}

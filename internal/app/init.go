@@ -21,7 +21,7 @@ type app struct {
 	gen          generator
 	folderer     folderProvider
 	materializer materializer
-	navHandler   navigator
+	navigator    navigator
 	projectData  ProjectData
 	opts         *Options
 	navNames     []string
@@ -53,10 +53,10 @@ func WithGen(gen generator) option {
 	}
 }
 
-// WithNavHandler sets the NavHandler for the application to manage navigation files.
-func WithNavHandler(n navigator) option {
+// WithNavigator sets the NavHandler for the application to manage navigation files.
+func WithNavigator(n navigator) option {
 	return func(a *app) {
-		a.navHandler = n
+		a.navigator = n
 	}
 }
 
@@ -93,6 +93,13 @@ func WithMode(mode folder.Mode) option {
 func WithProjectData(data ProjectData) option {
 	return func(a *app) {
 		a.projectData = data
+	}
+}
+
+// WithMaterializer sets the materializer for the application to handle project materialization.
+func WithMaterializer(m materializer) option {
+	return func(a *app) {
+		a.materializer = m
 	}
 }
 

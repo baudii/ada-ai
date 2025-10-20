@@ -24,7 +24,8 @@ func TestNew(t *testing.T) {
 		app.WithProjectData(app.ProjectData{}),
 		app.WithOptions(&app.Options{}),
 		app.WithNavNames([]string{"a", "b"}),
-		app.WithNavHandler(nil),
+		app.WithNavigator(nil),
+		app.WithMaterializer(nil),
 	)
 	require.NotNil(t, a)
 }
