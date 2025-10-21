@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"math"
 
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/jsonx"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -63,7 +63,7 @@ func (ada *Ada) SendReflect(prompt string) ([]byte, error) {
 	}
 
 	slog.Info("finished improve")
-	return utils.TrimJSON(data)
+	return jsonx.Trim(data)
 }
 
 // Improve takes an initial response and iteratively reflects on it
@@ -139,7 +139,7 @@ func (ada *Ada) Reflect(reflectPrompt string, msgs []llms.MessageContent) (*refl
 	}
 
 	var js []byte
-	js, err = utils.TrimJSON(resp.Choices[0].Content)
+	js, err = jsonx.Trim(resp.Choices[0].Content)
 	if err != nil {
 		return nil, fmt.Errorf("trim reflect: %w", err)
 	}

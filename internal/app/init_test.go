@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 		app.WithGen(nil),
 		app.WithDirProvider(nil),
 		app.WithProjectData(app.ProjectData{}),
-		app.WithOptions(&app.Options{}),
+		app.WithOptions(app.Options{}),
 		app.WithNavNames([]string{"a", "b"}),
 		app.WithNavigator(nil),
 		app.WithMaterializer(nil),
@@ -37,7 +37,7 @@ func TestParseAppOptions(t *testing.T) {
 		filename string
 		contents string
 		err      string
-		expected *app.Options
+		expected app.Options
 	}{
 		{"non-existent path", "non-existent-path", `
 			{
@@ -48,13 +48,13 @@ func TestParseAppOptions(t *testing.T) {
 					"depth": 1,
 					"threshhold": 0.4
 				}
-			}`, "parse ada options", &app.Options{
+			}`, "parse ada options", app.Options{
 			Timeout:      "5s",
 			ProjectsRoot: "testdata/projects",
 			PromptsRoot:  "testdata/prompts",
 			Reflection:   ada.ReflectConfig{Depth: 1, Threshhold: 0.4},
 		}},
-		{"valid config", app.ConfigFile, `{}`, "", &app.Options{
+		{"valid config", app.ConfigFile, `{}`, "", app.Options{
 			ProjectsRoot: common.ProjectsPath,
 			PromptsRoot:  common.PromptsPath,
 		}},

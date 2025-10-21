@@ -9,8 +9,8 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 
-func registerOllama(options map[string]string) (llms.Model, error) {
-	model := options["model"]
+func registerOllama(m map[string]string) (llms.Model, error) {
+	model := m["model"]
 	if model == "" {
 		return nil, fmt.Errorf("ollama: options.model is required")
 	}
@@ -18,19 +18,19 @@ func registerOllama(options map[string]string) (llms.Model, error) {
 	var opts []ollama.Option
 	opts = append(opts, ollama.WithModel(model))
 
-	if v := options["url"]; v != "" {
+	if v := m["url"]; v != "" {
 		opts = append(opts, ollama.WithServerURL(v))
 	}
-	if v := options["keep_alive"]; v != "" {
+	if v := m["keep_alive"]; v != "" {
 		opts = append(opts, ollama.WithKeepAlive(v))
 	}
-	if v := options["format"]; v != "" {
+	if v := m["format"]; v != "" {
 		opts = append(opts, ollama.WithFormat(v))
 	}
-	if v := options["custom_template"]; v != "" {
+	if v := m["custom_template"]; v != "" {
 		opts = append(opts, ollama.WithCustomTemplate(v))
 	}
-	if v := options["http_timeout"]; v != "" {
+	if v := m["http_timeout"]; v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			opts = append(opts, ollama.WithHTTPClient(&http.Client{Timeout: d}))
 		}

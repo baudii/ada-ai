@@ -19,15 +19,28 @@ func TestRegister_invalid(t *testing.T) {
 
 func TestRegister_ollama(t *testing.T) {
 	tests := []struct {
+		name   string
 		cfg    *Config
 		hasErr bool
 	}{
-		{&Config{nil}, true},
-		{&Config{map[string]string{"model": "gemma3:4b", "url": "invalid"}}, false},
-		{&Config{map[string]string{"model": "gemma3:4b"}}, false},
+		{
+			name:   "fail: missing config",
+			cfg:    &Config{nil},
+			hasErr: true,
+		},
+		{
+			name:   "success: invalid url",
+			cfg:    &Config{map[string]string{"model": "gemma3:4b", "url": "invalid"}},
+			hasErr: false,
+		},
+		{
+			name:   "success: valid config",
+			cfg:    &Config{map[string]string{"model": "gemma3:4b"}},
+			hasErr: false,
+		},
 		{
 			// Full options as per ollama.go defaults
-			&Config{
+			cfg: &Config{
 				map[string]string{
 					"model":           "gemma3:4b",
 					"url":             "http://localhost:11434",
@@ -37,7 +50,7 @@ func TestRegister_ollama(t *testing.T) {
 					"http_timeout":    "30s",
 				},
 			},
-			false,
+			hasErr: false,
 		},
 	}
 
@@ -83,24 +96,42 @@ func TestRegister_grok(t *testing.T) {
 func TestRegisterFromFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
+		name     string
 		provider string
 		json     string
-		hasErr   bool
+		err      string
 	}{
-		{"ollama", `{"options": {"model":"some"}}`, false},
-		{"grok", `{"options": {"model":"some", "token": "api-key"}}`, false},
-		{"unsupported", "", true},
+		{
+			name:     "success: ollama",
+			provider: "ollama",
+			json:     `{"options": {"model":"some"}}`,
+		},
+		{
+			name:     "success: grok",
+			provider: "grok",
+			json:     `{"options": {"model":"some", "token": "api-key"}}`,
+		},
+		{
+			name:     "fail: parse llm config",
+			provider: "ollama",
+			json:     `{`,
+			err:      "parse llm config",
+		},
+		{
+			name:     "fail: default provider",
+			provider: "unknown",
+			json:     `{"options": {"model":"some"}}`,
+			err:      "unsupported llm provider",
+		},
 	}
-	for i, v := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	for _, v := range tests {
+		t.Run(v.name, func(t *testing.T) {
 			dir := t.TempDir()
-			if !v.hasErr {
-				err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("%s.json", v.provider)), []byte(v.json), 0644)
-				require.NoError(t, err)
-			}
-			_, err := RegisterFromFile(v.provider, dir)
-			if v.hasErr {
-				assert.Error(t, err)
+			err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("%s.json", v.provider)), []byte(v.json), 0644)
+			require.NoError(t, err)
+			_, err = RegisterFromFile(v.provider, dir)
+			if v.err != "" {
+				assert.ErrorContains(t, err, v.err)
 			} else {
 				assert.NoError(t, err)
 			}

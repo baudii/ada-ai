@@ -30,7 +30,7 @@ func TestInitAda_Success(t *testing.T) {
 	t.Parallel()
 	aicfgroot := filepath.Join(t.TempDir(), "ollama.json")
 	cfgroot := t.TempDir()
-	a := app.New(app.WithOptions(&app.Options{}))
+	a := app.New(app.WithOptions(app.Options{}))
 	err := os.WriteFile(aicfgroot, []byte(`{"options":{"model":"some"}}`), 0o644)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(cfgroot, "ada.json"), []byte(`{"option1":"value1"}`), 0o644)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/jsonx"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -32,9 +32,9 @@ func Register(provider string, options map[string]string, opts ...options) (llms
 // for the specified provider.
 func RegisterFromFile(provider, folder string) (llms.Model, error) {
 	path := filepath.Join(folder, fmt.Sprintf("%s.json", provider))
-	cfg, err := utils.ParseJSONConfigWithLocal[Config](path)
+	cfg, err := jsonx.LoadWithLocal[Config](path)
 	if err != nil {
-		return nil, fmt.Errorf("parse llm config %q: %w", path, err)
+		return nil, fmt.Errorf("parse llm config: %w", err)
 	}
 
 	return Register(provider, cfg.Options)

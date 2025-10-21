@@ -3,6 +3,7 @@ package folder
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -37,6 +38,10 @@ func NewSeqDir(reader DirReader) *seqDir {
 func (d *seqDir) ProjectFolder(base string, mode Mode) (string, error) {
 	dirEntries, err := d.read(base)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// If the directory does not exist, we can start with "0"
+			return filepath.Join(base, "0"), nil
+		}
 		return "", fmt.Errorf("read dir %q: %w", base, err)
 	}
 

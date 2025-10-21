@@ -1,6 +1,6 @@
 {
   "options": {
-    "model": "groq/compound",
+    "model": "openai/gpt-oss-120b",
     "url": "https://api.groq.com/openai/v1",
     "token": "your-api-key",
     "http_timeout": "60s"

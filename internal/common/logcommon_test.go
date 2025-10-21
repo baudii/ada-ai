@@ -18,18 +18,18 @@ func TestLoadLogConfig(t *testing.T) {
 
 	tests := []struct {
 		cfgPath  string
-		expected *dilog.LogConfig
+		expected dilog.LogConfig
 		hasErr   bool
 	}{
 		{
 			hasErr:   false,
 			cfgPath:  "testdata/valid_config.json",
-			expected: &dilog.LogConfig{Timezone: "UTC", Path: "logs", Prefix: "prefix"},
+			expected: dilog.LogConfig{Timezone: "UTC", Path: "logs", Prefix: "prefix"},
 		},
 		{
 			hasErr:   true,
 			cfgPath:  "testdata/invalid_config.json",
-			expected: &defaultCfg,
+			expected: defaultCfg,
 		},
 	}
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/dilog/simplehandler"
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/jsonx"
 )
 
 var defaultCfg = dilog.LogConfig{
@@ -20,10 +20,10 @@ var defaultCfg = dilog.LogConfig{
 
 // LoadLogConfig loads the log configuration from the specified JSON file path.
 // If loading fails, it returns a default configuration.
-func LoadLogConfig(path string) *dilog.LogConfig {
-	cfg, err := utils.ParseJSONConfigWithLocal[dilog.LogConfig](path)
+func LoadLogConfig(path string) dilog.LogConfig {
+	cfg, err := jsonx.LoadWithLocal[dilog.LogConfig](path)
 	if err != nil {
-		return &defaultCfg
+		return defaultCfg
 	}
 
 	return cfg

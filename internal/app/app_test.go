@@ -89,6 +89,12 @@ func TestRun_Fails(t *testing.T) {
 			expectedErr: "add nav file",
 		},
 		{
+			name:        "fail: add nav, fail materialize",
+			addNavErr:   assert.AnError,
+			matErr:      assert.AnError,
+			expectedErr: "add nav file",
+		},
+		{
 			name:        "fail: materialize",
 			matErr:      assert.AnError,
 			expectedErr: "materialize project",

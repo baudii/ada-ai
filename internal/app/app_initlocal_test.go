@@ -33,7 +33,7 @@ func TestInitLocalProject_FailsReadDir(t *testing.T) {
 	a := app.New(
 		app.WithGen(ada),
 		app.WithDirProvider(mdpErr),
-		app.WithOptions(&app.Options{
+		app.WithOptions(app.Options{
 			ProjectsRoot: t.TempDir(),
 		}))
 	err = a.InitLocalProject()
@@ -51,7 +51,7 @@ func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
 		app.WithGen(ada),
 		app.WithMode(folder.CreateNew),
 		app.WithDirProvider(&mockDirProvider{path: d}),
-		app.WithOptions(&app.Options{
+		app.WithOptions(app.Options{
 			ProjectsRoot: t.TempDir(),
 		}))
 	err = a.InitLocalProject()
@@ -64,7 +64,7 @@ func TestInitLocalProject_Success(t *testing.T) {
 	a := app.New(app.WithGen(ada),
 		app.WithMode(folder.CreateNew),
 		app.WithDirProvider(&mockDirProvider{path: t.TempDir()}),
-		app.WithOptions(&app.Options{
+		app.WithOptions(app.Options{
 			ProjectsRoot: t.TempDir(),
 		}))
 	err := a.InitLocalProject()

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/internal/project/local"
 	"github.com/baudii/ada-ai/internal/project/nav"
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/jsonx"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
@@ -32,7 +33,7 @@ const ext = "json"
 // text AI model, and configures the Ada workflow with the provided options.
 func (a *app) InitAda(provider, configPath string) error {
 	slog.Info("initializing ada", "provider", provider)
-	cfg, err := utils.ParseJSONConfigWithLocal[ai.Config](configPath)
+	cfg, err := jsonx.LoadWithLocal[ai.Config](configPath)
 	if err != nil {
 		return fmt.Errorf("parse llm config %q: %w", configPath, err)
 	}
@@ -81,6 +82,12 @@ func (a *app) InitLocalProject() error {
 func (a *app) Run(ctx context.Context) error {
 	slog.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
 	if err := a.AddNavs(ctx); err != nil {
+		if retryErr := a.materializer.Materialize(project.DefaultFileHandler, project.DefaultFolderHandler); retryErr != nil {
+			return errors.Join(
+				fmt.Errorf("add navs: %w", err),
+				fmt.Errorf("materialize during recovery: %w", retryErr),
+			)
+		}
 		return fmt.Errorf("add navs: %w", err)
 	}
 	if err := a.MaterializeProject(ctx); err != nil {
@@ -111,7 +118,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 				return fmt.Errorf("no args for nav %q", navName)
 			}
 			if res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode()); err != nil {
-				return fmt.Errorf("business description: %w", err)
+				return fmt.Errorf("send instructions: %w", err)
 			}
 		}
 

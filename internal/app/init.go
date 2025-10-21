@@ -8,7 +8,7 @@ import (
 	"github.com/baudii/ada-ai/internal/common"
 	"github.com/baudii/ada-ai/internal/project"
 	"github.com/baudii/ada-ai/internal/project/folder"
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/jsonx"
 )
 
 const ConfigFile = "ada.json"
@@ -23,7 +23,7 @@ type app struct {
 	materializer materializer
 	navigator    navigator
 	projectData  ProjectData
-	opts         *Options
+	opts         Options
 	navNames     []string
 	// TODO: inject logger
 }
@@ -68,7 +68,7 @@ func WithDirProvider(dp folderProvider) option {
 }
 
 // WithOptions sets the application options.
-func WithOptions(opts *Options) option {
+func WithOptions(opts Options) option {
 	return func(a *app) {
 		a.opts = opts
 	}
@@ -131,11 +131,11 @@ func New(opts ...option) *app {
 
 // ParseAppOptions parses the application options from a JSON file located
 // in the specified path.
-func ParseAppOptions(path string) (*Options, error) {
+func ParseAppOptions(path string) (Options, error) {
 	optsPath := filepath.Join(path, ConfigFile)
-	opts, err := utils.ParseJSONConfigWithLocal[Options](optsPath)
+	opts, err := jsonx.LoadWithLocal[Options](optsPath)
 	if err != nil {
-		return nil, fmt.Errorf("parse ada options %q: %w", optsPath, err)
+		return Options{}, fmt.Errorf("parse ada options %q: %w", optsPath, err)
 	}
 	if opts.PromptsRoot == "" {
 		opts.PromptsRoot = common.PromptsPath

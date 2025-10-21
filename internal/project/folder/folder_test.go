@@ -48,12 +48,52 @@ func TestProjectFolder(t *testing.T) {
 		expectedName string
 		expectErr    string
 	}{
-		{"fails to read dir", nil, fs.ErrNotExist, folder.UseLatest, "", "read dir"},
-		{"create new with empty folder", []fs.DirEntry{}, nil, folder.CreateNew, filepath.Join("basepath", "0"), ""},
-		{"use latest with empty folder", []fs.DirEntry{}, nil, folder.UseLatest, filepath.Join("basepath", "0"), ""},
-		{"create new with existing folders", mockEntries, nil, folder.CreateNew, filepath.Join("basepath", "5"), ""},
-		{"use latest with existing folders", mockEntries, nil, folder.UseLatest, filepath.Join("basepath", "3"), ""},
-		{"unknown mode", mockEntries, nil, folder.Mode(99), "", "unknown mode"},
+		{
+			name:      "fails to read dir",
+			mockErr:   assert.AnError,
+			mode:      folder.UseLatest,
+			expectErr: "read dir",
+		},
+		{
+			name:         "fails to read dir",
+			mockErr:      fs.ErrNotExist,
+			mode:         folder.UseLatest,
+			expectedName: filepath.Join("basepath", "0"),
+		},
+		{
+			name:         "create new with empty folder",
+			mockFiles:    []fs.DirEntry{},
+			mode:         folder.CreateNew,
+			expectedName: filepath.Join("basepath", "0"),
+		},
+		{
+			name:         "use latest with empty folder",
+			mockFiles:    []fs.DirEntry{},
+			mode:         folder.UseLatest,
+			expectedName: filepath.Join("basepath", "0"),
+		},
+		{
+			name:         "create new with existing folders",
+			mockFiles:    mockEntries,
+			mockErr:      nil,
+			mode:         folder.CreateNew,
+			expectedName: filepath.Join("basepath", "5"),
+		},
+		{
+			name:         "use latest with existing folders",
+			mockFiles:    mockEntries,
+			mockErr:      nil,
+			mode:         folder.UseLatest,
+			expectedName: filepath.Join("basepath", "3"),
+		},
+		{
+			name:         "unknown mode",
+			mockFiles:    mockEntries,
+			mockErr:      nil,
+			mode:         folder.Mode(99),
+			expectedName: "",
+			expectErr:    "unknown mode",
+		},
 	}
 
 	for _, v := range tests {

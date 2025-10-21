@@ -109,9 +109,17 @@ func TestDefaultFileHandler(t *testing.T) {
 		path string
 		err  string
 	}{
-		{"valid file creation", filepath.Join(t.TempDir(), "newfile.txt"), ""},
-		{"invalid file creation", t.TempDir(), "create file"},
+		{
+			name: "valid file creation",
+			path: filepath.Join(t.TempDir(), "newfile.txt"),
+		},
+		{
+			name: "invalid file creation",
+			path: t.TempDir(),
+			err:  "create file",
+		},
 	}
+
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
 			err := project.DefaultFileHandler(v.path)

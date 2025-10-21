@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/pkg/utils"
+	"github.com/baudii/ada-ai/pkg/pathx"
 )
 
 // Define the path to the named folders. Used for centrilized access to the files that contain data.
@@ -22,7 +22,7 @@ var (
 const ProjectStructurePrompt = "project-structure-template.txt"
 
 func init() {
-	Artifacts = utils.AbsolutePath("", os.Executable)
+	Artifacts = pathx.FromExecutable("", os.Executable)
 
 	ProjectsPath = filepath.Join(Artifacts, ".projects")
 	DataPath = filepath.Join(Artifacts, "data")
