@@ -1,4 +1,4 @@
-package consolex
+package console
 
 import (
 	"bufio"

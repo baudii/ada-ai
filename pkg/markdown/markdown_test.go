@@ -58,9 +58,9 @@ func TestStringify(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			if v.panics {
-				assert.Panics(t, func() { markdown.Stringify(v.prefix, v.input) })
+				assert.Panics(t, func() { markdown.Stringify(v.input, v.prefix) })
 			} else {
-				assert.Equal(t, v.expected, markdown.Stringify(v.prefix, v.input))
+				assert.Equal(t, v.expected, markdown.Stringify(v.input, v.prefix))
 			}
 		})
 	}

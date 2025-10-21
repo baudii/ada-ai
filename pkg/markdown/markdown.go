@@ -9,7 +9,7 @@ import (
 // Stringify returns a string representation of the given struct value. Each
 // field is represented on a new line in the format "- FieldName: FieldValue".
 // Fields with empty string values are omitted from the output.
-func Stringify[T any](prefix string, v T) string {
+func Stringify[T any](v T, prefix string) string {
 	if reflect.TypeOf(v).Kind() != reflect.Struct {
 		panic("T must be struct")
 	}

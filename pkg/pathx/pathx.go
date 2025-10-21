@@ -20,8 +20,8 @@ func FromExecutable(relativePath string, executable func() (string, error)) stri
 // InsertFsuffix inserts a postfix before the file extension
 // in the given path. If there is no extension, postfix
 // will be appended to the path.
-func InsertFsuffix(path string, postfix string) string {
+func InsertFsuffix(path string, suffix string) string {
 	ext := filepath.Ext(path)
 	name := strings.TrimSuffix(path, ext)
-	return name + postfix + ext
+	return name + suffix + ext
 }

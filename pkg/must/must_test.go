@@ -1,10 +1,11 @@
-package must
+package must_test
 
 import (
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/baudii/ada-ai/pkg/must"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,10 +22,10 @@ func TestMust(t *testing.T) {
 	for _, v := range tests {
 		t.Run(fmt.Sprintf("%v", v.val), func(t *testing.T) {
 			if v.err == nil {
-				result := Value(v.val, v.err)
+				result := must.Value(v.val, v.err)
 				assert.Equal(t, v.val, result)
 			} else {
-				assert.PanicsWithValue(t, v.err.Error(), func() { Value(v.val, errors.New("err")) })
+				assert.PanicsWithValue(t, v.err.Error(), func() { must.Value(v.val, errors.New("err")) })
 			}
 		})
 	}
@@ -41,9 +42,9 @@ func TestMustErr(t *testing.T) {
 	for _, v := range tests {
 		t.Run(fmt.Sprintf("%v", v.err), func(t *testing.T) {
 			if v.err == nil {
-				Do(nil)
+				must.Do(nil)
 			} else {
-				assert.PanicsWithValue(t, v.err.Error(), func() { Do(errors.New("err")) })
+				assert.PanicsWithValue(t, v.err.Error(), func() { must.Do(errors.New("err")) })
 			}
 		})
 	}
