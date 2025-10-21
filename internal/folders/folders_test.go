@@ -1,4 +1,4 @@
-package common
+package folders
 
 import (
 	"path/filepath"

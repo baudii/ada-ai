@@ -1,4 +1,4 @@
-package dilog
+package dailywriter
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ type mockWriteCloser struct {
 
 func (mockWriteCloser) Close() error { return nil }
 
-func TestNewDailyWriter(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		opts     []Option
@@ -58,7 +58,7 @@ func TestNewDailyWriter(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			d := t.TempDir()
-			dw, err := NewDailyWriter(d, v.opts...)
+			dw, err := New(d, v.opts...)
 			if v.err == "" {
 				assert.NoError(t, err)
 				assert.NotNil(t, dw)
@@ -111,7 +111,7 @@ func TestWrite(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			d := t.TempDir()
-			dw, err := NewDailyWriter(d, v.opts...)
+			dw, err := New(d, v.opts...)
 			require.NoError(t, err)
 			if v.swappath != "" {
 				dw.path = v.swappath
@@ -134,7 +134,7 @@ func TestWrite(t *testing.T) {
 func TestWrite_DefaultPrepareOpener(t *testing.T) {
 	t.Parallel()
 	d := t.TempDir()
-	dw, err := NewDailyWriter(
+	dw, err := New(
 		d,
 		WithPrefix("m"),
 		WithDater(func(loc *time.Location) string { return "2020-01-02" }),

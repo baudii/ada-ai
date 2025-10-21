@@ -1,4 +1,4 @@
-package common
+package dilog
 
 import (
 	"io"
@@ -7,37 +7,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baudii/ada-ai/pkg/dilog"
+	"github.com/baudii/ada-ai/pkg/dilog/dailywriter"
 	"github.com/baudii/ada-ai/pkg/dilog/simplehandler"
-	"github.com/baudii/ada-ai/pkg/jsonx"
 )
 
-var defaultCfg = dilog.LogConfig{
-	Timezone: "local",
-	Path:     "logs",
-	Prefix:   "pfx",
+// LogConfig holds configuration settings for logging.
+type LogConfig struct {
+	Timezone string `json:"timezone"`
+	Path     string `json:"path"`
+	Prefix   string `json:"prefix"`
+	Level    string `json:"level"`
 }
 
-// LoadLogConfig loads the log configuration from the specified JSON file path.
-// If loading fails, it returns a default configuration.
-func LoadLogConfig(path string) dilog.LogConfig {
-	cfg, err := jsonx.LoadWithLocal[dilog.LogConfig](path)
-	if err != nil {
-		return defaultCfg
-	}
-
-	return cfg
-}
-
-// DefaultSimpleLogger creates a simple slog.Logger based on the provided
+// DefaultDailyLogger creates a simple slog.Logger based on the provided
 // dilog.LogConfig and additional options.
-func DefaultSimpleLogger(cfg *dilog.LogConfig, opts ...dilog.Option) (*slog.Logger, error) {
+func DefaultDailyLogger(cfg *LogConfig, opts ...dailywriter.Option) (*slog.Logger, error) {
 	opts = append(opts,
-		dilog.WithPrefix(cfg.Prefix),
-		dilog.WithLocation(loc(cfg.Timezone)),
+		dailywriter.WithPrefix(cfg.Prefix),
+		dailywriter.WithLocation(loc(cfg.Timezone)),
 	)
 
-	dw, err := dilog.NewDailyWriter(cfg.Path, opts...)
+	dw, err := dailywriter.New(cfg.Path, opts...)
 	if err != nil {
 		return nil, err
 	}

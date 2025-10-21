@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/ada"
-	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/folders"
 	"github.com/baudii/ada-ai/internal/project"
-	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/project/seqdir"
 	"github.com/baudii/ada-ai/pkg/jsonx"
 )
 
@@ -17,7 +17,7 @@ var defaultNavNames = [4]string{business, technical, scope, project.Structure}
 
 type app struct {
 	deg          int
-	mode         folder.Mode
+	mode         seqdir.Mode
 	gen          generator
 	folderer     folderProvider
 	materializer materializer
@@ -83,7 +83,7 @@ func WithProject(proj materializer) option {
 
 // WithMode sets whether to create a new project folder or reuse an existing one.
 // Default is false (reuse existing).
-func WithMode(mode folder.Mode) option {
+func WithMode(mode seqdir.Mode) option {
 	return func(a *app) {
 		a.mode = mode
 	}
@@ -138,10 +138,10 @@ func ParseAppOptions(path string) (Options, error) {
 		return Options{}, fmt.Errorf("parse ada options %q: %w", optsPath, err)
 	}
 	if opts.PromptsRoot == "" {
-		opts.PromptsRoot = common.PromptsPath
+		opts.PromptsRoot = folders.Prompts
 	}
 	if opts.ProjectsRoot == "" {
-		opts.ProjectsRoot = common.ProjectsPath
+		opts.ProjectsRoot = folders.Projects
 	}
 	return opts, nil
 }

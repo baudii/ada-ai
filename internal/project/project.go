@@ -46,7 +46,7 @@ func Traverse(base string, structure map[string]any, hfile, hfold Handler) error
 		path := filepath.Join(base, name)
 		switch r := v.(type) {
 		case map[string]any:
-			if err := hfold(path); err != nil { //os.MkdirAll(path, 0755)
+			if err := hfold(path); err != nil {
 				return fmt.Errorf("handle folder(s): %w", err)
 			}
 			if err := Traverse(path, r, hfile, hfold); err != nil {

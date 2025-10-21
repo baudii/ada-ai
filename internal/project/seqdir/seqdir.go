@@ -1,4 +1,4 @@
-package folder
+package seqdir
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 // Mode defines the folder naming strategy.
 type Mode int
 
+// DirReader defines a function type for reading directory entries.
 type DirReader func(name string) ([]fs.DirEntry, error)
 
 // Modes for folder naming strategy.
@@ -25,8 +26,8 @@ type seqDir struct {
 	read DirReader
 }
 
-// NewSeqDir creates a new seqDir instance with the provided ReadDirFS.
-func NewSeqDir(reader DirReader) *seqDir {
+// New creates a new seqDir instance with the provided ReadDirFS.
+func New(reader DirReader) *seqDir {
 	return &seqDir{read: reader}
 }
 

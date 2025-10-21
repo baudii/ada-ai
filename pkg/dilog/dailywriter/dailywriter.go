@@ -1,4 +1,4 @@
-package dilog
+package dailywriter
 
 import (
 	"fmt"
@@ -8,14 +8,6 @@ import (
 	"sync"
 	"time"
 )
-
-// LogConfig holds configuration settings for logging.
-type LogConfig struct {
-	Timezone string `json:"timezone"`
-	Path     string `json:"path"`
-	Prefix   string `json:"prefix"`
-	Level    string `json:"level"`
-}
 
 type dailyWriter struct {
 	path   string
@@ -87,9 +79,9 @@ func WithPreparer(m preparer) Option {
 	}
 }
 
-// NewDailyWriter creates and returns a new dailyWriter instance based on the provided Config.
+// New creates and returns a new dailyWriter instance based on the provided Config.
 // The dailyWriter manages log file rotation based on the date and writes log entries to the appropriate file.
-func NewDailyWriter(path string, opts ...Option) (*dailyWriter, error) {
+func New(path string, opts ...Option) (*dailyWriter, error) {
 	dw := &dailyWriter{
 		path:    path,
 		prefix:  "default",
@@ -103,7 +95,7 @@ func NewDailyWriter(path string, opts ...Option) (*dailyWriter, error) {
 		opt(dw)
 	}
 
-	if err := dw.tryRotate(); err != nil {
+	if err := dw.rotateIfNextDay(); err != nil {
 		return nil, fmt.Errorf("new dailywriter: %w", err)
 	}
 
@@ -117,13 +109,13 @@ func NewDailyWriter(path string, opts ...Option) (*dailyWriter, error) {
 func (dw *dailyWriter) Write(p []byte) (n int, err error) {
 	dw.mu.Lock()
 	defer dw.mu.Unlock()
-	if err := dw.tryRotate(); err != nil {
+	if err := dw.rotateIfNextDay(); err != nil {
 		return 0, err
 	}
 	return dw.wc.Write(p)
 }
 
-func (dw *dailyWriter) tryRotate() error {
+func (dw *dailyWriter) rotateIfNextDay() error {
 	date := dw.date(dw.loc)
 	if dw.wc != nil && dw.curDate == date {
 		return nil

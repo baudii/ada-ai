@@ -1,11 +1,11 @@
-package folder_test
+package seqdir_test
 
 import (
 	"io/fs"
 	"path/filepath"
 	"testing"
 
-	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/project/seqdir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,53 +44,53 @@ func TestProjectFolder(t *testing.T) {
 		name         string
 		mockFiles    []fs.DirEntry
 		mockErr      error
-		mode         folder.Mode
+		mode         seqdir.Mode
 		expectedName string
 		expectErr    string
 	}{
 		{
 			name:      "fails to read dir",
 			mockErr:   assert.AnError,
-			mode:      folder.UseLatest,
+			mode:      seqdir.UseLatest,
 			expectErr: "read dir",
 		},
 		{
 			name:         "fails to read dir",
 			mockErr:      fs.ErrNotExist,
-			mode:         folder.UseLatest,
+			mode:         seqdir.UseLatest,
 			expectedName: filepath.Join("basepath", "0"),
 		},
 		{
 			name:         "create new with empty folder",
 			mockFiles:    []fs.DirEntry{},
-			mode:         folder.CreateNew,
+			mode:         seqdir.CreateNew,
 			expectedName: filepath.Join("basepath", "0"),
 		},
 		{
 			name:         "use latest with empty folder",
 			mockFiles:    []fs.DirEntry{},
-			mode:         folder.UseLatest,
+			mode:         seqdir.UseLatest,
 			expectedName: filepath.Join("basepath", "0"),
 		},
 		{
 			name:         "create new with existing folders",
 			mockFiles:    mockEntries,
 			mockErr:      nil,
-			mode:         folder.CreateNew,
+			mode:         seqdir.CreateNew,
 			expectedName: filepath.Join("basepath", "5"),
 		},
 		{
 			name:         "use latest with existing folders",
 			mockFiles:    mockEntries,
 			mockErr:      nil,
-			mode:         folder.UseLatest,
+			mode:         seqdir.UseLatest,
 			expectedName: filepath.Join("basepath", "3"),
 		},
 		{
 			name:         "unknown mode",
 			mockFiles:    mockEntries,
 			mockErr:      nil,
-			mode:         folder.Mode(99),
+			mode:         seqdir.Mode(99),
 			expectedName: "",
 			expectErr:    "unknown mode",
 		},
@@ -99,7 +99,7 @@ func TestProjectFolder(t *testing.T) {
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
-			sd := folder.NewSeqDir(func(name string) ([]fs.DirEntry, error) {
+			sd := seqdir.New(func(name string) ([]fs.DirEntry, error) {
 				return v.mockFiles, v.mockErr
 			})
 			folder, err := sd.ProjectFolder("basepath", v.mode)

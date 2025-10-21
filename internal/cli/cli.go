@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/common"
+	"github.com/baudii/ada-ai/internal/folders"
 	"github.com/baudii/ada-ai/pkg/console"
 	"github.com/baudii/ada-ai/pkg/jsonx"
 )
@@ -23,7 +23,7 @@ func New() *cliApp {
 // if the file does not exist or cannot be parsed. It sends the project data
 // through the provided channel and closes the channel when done.
 func (cli *cliApp) GetProjectData() app.ProjectData {
-	path := filepath.Join(common.DataPath, "user_data.json")
+	path := filepath.Join(folders.Data, "user_data.json")
 	projectData, err := jsonx.Load[app.ProjectData](path)
 	if err != nil {
 		username := cli.read("Provide nickname")

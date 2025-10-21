@@ -7,8 +7,8 @@ import (
 
 	"github.com/baudii/ada-ai/internal/ada"
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/folders"
+	"github.com/baudii/ada-ai/internal/project/seqdir"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 	a := app.New(
 		app.WithDegree(5),
 		app.WithProject(nil),
-		app.WithMode(folder.CreateNew),
+		app.WithMode(seqdir.CreateNew),
 		app.WithGen(nil),
 		app.WithDirProvider(nil),
 		app.WithProjectData(app.ProjectData{}),
@@ -55,8 +55,8 @@ func TestParseAppOptions(t *testing.T) {
 			Reflection:   ada.ReflectConfig{Depth: 1, Threshhold: 0.4},
 		}},
 		{"valid config", app.ConfigFile, `{}`, "", app.Options{
-			ProjectsRoot: common.ProjectsPath,
-			PromptsRoot:  common.PromptsPath,
+			ProjectsRoot: folders.Projects,
+			PromptsRoot:  folders.Prompts,
 		}},
 	}
 

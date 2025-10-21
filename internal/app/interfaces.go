@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/baudii/ada-ai/internal/project"
-	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/project/seqdir"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -17,7 +17,7 @@ type generator interface {
 // folderProvider defines an interface for providing folder names based on a base path
 // and a flag indicating whether to create a new folder.
 type folderProvider interface {
-	ProjectFolder(base string, mode folder.Mode) (string, error)
+	ProjectFolder(base string, mode seqdir.Mode) (string, error)
 }
 
 // materializer defines the interface for managing project structures

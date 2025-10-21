@@ -11,8 +11,10 @@ import (
 
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/cli"
-	"github.com/baudii/ada-ai/internal/common"
-	"github.com/baudii/ada-ai/internal/project/folder"
+	"github.com/baudii/ada-ai/internal/folders"
+	"github.com/baudii/ada-ai/internal/logx"
+	"github.com/baudii/ada-ai/internal/project/seqdir"
+	"github.com/baudii/ada-ai/pkg/dilog"
 	"github.com/baudii/ada-ai/pkg/must"
 )
 
@@ -24,22 +26,22 @@ func main() {
 	flag.Parse()
 
 	// Set up logging
-	cfgPath := filepath.Join(common.ConfigPath, "dilog.json")
-	cfg := common.LoadLogConfig(cfgPath)
-	logger := must.Value(common.DefaultSimpleLogger(&cfg))
+	cfgPath := filepath.Join(folders.Config, "dilog.json")
+	cfg := logx.LoadLogConfigOrDefault(cfgPath)
+	logger := must.Value(dilog.DefaultDailyLogger(&cfg))
 	slog.SetDefault(logger)
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
-	opts := must.Value(app.ParseAppOptions(common.ConfigPath))
-	path := filepath.Join(common.AiConfigPath, fmt.Sprintf("%s.json", *provider))
+	opts := must.Value(app.ParseAppOptions(folders.Config))
+	path := filepath.Join(folders.AiConfig, fmt.Sprintf("%s.json", *provider))
 	c := cli.New().GetProjectData()
 	app := app.New(
 		app.WithDegree(*deg),
-		app.WithMode(folder.Mode(*mode)),
+		app.WithMode(seqdir.Mode(*mode)),
 		app.WithOptions(opts),
 		app.WithProjectData(c),
-		app.WithDirProvider(folder.NewSeqDir(os.ReadDir)),
+		app.WithDirProvider(seqdir.New(os.ReadDir)),
 	)
 	must.Do(app.InitAda(*provider, path))
 	must.Do(app.InitLocalProject())
