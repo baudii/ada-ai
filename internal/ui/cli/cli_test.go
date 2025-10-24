@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 
 func TestProjData(t *testing.T) {
 	t.Parallel()
-	expected := project.Data{
+	expected := project.Context{
 		UserName: "testuser",
 		ProjName: "testproject",
 		Language: "go",

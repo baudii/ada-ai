@@ -15,9 +15,9 @@ import (
 
 // Templates lists prompt template filenames used by the system prompts.
 type Templates struct {
-    Reflect      string
-    ShortReflect string
-    Improve      string
+	Reflect      string
+	ShortReflect string
+	Improve      string
 }
 
 // folderProvider defines an interface for providing folder names based on a base path
@@ -45,7 +45,7 @@ func NewAI(provider, configPath string) (llms.Model, error) {
 
 // NewFSProject initializes a filesystem-backed project under the user/project root.
 // It chooses the project folder according to the mode and returns the project handle.
-func NewFSProject(projRoot string, projData project.Data, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
+func NewFSProject(projRoot string, projData project.Context, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
 	base := filepath.Join(projRoot, projData.UserName, projData.ProjName)
 	projRoot, err := folderer.ProjectFolder(base, mode)
 	if err != nil {

@@ -80,7 +80,7 @@ func TestRun_Success(t *testing.T) {
 	t.Parallel()
 	a := app.New(
 		app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
-		app.WithProjectData(project.Data{}),
+		app.WithProjectData(project.Context{}),
 		app.WithNavigator(&mockNavigator{loadNavErr: assert.AnError}),
 		app.WithNavNames([]string{project.Structure}),
 		app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt")}),

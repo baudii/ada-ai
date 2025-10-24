@@ -18,7 +18,7 @@ type app struct {
 	gen          generator
 	materializer materializer
 	navigator    navigator
-	projectData  project.Data
+	projectData  project.Context
 	opts         Options
 	navNames     []string
 	logger       *slog.Logger
@@ -70,7 +70,7 @@ func WithMode(mode seqdir.Mode) option {
 }
 
 // WithProjectData sets the project data for the application.
-func WithProjectData(data project.Data) option {
+func WithProjectData(data project.Context) option {
 	return func(a *app) {
 		a.projectData = data
 	}

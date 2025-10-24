@@ -18,9 +18,9 @@ type option func(*cliApp)
 
 // WithLogger sets the logger used by the CLI application.
 func WithLogger(logger *slog.Logger) option {
-    return func(c *cliApp) {
-        c.logger = logger
-    }
+	return func(c *cliApp) {
+		c.logger = logger
+	}
 }
 
 // New creates a new instance of the CLI application that implements the Runner interface.
@@ -35,15 +35,15 @@ func New(opts ...option) *cliApp {
 // GetProjectData retrieves project data from a JSON file or prompts the user for input
 // if the file does not exist or cannot be parsed. It sends the project data
 // through the provided channel and closes the channel when done.
-func (cli *cliApp) GetProjectData(userConfigRoot string) project.Data {
-	path := filepath.Join(userConfigRoot, "user_data.json")
-	projectData, err := config.Load[project.Data](path)
+func (c *cliApp) GetProjectData(userConfigRoot string) project.Context {
+	path := filepath.Join(userConfigRoot, "project_context.json")
+	projectData, err := config.Load[project.Context](path)
 	if err != nil {
-		username := cli.read("Provide nickname")
-		projname := cli.read("Provide project name")
-		plang := cli.read("Provide programming language (go, python, js, etc)")
-		summary := cli.read("Provide a short summary of the project")
-		projectData = project.Data{
+		username := c.read("Provide nickname")
+		projname := c.read("Provide project name")
+		plang := c.read("Provide programming language (go, python, js, etc)")
+		summary := c.read("Provide a short summary of the project")
+		projectData = project.Context{
 			UserName: username,
 			ProjName: projname,
 			Language: plang,
@@ -51,8 +51,8 @@ func (cli *cliApp) GetProjectData(userConfigRoot string) project.Data {
 		}
 	}
 
-	if err = cli.save(projectData, path); err != nil {
-		cli.logger.Error("failed to save project data to file", "path", path, "error", err)
+	if err = c.save(projectData, path); err != nil {
+		c.logger.Error("failed to save project data to file", "path", path, "error", err)
 	}
 
 	return projectData

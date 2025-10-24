@@ -15,8 +15,8 @@ type (
 	FolderHandler func(string) error
 )
 
-// Data is the context of the current project.
-type Data struct {
+// Context is the context of the current project.
+type Context struct {
 	UserName string `json:"userName"`
 	ProjName string `json:"projName"`
 	Language string `json:"language"`

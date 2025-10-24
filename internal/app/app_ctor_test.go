@@ -16,7 +16,7 @@ func TestNew(t *testing.T) {
 		app.WithProject(nil),
 		app.WithMode(seqdir.CreateNew),
 		app.WithGenerator(nil),
-		app.WithProjectData(project.Data{}),
+		app.WithProjectData(project.Context{}),
 		app.WithOptions(app.Options{}),
 		app.WithNavNames([]string{"a", "b"}),
 		app.WithNavigator(nil),
