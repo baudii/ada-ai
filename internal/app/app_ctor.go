@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log/slog"
+
 	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/baudii/ada-ai/internal/core/seqdir"
 )
@@ -18,7 +20,7 @@ type app struct {
 	projectData  project.Data
 	opts         Options
 	navNames     []string
-	// TODO: inject logger
+	logger       *slog.Logger
 }
 
 // Options is the configuration for Ada AI workflow.
@@ -91,6 +93,13 @@ func WithNavNames(names []string) option {
 func WithDegree(deg int) option {
 	return func(a *app) {
 		a.deg = deg
+	}
+}
+
+// WithLogger sets the logger for the application.
+func WithLogger(logger *slog.Logger) option {
+	return func(a *app) {
+		a.logger = logger
 	}
 }
 

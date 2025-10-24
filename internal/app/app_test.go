@@ -2,6 +2,8 @@ package app_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tmc/langchaingo/llms"
 )
+
+func MockLogger(w io.Writer) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{}))
+}
 
 // mockMaterializer is a mock implementation of a materializer for testing purposes.
 type mockMaterializer struct {
@@ -78,6 +84,7 @@ func TestRun_Success(t *testing.T) {
 		app.WithNavigator(&mockNavigator{loadNavErr: assert.AnError}),
 		app.WithNavNames([]string{project.Structure}),
 		app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt")}),
+		app.WithLogger(MockLogger(io.Discard)),
 	)
 	err := a.Run(context.Background())
 	assert.NoError(t, err)
@@ -117,6 +124,7 @@ func TestRun_Fails(t *testing.T) {
 				app.WithNavigator(&mockNavigator{addNavErr: v.addNavErr}),
 				app.WithNavNames([]string{"nav1"}),
 				app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt"), err: v.matErr}),
+				app.WithLogger(MockLogger(io.Discard)),
 			)
 			err := a.Run(context.Background())
 			if v.expectedErr != "" {
@@ -157,6 +165,7 @@ func TestAddNavs_Fails(t *testing.T) {
 				app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
 				app.WithNavigator(&mockNavigator{contentErr: v.contentErr, loadNavErr: assert.AnError}),
 				app.WithNavNames([]string{v.navName}),
+				app.WithLogger(MockLogger(io.Discard)),
 			)
 			err := a.AddNavs(context.Background())
 			if v.expectedErr != "" {
@@ -218,6 +227,7 @@ func TestMaterializeProject(t *testing.T) {
 				app.WithNavigator(&mockNavigator{contentErr: v.contentErr}),
 				app.WithNavNames([]string{"nav1"}),
 				app.WithMaterializer(&mockMaterializer{fileArg: t.TempDir(), fileErr: v.fileErr}),
+				app.WithLogger(MockLogger(io.Discard)),
 			)
 			err := a.MaterializeProject(context.Background())
 			assert.ErrorContains(t, err, v.expectedErr)

@@ -2,7 +2,6 @@ package infra
 
 import (
 	"fmt"
-	"log/slog"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/core/nav"
@@ -30,7 +29,6 @@ type folderProvider interface {
 // and configuration. It sets up both a JSON-capable AI model and a standard
 // text AI model, and configures the Ada workflow with the provided options.
 func NewAI(provider, configPath string) (llms.Model, error) {
-	slog.Info("initializing ada", "provider", provider)
 	cfg, err := config.LoadWithLocal[ai.Config](configPath)
 	if err != nil {
 		return nil, fmt.Errorf("parse llm config: %w", err)
@@ -49,7 +47,6 @@ func NewAI(provider, configPath string) (llms.Model, error) {
 // local project instance, incrementing the project folder index if
 // the 'new' flag is set.
 func NewFSProject(projRoot string, projData project.Data, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
-	slog.Info("initializing project")
 	base := filepath.Join(projRoot, projData.UserName, projData.ProjName)
 	projRoot, err := folderer.ProjectFolder(base, mode)
 	if err != nil {
@@ -59,7 +56,5 @@ func NewFSProject(projRoot string, projData project.Data, mode seqdir.Mode, fold
 	if err != nil {
 		return nil, fmt.Errorf("create local project: %w", err)
 	}
-
-	slog.Debug("created local project", "path", projRoot)
 	return lp, nil
 }

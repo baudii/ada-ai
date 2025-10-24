@@ -21,6 +21,7 @@ func TestNew(t *testing.T) {
 		app.WithNavNames([]string{"a", "b"}),
 		app.WithNavigator(nil),
 		app.WithMaterializer(nil),
+		app.WithLogger(nil),
 	)
 	require.NotNil(t, a)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/core/project"
@@ -30,7 +29,7 @@ const ext = "json"
 //
 // Additional arguments can be passed to modify the behavior of the application.
 func (a *app) Run(ctx context.Context) error {
-	slog.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
+	a.logger.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
 	if err := a.AddNavs(ctx); err != nil {
 		if retryErr := a.materializer.Materialize(nil, nil); retryErr != nil {
 			return errors.Join(
@@ -43,7 +42,7 @@ func (a *app) Run(ctx context.Context) error {
 	if err := a.MaterializeProject(ctx); err != nil {
 		return fmt.Errorf("materialize project: %w", err)
 	}
-	slog.Debug("project materialized")
+	a.logger.Debug("project materialized")
 	return nil
 }
 
@@ -60,9 +59,9 @@ func (a *app) AddNavs(ctx context.Context) error {
 	var err error
 	for _, navName := range a.navNames {
 		filename := fmt.Sprintf("%v.%v", navName, ext)
-		slog.Debug("checking nav file", "file", filename)
+		a.logger.Debug("checking nav file", "file", filename)
 		if res, err = a.navigator.LoadNav(filename); err != nil {
-			slog.Debug("generating new nav file", "file", filename)
+			a.logger.Debug("generating new nav file", "file", filename)
 			args, ok := m[navName]
 			if !ok {
 				return fmt.Errorf("no args for nav %q", navName)
@@ -75,7 +74,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 		if err := a.navigator.AddNav(navName, ext, res); err != nil {
 			return fmt.Errorf("add nav file: %w", err)
 		}
-		slog.Debug("added nav file", "file", filename)
+		a.logger.Debug("added nav file", "file", filename)
 	}
 	return nil
 }
@@ -91,7 +90,7 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 	g.SetLimit(a.deg)
 	if err := a.materializer.Materialize(
 		func(name string) error {
-			slog.Debug("handling materialization", "name", name)
+			a.logger.Debug("handling materialization", "name", name)
 			g.Go(func() error {
 				return a.fileGen(ctx, name)
 			})
@@ -116,7 +115,7 @@ func (a *app) fileGen(ctx context.Context, path string) error {
 	if err := a.materializer.CreateFile(path, res); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
-	slog.Info("success", "path", path)
+	a.logger.Info("success", "path", path)
 	return nil
 }
 

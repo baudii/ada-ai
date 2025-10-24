@@ -213,7 +213,7 @@ func TestCreateFile(t *testing.T) {
 	t.Parallel()
 	d := t.TempDir()
 	s := &Data{navRoot: d}
-	err := s.CreateFile("file.txt", []byte("content"))
+	err := s.CreateFile(filepath.Join(d, "file.txt"), []byte("content"))
 	require.NoError(t, err)
 	data, err := os.ReadFile(filepath.Join(d, "file.txt"))
 	require.NoError(t, err)

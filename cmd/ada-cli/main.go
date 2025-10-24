@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -30,13 +29,12 @@ func main() {
 	cfgPath := filepath.Join(folders.Config, "dilog.json")
 	cfg := dailylogger.LoadLogConfigOrDefault(cfgPath)
 	logger := cli.Must(dailylogger.DefaultDailyLogger(&cfg))
-	slog.SetDefault(logger)
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
 	opts := cli.Must(config.ParseAppOptions(folders.Config))
 	path := filepath.Join(folders.AiConfig, fmt.Sprintf("%s.json", *provider))
-	c := cli.New().GetProjectData(folders.Artifacts)
+	c := cli.New(cli.WithLogger(logger)).GetProjectData(folders.Artifacts)
 	llm := cli.Must(infra.NewAI(*provider, path))
 	gen := ai.NewGenerator(llm,
 		ai.WithPromptsRoot(opts.PromptsRoot),
@@ -52,6 +50,7 @@ func main() {
 		app.WithGenerator(gen),
 		app.WithNavigator(lp),
 		app.WithMaterializer(lp),
+		app.WithLogger(logger),
 	)
 
 	if err := app.Run(context.Background()); err != nil {
