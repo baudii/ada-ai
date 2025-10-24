@@ -23,6 +23,7 @@ type dailyWriter struct {
 	wc      io.WriteCloser
 }
 
+// Option configures a dailyWriter instance.
 type Option func(*dailyWriter)
 
 type (

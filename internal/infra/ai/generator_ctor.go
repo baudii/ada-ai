@@ -19,7 +19,7 @@ func WithPromptsRoot(root string) Option {
 	}
 }
 
-// New creates a new Ada AI workflow instance with the provided LLM model
+// NewGenerator creates a new Ada AI workflow instance with the provided LLM model
 // and optional configurations. It initializes the Ada struct and applies any
 // provided options to customize its behavior. The main LLM model is stored
 // under the "main" key in the AIs map.

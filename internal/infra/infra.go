@@ -13,10 +13,11 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+// Templates lists prompt template filenames used by the system prompts.
 type Templates struct {
-	Reflect      string
-	ShortReflect string
-	Improve      string
+    Reflect      string
+    ShortReflect string
+    Improve      string
 }
 
 // folderProvider defines an interface for providing folder names based on a base path
@@ -42,10 +43,8 @@ func NewAI(provider, configPath string) (llms.Model, error) {
 	return ai, nil
 }
 
-// InitLocalProject initializes a new local project based on the current project data
-// in the Ada session. It determines the project path and creates a new
-// local project instance, incrementing the project folder index if
-// the 'new' flag is set.
+// NewFSProject initializes a filesystem-backed project under the user/project root.
+// It chooses the project folder according to the mode and returns the project handle.
 func NewFSProject(projRoot string, projData project.Data, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
 	base := filepath.Join(projRoot, projData.UserName, projData.ProjName)
 	projRoot, err := folderer.ProjectFolder(base, mode)

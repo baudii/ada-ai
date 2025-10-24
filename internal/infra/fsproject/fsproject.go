@@ -11,13 +11,15 @@ import (
 	"github.com/baudii/ada-ai/internal/core/project"
 )
 
+// NavFolder is the subdirectory used to store navigation files.
 var NavFolder = "nav"
 
+// Data represents a filesystem-backed project with navigation state and roots.
 type Data struct {
-	Tree    map[string]any
-	root    string
-	navRoot string
-	store   navStore
+    Tree    map[string]any
+    root    string
+    navRoot string
+    store   navStore
 }
 
 type navStore interface {
@@ -26,24 +28,25 @@ type navStore interface {
 	GetItems() map[string]nav.FileInfo
 }
 
-// Default handlers for file and folder creation during materialization.
 var (
-	DefaultFileHandler = func(path string) error {
-		f, err := os.Create(path)
-		if err != nil {
-			return fmt.Errorf("create file: %w", err)
-		}
-		defer func() { _ = f.Close() }()
-		return nil
-	}
+    // DefaultFileHandler creates a new empty file at the given path.
+    DefaultFileHandler = func(path string) error {
+        f, err := os.Create(path)
+        if err != nil {
+            return fmt.Errorf("create file: %w", err)
+        }
+        defer func() { _ = f.Close() }()
+        return nil
+    }
 
-	DefaultFolderHandler = func(path string) error {
-		err := os.MkdirAll(path, 0755)
-		if err != nil {
-			return fmt.Errorf("create folder: %w", err)
-		}
-		return nil
-	}
+    // DefaultFolderHandler creates all missing directories for the given path.
+    DefaultFolderHandler = func(path string) error {
+        err := os.MkdirAll(path, 0755)
+        if err != nil {
+            return fmt.Errorf("create folder: %w", err)
+        }
+        return nil
+    }
 )
 
 // New creates a new LocalProj instance with the given project root path.
@@ -95,9 +98,9 @@ func (l *Data) Materialize(hfile project.FileHandler, hfold project.FolderHandle
 	return project.Traverse(l.root, l.Tree, hfile, hfold)
 }
 
-// AddItem adds a navigation file to the local project descriptor. The filename
-// is the name of the file to be created under the "nav" folder, and content is
-// the byte content to be written to that file.
+// AddNav adds a navigation entry to the project descriptor and tracks it for persistence.
+// The key identifies the nav, ext is the file extension (e.g. "json"), and content is
+// the file content. When the key is project.Structure the internal tree is updated too.
 func (l *Data) AddNav(key, ext string, content []byte) error {
 	if key == project.Structure {
 		err := json.Unmarshal(content, &l.Tree)
@@ -109,8 +112,9 @@ func (l *Data) AddNav(key, ext string, content []byte) error {
 	return nil
 }
 
+// CreateFile writes the provided content to the absolute file path.
 func (l *Data) CreateFile(path string, content []byte) error {
-	return os.WriteFile(path, content, 0644)
+    return os.WriteFile(path, content, 0644)
 }
 
 // LoadNav retrieves a navigation file by its filename. It returns the file content

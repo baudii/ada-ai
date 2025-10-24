@@ -16,10 +16,11 @@ type cliApp struct {
 
 type option func(*cliApp)
 
+// WithLogger sets the logger used by the CLI application.
 func WithLogger(logger *slog.Logger) option {
-	return func(c *cliApp) {
-		c.logger = logger
-	}
+    return func(c *cliApp) {
+        c.logger = logger
+    }
 }
 
 // New creates a new instance of the CLI application that implements the Runner interface.

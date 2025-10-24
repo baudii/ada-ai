@@ -11,12 +11,13 @@ import (
 
 // SimpleHandler is a basic implementation of slog.Handler that writes log records to an io.Writer.
 type SimpleHandler struct {
-	w     io.Writer
-	attrs []slog.Attr
-	level slog.Level
-	loc   *time.Location
+    w     io.Writer
+    attrs []slog.Attr
+    level slog.Level
+    loc   *time.Location
 }
 
+// Option configures a SimpleHandler instance.
 type Option func(*SimpleHandler)
 
 // WithLevel sets the log level for the SimpleHandler.

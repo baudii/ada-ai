@@ -7,9 +7,10 @@ import (
 	"github.com/baudii/ada-ai/internal/core/seqdir"
 )
 
+// ConfigFile is the default application configuration filename.
 const ConfigFile = "ada.json"
 
-var defaultNavNames = [4]string{business, technical, scope, project.Structure}
+var defaultNavNames = []string{business, technical, scope, project.Structure}
 
 type app struct {
 	deg          int
@@ -107,7 +108,7 @@ func WithLogger(logger *slog.Logger) option {
 func New(opts ...option) *app {
 	a := &app{
 		deg:      1,
-		navNames: defaultNavNames[:],
+		navNames: defaultNavNames,
 	}
 	for _, o := range opts {
 		o(a)

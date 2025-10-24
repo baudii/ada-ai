@@ -14,10 +14,11 @@ type Mode int
 // dirReader defines a function type for reading directory entries.
 type dirReader func(name string) ([]fs.DirEntry, error)
 
-// Modes for folder naming strategy.
 const (
-	UseLatest Mode = iota
-	CreateNew
+    // UseLatest selects the latest existing numeric project folder.
+    UseLatest Mode = iota
+    // CreateNew creates a new project folder with the next index.
+    CreateNew
 )
 
 // seqDir implements the DirProvider interface to provide

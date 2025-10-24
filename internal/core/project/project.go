@@ -5,13 +5,17 @@ import (
 	"path/filepath"
 )
 
+// Structure is the navigation key for the project structure descriptor.
 const Structure = "structure"
 
-// FileHandler defines a function type for handling file or folder creation
-type FileHandler func(string) error
-type FolderHandler func(string) error
+// FileHandler and FolderHandler are function types used as callbacks
+// during the traversal of a project structure.
+type (
+	FileHandler   func(string) error
+	FolderHandler func(string) error
+)
 
-// ProjectData is the context of the current project.
+// Data is the context of the current project.
 type Data struct {
 	UserName string `json:"userName"`
 	ProjName string `json:"projName"`
