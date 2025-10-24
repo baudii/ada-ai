@@ -3,8 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/baudii/ada-ai/internal/project"
-	"github.com/baudii/ada-ai/internal/project/seqdir"
+	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -14,16 +13,11 @@ type generator interface {
 	GenerateWithSys(ctx context.Context, sys, user string, callOptions ...llms.CallOption) (*llms.ContentResponse, error)
 }
 
-// folderProvider defines an interface for providing folder names based on a base path
-// and a flag indicating whether to create a new folder.
-type folderProvider interface {
-	ProjectFolder(base string, mode seqdir.Mode) (string, error)
-}
-
 // materializer defines the interface for managing project structures
 // including navigation files and materialization of the project layout.
 type materializer interface {
-	Materialize(hfile, hfold project.Handler) error
+	Materialize(hfile project.FileHandler, hfold project.FolderHandler) error
+	CreateFile(name string, content []byte) error
 }
 
 // navigator defines methods for managing navigation files within a project.

@@ -5,15 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/ada"
-	"github.com/baudii/ada-ai/internal/ai"
-	"github.com/baudii/ada-ai/internal/project"
-	"github.com/baudii/ada-ai/internal/project/local"
-	"github.com/baudii/ada-ai/internal/project/nav"
-	"github.com/baudii/ada-ai/pkg/jsonx"
+	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
@@ -28,50 +22,6 @@ const (
 
 const ext = "json"
 
-// InitAda initializes the Ada AI model with the specified LLM provider
-// and configuration. It sets up both a JSON-capable AI model and a standard
-// text AI model, and configures the Ada workflow with the provided options.
-func (a *app) InitAda(provider, configPath string) error {
-	slog.Info("initializing ada", "provider", provider)
-	cfg, err := jsonx.LoadWithLocal[ai.Config](configPath)
-	if err != nil {
-		return fmt.Errorf("parse llm config %q: %w", configPath, err)
-	}
-
-	ai, err := ai.Register(provider, cfg.Options)
-	if err != nil {
-		return fmt.Errorf("register ai %q: %w", provider, err)
-	}
-
-	ada := ada.New(ai,
-		ada.WithPromptsRoot(a.opts.PromptsRoot),
-		ada.WithTimeout(a.opts.Timeout),
-		ada.WithReflection(a.opts.Reflection))
-	a.gen = ada
-	return nil
-}
-
-// InitLocalProject initializes a new local project based on the current project data
-// in the Ada session. It determines the project path and creates a new
-// local project instance, incrementing the project folder index if
-// the 'new' flag is set.
-func (a *app) InitLocalProject() error {
-	slog.Info("initializing project")
-	base := filepath.Join(a.opts.ProjectsRoot, a.projectData.UserName, a.projectData.ProjName)
-	projRoot, err := a.folderer.ProjectFolder(base, a.mode)
-	if err != nil {
-		return fmt.Errorf("project folder: %w", err)
-	}
-	lp, err := local.New(projRoot, nav.New())
-	if err != nil {
-		return fmt.Errorf("create local project %q: %w", projRoot, err)
-	}
-	a.materializer = lp
-	a.navigator = lp
-	slog.Debug("created local project", "path", projRoot)
-	return nil
-}
-
 // Run initializes and runs the CLI application. It sets up the AI model,
 // configures the Ada AI workflow, and handles user input to generate and
 // materialize a project based on the provided description.
@@ -82,7 +32,7 @@ func (a *app) InitLocalProject() error {
 func (a *app) Run(ctx context.Context) error {
 	slog.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
 	if err := a.AddNavs(ctx); err != nil {
-		if retryErr := a.materializer.Materialize(project.DefaultFileHandler, project.DefaultFolderHandler); retryErr != nil {
+		if retryErr := a.materializer.Materialize(nil, nil); retryErr != nil {
 			return errors.Join(
 				fmt.Errorf("add navs: %w", err),
 				fmt.Errorf("materialize during recovery: %w", retryErr),
@@ -123,7 +73,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 		}
 
 		if err := a.navigator.AddNav(navName, ext, res); err != nil {
-			return fmt.Errorf("add nav file %q: %w", filename, err)
+			return fmt.Errorf("add nav file: %w", err)
 		}
 		slog.Debug("added nav file", "file", filename)
 	}
@@ -140,14 +90,14 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(a.deg)
 	if err := a.materializer.Materialize(
-		func(path string) error {
-			slog.Debug("handling file", "path", path)
+		func(name string) error {
+			slog.Debug("handling materialization", "name", name)
 			g.Go(func() error {
-				return a.fileGen(ctx, path)
+				return a.fileGen(ctx, name)
 			})
 			return nil
 		},
-		project.DefaultFolderHandler,
+		nil,
 	); err != nil {
 		cancel()
 		_ = g.Wait()
@@ -160,22 +110,23 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 func (a *app) fileGen(ctx context.Context, path string) error {
 	res, err := a.sendInstructions(ctx, filler, []any{0, 1, 2, 3, path})
 	if err != nil {
-		return fmt.Errorf("generate file %q: %w", path, err)
+		return fmt.Errorf("generate file %w", err)
 	}
-	if err := os.WriteFile(path, res, 0o644); err != nil {
-		return fmt.Errorf("write file %q: %w", path, err)
+
+	if err := a.materializer.CreateFile(path, res); err != nil {
+		return fmt.Errorf("write file: %w", err)
 	}
 	slog.Info("success", "path", path)
 	return nil
 }
 
-func (a *app) sendInstructions(ctx context.Context, p string, args []any, opts ...llms.CallOption) ([]byte, error) {
+func (a *app) sendInstructions(ctx context.Context, promptName string, args []any, opts ...llms.CallOption) ([]byte, error) {
 	args, err := a.injectNavContent(args...)
 	if err != nil {
-		return nil, fmt.Errorf("inject nav content %q: %w", p, err)
+		return nil, fmt.Errorf("inject nav content for %q: %w", promptName, err)
 	}
 
-	sys, hum, err := a.sysHumanPrompts(p, args...)
+	sys, hum, err := a.sysHumanPrompts(promptName, args...)
 	if err != nil {
 		return nil, fmt.Errorf("system and human prompts: %w", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/project"
+	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/stretchr/testify/assert"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -16,13 +16,21 @@ import (
 type mockMaterializer struct {
 	fileArg string
 	err     error
+	fileErr error
 }
 
-func (m *mockMaterializer) Materialize(hfile, hfold project.Handler) error {
+func (m *mockMaterializer) Materialize(hfile project.FileHandler, hfold project.FolderHandler) error {
 	if m.err != nil {
 		return m.err
 	}
-	return hfile(m.fileArg)
+	if hfile != nil {
+		return hfile(m.fileArg)
+	}
+	return nil
+}
+
+func (m *mockMaterializer) CreateFile(name string, content []byte) error {
+	return m.fileErr
 }
 
 // mockNavigator is a mock implementation of a navigation store for testing purposes.
@@ -65,8 +73,8 @@ func (m *mockGen) GenerateWithSys(ctx context.Context, sys, user string, callOpt
 func TestRun_Success(t *testing.T) {
 	t.Parallel()
 	a := app.New(
-		app.WithGen(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
-		app.WithProjectData(app.ProjectData{}),
+		app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+		app.WithProjectData(project.Data{}),
 		app.WithNavigator(&mockNavigator{loadNavErr: assert.AnError}),
 		app.WithNavNames([]string{project.Structure}),
 		app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt")}),
@@ -105,7 +113,7 @@ func TestRun_Fails(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			a := app.New(
-				app.WithGen(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+				app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
 				app.WithNavigator(&mockNavigator{addNavErr: v.addNavErr}),
 				app.WithNavNames([]string{"nav1"}),
 				app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt"), err: v.matErr}),
@@ -146,7 +154,7 @@ func TestAddNavs_Fails(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			a := app.New(
-				app.WithGen(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+				app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
 				app.WithNavigator(&mockNavigator{contentErr: v.contentErr, loadNavErr: assert.AnError}),
 				app.WithNavNames([]string{v.navName}),
 			)
@@ -168,6 +176,7 @@ func TestMaterializeProject(t *testing.T) {
 		contentErr    error
 		failCondition func(string) bool
 		genErr        error
+		fileErr       error
 		expectedErr   string
 	}{
 		{
@@ -193,6 +202,7 @@ func TestMaterializeProject(t *testing.T) {
 		{
 			name:        "fail: write file",
 			expectedErr: "write file",
+			fileErr:     assert.AnError,
 		},
 	}
 
@@ -200,14 +210,14 @@ func TestMaterializeProject(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			a := app.New(
-				app.WithGen(&mockGen{
+				app.WithGenerator(&mockGen{
 					resp:          &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}},
 					failCondition: v.failCondition,
 					genErr:        v.genErr,
 				}),
 				app.WithNavigator(&mockNavigator{contentErr: v.contentErr}),
 				app.WithNavNames([]string{"nav1"}),
-				app.WithMaterializer(&mockMaterializer{fileArg: t.TempDir()}),
+				app.WithMaterializer(&mockMaterializer{fileArg: t.TempDir(), fileErr: v.fileErr}),
 			)
 			err := a.MaterializeProject(context.Background())
 			assert.ErrorContains(t, err, v.expectedErr)

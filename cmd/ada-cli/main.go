@@ -10,12 +10,13 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/cli"
-	"github.com/baudii/ada-ai/internal/folders"
-	"github.com/baudii/ada-ai/internal/logx"
-	"github.com/baudii/ada-ai/internal/project/seqdir"
-	"github.com/baudii/ada-ai/pkg/dilog"
-	"github.com/baudii/ada-ai/pkg/must"
+	"github.com/baudii/ada-ai/internal/core/seqdir"
+	"github.com/baudii/ada-ai/internal/infra"
+	"github.com/baudii/ada-ai/internal/infra/ai"
+	"github.com/baudii/ada-ai/internal/infra/config"
+	"github.com/baudii/ada-ai/internal/infra/dailylogger"
+	"github.com/baudii/ada-ai/internal/infra/folders"
+	"github.com/baudii/ada-ai/internal/ui/cli"
 )
 
 func main() {
@@ -27,24 +28,32 @@ func main() {
 
 	// Set up logging
 	cfgPath := filepath.Join(folders.Config, "dilog.json")
-	cfg := logx.LoadLogConfigOrDefault(cfgPath)
-	logger := must.Value(dilog.DefaultDailyLogger(&cfg))
+	cfg := dailylogger.LoadLogConfigOrDefault(cfgPath)
+	logger := cli.Must(dailylogger.DefaultDailyLogger(&cfg))
 	slog.SetDefault(logger)
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
-	opts := must.Value(app.ParseAppOptions(folders.Config))
+	opts := cli.Must(config.ParseAppOptions(folders.Config))
 	path := filepath.Join(folders.AiConfig, fmt.Sprintf("%s.json", *provider))
-	c := cli.New().GetProjectData()
+	c := cli.New().GetProjectData(folders.Artifacts)
+	llm := cli.Must(infra.NewAI(*provider, path))
+	gen := ai.NewGenerator(llm,
+		ai.WithPromptsRoot(opts.PromptsRoot),
+		ai.WithTimeout(opts.Timeout),
+	)
+
+	lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.Mode(*mode), seqdir.New(os.ReadDir)))
 	app := app.New(
 		app.WithDegree(*deg),
 		app.WithMode(seqdir.Mode(*mode)),
 		app.WithOptions(opts),
 		app.WithProjectData(c),
-		app.WithDirProvider(seqdir.New(os.ReadDir)),
+		app.WithGenerator(gen),
+		app.WithNavigator(lp),
+		app.WithMaterializer(lp),
 	)
-	must.Do(app.InitAda(*provider, path))
-	must.Do(app.InitLocalProject())
+
 	if err := app.Run(context.Background()); err != nil {
 		log.Fatalf("runtime error: %v", err)
 	}

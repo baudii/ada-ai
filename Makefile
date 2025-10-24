@@ -2,8 +2,8 @@ APP          := ada-cli
 PKG          := ./cmd/$(APP)
 COVER        := coverage.out
 ARTIFACTS    := artifacts
-CONF_SRC     := data/configuration
-PRMPT_SRC    := data/prompts
+CONF_SRC     := configs
+PRMPT_SRC    := prompts
 CONF_DST     := $(ARTIFACTS)/$(CONF_SRC)
 PRMPT_DST    := $(ARTIFACTS)/$(PRMPT_SRC)
 
