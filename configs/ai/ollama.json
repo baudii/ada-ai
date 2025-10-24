@@ -1,0 +1,8 @@
+{
+  "options": {
+    "model": "gemma3:4b",
+    "url": "http://localhost:11434",
+    "keep_alive": "20m",
+    "http_timeout": "60s"
+  }
+}
