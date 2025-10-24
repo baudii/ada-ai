@@ -11,7 +11,6 @@ import (
 	"github.com/baudii/ada-ai/internal/app"
 	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/stretchr/testify/assert"
-	"github.com/tmc/langchaingo/llms"
 )
 
 func MockLogger(w io.Writer) *slog.Logger {
@@ -60,7 +59,7 @@ func (m *mockNavigator) Content(key string) (string, error) {
 type mockGen struct {
 	promptStr     string
 	promptErr     error
-	resp          *llms.ContentResponse
+	resp          string
 	genErr        error
 	failCondition func(string) bool
 }
@@ -72,14 +71,14 @@ func (m *mockGen) BuildPrompt(p string, args ...any) (string, error) {
 	return m.promptStr, m.promptErr
 }
 
-func (m *mockGen) GenerateWithSys(ctx context.Context, sys, user string, callOptions ...llms.CallOption) (*llms.ContentResponse, error) {
+func (m *mockGen) GenerateWithSys(ctx context.Context, sys, user string, jsonMode bool) (string, error) {
 	return m.resp, m.genErr
 }
 
 func TestRun_Success(t *testing.T) {
 	t.Parallel()
 	a := app.New(
-		app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+		app.WithGenerator(&mockGen{resp: "generated content"}),
 		app.WithProjectData(project.Context{}),
 		app.WithNavigator(&mockNavigator{loadNavErr: assert.AnError}),
 		app.WithNavNames([]string{project.Structure}),
@@ -120,7 +119,7 @@ func TestRun_Fails(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			a := app.New(
-				app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+				app.WithGenerator(&mockGen{resp: "generated content"}),
 				app.WithNavigator(&mockNavigator{addNavErr: v.addNavErr}),
 				app.WithNavNames([]string{"nav1"}),
 				app.WithMaterializer(&mockMaterializer{fileArg: filepath.Join(t.TempDir(), "file.txt"), err: v.matErr}),
@@ -162,7 +161,7 @@ func TestAddNavs_Fails(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			a := app.New(
-				app.WithGenerator(&mockGen{resp: &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}}}),
+				app.WithGenerator(&mockGen{resp: "generated content"}),
 				app.WithNavigator(&mockNavigator{contentErr: v.contentErr, loadNavErr: assert.AnError}),
 				app.WithNavNames([]string{v.navName}),
 				app.WithLogger(MockLogger(io.Discard)),
@@ -220,7 +219,7 @@ func TestMaterializeProject(t *testing.T) {
 			t.Parallel()
 			a := app.New(
 				app.WithGenerator(&mockGen{
-					resp:          &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "generated content"}}},
+					resp:          "generated content",
 					failCondition: v.failCondition,
 					genErr:        v.genErr,
 				}),

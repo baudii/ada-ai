@@ -82,10 +82,48 @@ func TestGenerateWithSys(t *testing.T) {
 		return defaultMock(a...)
 	}}
 	ada := NewGenerator(m, WithTimeout("1m"))
-	res, err := ada.GenerateWithSys(context.Background(), sysp, usp)
+	res, err := ada.GenerateWithSys(context.Background(), sysp, usp, true)
 	require.NoError(t, err)
 	require.NotNil(t, res)
-	assert.Equal(t, "some response", res.Choices[0].Content)
+	assert.Equal(t, "some response", res)
+}
+
+func TestGenerateWithSys_Errors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		mockFunc func(...any) (*llms.ContentResponse, error)
+		err      string
+	}{
+		{
+			name:     "llm error",
+			mockFunc: func(a ...any) (*llms.ContentResponse, error) { return nil, assert.AnError },
+			err:      assert.AnError.Error(),
+		},
+		{
+			name: "no response",
+			mockFunc: func(a ...any) (*llms.ContentResponse, error) {
+				return &llms.ContentResponse{Choices: []*llms.ContentChoice{}}, nil
+			},
+			err: "no response from LLM",
+		},
+		{
+			name: "nil response with no error",
+			mockFunc: func(a ...any) (*llms.ContentResponse, error) {
+				return &llms.ContentResponse{Choices: nil}, nil
+			},
+			err: "no response from LLM",
+		},
+	}
+
+	for _, v := range tests {
+		t.Run(v.name, func(t *testing.T) {
+			m := &mockLLM{v.mockFunc}
+			ada := NewGenerator(m, WithTimeout("1m"))
+			_, err := ada.GenerateWithSys(context.Background(), "", "", true)
+			assert.ErrorContains(t, err, v.err)
+		})
+	}
 }
 
 func TestGenerateJSON(t *testing.T) {

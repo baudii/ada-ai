@@ -19,9 +19,22 @@ type generator struct {
 
 // GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
 // It calls GenerateContent with the provided system prompt.
-func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, callOptions ...llms.CallOption) (*llms.ContentResponse, error) {
+func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, jsonMode bool) (string, error) {
 	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
-	return g.GenerateContent(ctx, user, msgs, callOptions...)
+	callOptions := []llms.CallOption{}
+	if jsonMode {
+		callOptions = append(callOptions, llms.WithJSONMode())
+	}
+	resp, err := g.GenerateContent(ctx, user, msgs, callOptions...)
+	if err != nil {
+		return "", err
+	}
+
+	if resp == nil || len(resp.Choices) == 0 {
+		return "", fmt.Errorf("no response from LLM")
+	}
+
+	return resp.Choices[0].Content, nil
 }
 
 // GenerateContent sends a prompt along with a series of messages to the LLM

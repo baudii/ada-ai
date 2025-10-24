@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/core/project"
-	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -66,7 +65,7 @@ func (a *app) AddNavs(ctx context.Context) error {
 			if !ok {
 				return fmt.Errorf("no args for nav %q", navName)
 			}
-			if res, err = a.sendInstructions(ctx, navName, args, llms.WithJSONMode()); err != nil {
+			if res, err = a.sendInstructions(ctx, navName, args, true); err != nil {
 				return fmt.Errorf("send instructions: %w", err)
 			}
 		}
@@ -107,7 +106,7 @@ func (a *app) MaterializeProject(ctx context.Context) error {
 }
 
 func (a *app) fileGen(ctx context.Context, path string) error {
-	res, err := a.sendInstructions(ctx, filler, []any{0, 1, 2, 3, path})
+	res, err := a.sendInstructions(ctx, filler, []any{0, 1, 2, 3, path}, false)
 	if err != nil {
 		return fmt.Errorf("generate file %w", err)
 	}
@@ -119,7 +118,7 @@ func (a *app) fileGen(ctx context.Context, path string) error {
 	return nil
 }
 
-func (a *app) sendInstructions(ctx context.Context, promptName string, args []any, opts ...llms.CallOption) ([]byte, error) {
+func (a *app) sendInstructions(ctx context.Context, promptName string, args []any, jsonMode bool) ([]byte, error) {
 	args, err := a.injectNavContent(args...)
 	if err != nil {
 		return nil, fmt.Errorf("inject nav content for %q: %w", promptName, err)
@@ -130,12 +129,12 @@ func (a *app) sendInstructions(ctx context.Context, promptName string, args []an
 		return nil, fmt.Errorf("system and human prompts: %w", err)
 	}
 
-	resp, err := a.gen.GenerateWithSys(ctx, sys, hum, opts...)
+	resp, err := a.gen.GenerateWithSys(ctx, sys, hum, jsonMode)
 	if err != nil {
 		return nil, fmt.Errorf("generate with sys: %w", err)
 	}
 
-	return []byte(resp.Choices[0].Content), nil
+	return []byte(resp), nil
 }
 
 func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
