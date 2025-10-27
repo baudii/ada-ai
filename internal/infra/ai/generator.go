@@ -8,23 +8,15 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/baudii/ada-ai/internal/core/gen"
 	"github.com/tmc/langchaingo/llms"
 )
 
-type generator struct {
-	ai          llms.Model
-	Timeout     string
-	PromptsRoot string
-}
-
 // GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
 // It calls GenerateContent with the provided system prompt.
-func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, jsonMode bool) (string, error) {
+func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, opts ...gen.Option) (string, error) {
 	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
-	callOptions := []llms.CallOption{}
-	if jsonMode {
-		callOptions = append(callOptions, llms.WithJSONMode())
-	}
+	callOptions := ToCallOptions(opts...)
 	resp, err := g.GenerateContent(ctx, user, msgs, callOptions...)
 	if err != nil {
 		return "", err
@@ -64,4 +56,21 @@ func (g *generator) BuildPrompt(filename string, input ...any) (string, error) {
 	}
 
 	return fmt.Sprintf(string(template), input...), nil
+}
+
+// ToCallOptions converts generation options into LLM call options.
+func ToCallOptions(opts ...gen.Option) []llms.CallOption {
+	params := &gen.Params{}
+	for _, o := range opts {
+		o(params)
+	}
+
+	var callOptions []llms.CallOption
+	if params.Temperature != nil {
+		callOptions = append(callOptions, llms.WithTemperature(*params.Temperature))
+	}
+	if params.JSONMode != nil {
+		callOptions = append(callOptions, llms.WithJSONMode())
+	}
+	return callOptions
 }

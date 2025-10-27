@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/baudii/ada-ai/internal/core/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmc/langchaingo/llms"
@@ -58,8 +59,8 @@ func TestNew(t *testing.T) {
 	}
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			ada := NewGenerator(ai, WithPromptsRoot(v.promptsRoot), WithTimeout(v.timeout))
-			assert.Equal(t, v.expected, ada)
+			gen := NewGenerator(ai, WithPromptsRoot(v.promptsRoot), WithTimeout(v.timeout))
+			assert.Equal(t, v.expected, gen)
 		})
 	}
 }
@@ -81,8 +82,8 @@ func TestGenerateWithSys(t *testing.T) {
 		}
 		return defaultMock(a...)
 	}}
-	ada := NewGenerator(m, WithTimeout("1m"))
-	res, err := ada.GenerateWithSys(context.Background(), sysp, usp, true)
+	gen := NewGenerator(m, WithTimeout("1m"))
+	res, err := gen.GenerateWithSys(context.Background(), sysp, usp)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	assert.Equal(t, "some response", res)
@@ -119,8 +120,8 @@ func TestGenerateWithSys_Errors(t *testing.T) {
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
 			m := &mockLLM{v.mockFunc}
-			ada := NewGenerator(m, WithTimeout("1m"))
-			_, err := ada.GenerateWithSys(context.Background(), "", "", true)
+			gen := NewGenerator(m, WithTimeout("1m"))
+			_, err := gen.GenerateWithSys(context.Background(), "", "")
 			assert.ErrorContains(t, err, v.err)
 		})
 	}
@@ -142,8 +143,8 @@ func TestGenerateJSON(t *testing.T) {
 	for i, v := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ai := &mockLLM{v.mockFunc}
-			ada := NewGenerator(ai, WithTimeout(v.timeout))
-			res, err := ada.GenerateContent(context.Background(), "test prompt", []llms.MessageContent{})
+			gen := NewGenerator(ai, WithTimeout(v.timeout))
+			res, err := gen.GenerateContent(context.Background(), "test prompt", []llms.MessageContent{})
 			assert.Equal(t, v.hasError, err != nil)
 			if !v.hasError {
 				assert.NotNil(t, res)
@@ -153,26 +154,42 @@ func TestGenerateJSON(t *testing.T) {
 	}
 }
 
-// func TestResolveProjectPath(t *testing.T) {
-// 	t.Parallel()
-// 	tests := []struct {
-// 		projRoot string
-// 		username string
-// 		projname string
-// 	}{
-// 		{"projroot", "username", "projname"},
-// 	}
+func TestToCallOption(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		opts     []gen.Option
+		expected []llms.CallOption
+	}{
+		{
+			name:     "no options",
+			opts:     []gen.Option{},
+			expected: []llms.CallOption{},
+		},
+		{
+			name:     "with temperature",
+			opts:     []gen.Option{gen.WithTemperature(0.5)},
+			expected: []llms.CallOption{llms.WithTemperature(0.5)},
+		},
+		{
+			name:     "with JSON mode",
+			opts:     []gen.Option{gen.WithJSONMode()},
+			expected: []llms.CallOption{llms.WithJSONMode()},
+		},
+	}
 
-// 	for i, v := range tests {
-// 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-// 			cfg := Options{ProjectsRoot: v.projRoot}
-// 			ai := &mockLLM{}
-// 			ada := New(ai, WithOptions(cfg))
-// 			ada.AddProjectData(ProjectData{UserName: v.username, ProjName: v.projname})
-// 			res := ada.projectPath()
-// 			assert.Contains(t, res, v.username)
-// 			assert.Contains(t, res, v.projRoot)
-// 			assert.Contains(t, res, v.projname)
-// 		})
-// 	}
-// }
+	for _, v := range tests {
+		t.Run(v.name, func(t *testing.T) {
+			got := ToCallOptions(v.opts...)
+			expOpts := &llms.CallOptions{}
+			for _, opt := range v.expected {
+				opt(expOpts)
+			}
+			gotOpts := &llms.CallOptions{}
+			for _, opt := range got {
+				opt(gotOpts)
+			}
+			assert.Equal(t, expOpts, gotOpts)
+		})
+	}
+}

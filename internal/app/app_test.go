@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/baudii/ada-ai/internal/app"
+	"github.com/baudii/ada-ai/internal/core/gen"
 	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/stretchr/testify/assert"
 )
@@ -71,7 +72,7 @@ func (m *mockGen) BuildPrompt(p string, args ...any) (string, error) {
 	return m.promptStr, m.promptErr
 }
 
-func (m *mockGen) GenerateWithSys(ctx context.Context, sys, user string, jsonMode bool) (string, error) {
+func (m *mockGen) GenerateWithSys(ctx context.Context, sys, user string, opts ...gen.Option) (string, error) {
 	return m.resp, m.genErr
 }
 
