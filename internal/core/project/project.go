@@ -17,8 +17,8 @@ type (
 
 // Context is the context of the current project.
 type Context struct {
+	Name     string `json:"projName"`
 	UserName string `json:"userName"`
-	ProjName string `json:"projName"`
 	Language string `json:"language"`
 	Summary  string `json:"summary"`
 }

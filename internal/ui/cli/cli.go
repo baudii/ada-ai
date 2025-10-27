@@ -45,7 +45,7 @@ func (c *cliApp) GetProjectData(userConfigRoot string) project.Context {
 		summary := c.read("Provide a short summary of the project")
 		projectData = project.Context{
 			UserName: username,
-			ProjName: projname,
+			Name:     projname,
 			Language: plang,
 			Summary:  summary,
 		}

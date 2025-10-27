@@ -13,15 +13,15 @@ const ConfigFile = "ada.json"
 var defaultNavNames = []string{business, technical, scope, project.Structure}
 
 type app struct {
-	deg          int
-	mode         seqdir.Mode
-	gen          generator
-	materializer materializer
-	navigator    navigator
-	projectData  project.Context
-	opts         Options
-	navNames     []string
-	logger       *slog.Logger
+	deg            int
+	mode           seqdir.Mode
+	gen            generator
+	materializer   materializer
+	navigator      navigator
+	projectContext project.Context
+	opts           Options
+	navNames       []string
+	logger         *slog.Logger
 }
 
 // Options is the configuration for Ada AI workflow.
@@ -72,7 +72,7 @@ func WithMode(mode seqdir.Mode) option {
 // WithProjectData sets the project data for the application.
 func WithProjectData(data project.Context) option {
 	return func(a *app) {
-		a.projectData = data
+		a.projectContext = data
 	}
 }
 

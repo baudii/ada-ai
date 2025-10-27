@@ -24,7 +24,7 @@ func TestProjData(t *testing.T) {
 	t.Parallel()
 	expected := project.Context{
 		UserName: "testuser",
-		ProjName: "testproject",
+		Name:     "testproject",
 		Language: "go",
 		Summary:  "This is a test project.",
 	}
@@ -33,7 +33,7 @@ func TestProjData(t *testing.T) {
 		case "Provide nickname":
 			return expected.UserName
 		case "Provide project name":
-			return expected.ProjName
+			return expected.Name
 		case "Provide programming language (go, python, js, etc)":
 			return expected.Language
 		case "Provide a short summary of the project":

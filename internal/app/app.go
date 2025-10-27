@@ -29,12 +29,12 @@ const ext = "json"
 //
 // Additional arguments can be passed to modify the behavior of the application.
 func (a *app) Run(ctx context.Context) error {
-	a.logger.Info("starting app session", "user", a.projectData.UserName, "project", a.projectData.ProjName)
+	a.logger.Info("starting app session", "user", a.projectContext.UserName, "project", a.projectContext.Name)
 	if err := a.AddNavs(ctx); err != nil {
-		if retryErr := a.materializer.Materialize(nil, nil); retryErr != nil {
+		if saveErr := a.materializer.Materialize(nil, nil); saveErr != nil {
 			return errors.Join(
 				fmt.Errorf("add navs: %w", err),
-				fmt.Errorf("materialize during recovery: %w", retryErr),
+				fmt.Errorf("materialize during recovery: %w", saveErr),
 			)
 		}
 		return fmt.Errorf("add navs: %w", err)
@@ -50,8 +50,8 @@ func (a *app) Run(ctx context.Context) error {
 // navigation files and generates new ones if they are not found.
 func (a *app) AddNavs(ctx context.Context) error {
 	m := make(map[string][]any)
-	m[business] = []any{a.projectData.ProjName, a.projectData.Summary}
-	m[technical] = []any{a.projectData.Language, 0}
+	m[business] = []any{a.projectContext.Name, a.projectContext.Summary}
+	m[technical] = []any{a.projectContext.Language, 0}
 	m[scope] = []any{0, 1}
 	m[project.Structure] = []any{0, 1, 2}
 

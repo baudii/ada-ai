@@ -46,7 +46,7 @@ func NewAI(provider, configPath string) (llms.Model, error) {
 // NewFSProject initializes a filesystem-backed project under the user/project root.
 // It chooses the project folder according to the mode and returns the project handle.
 func NewFSProject(projRoot string, projData project.Context, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
-	base := filepath.Join(projRoot, projData.UserName, projData.ProjName)
+	base := filepath.Join(projRoot, projData.UserName, projData.Name)
 	projRoot, err := folderer.ProjectFolder(base, mode)
 	if err != nil {
 		return nil, fmt.Errorf("project folder: %w", err)
