@@ -17,12 +17,12 @@ type generator interface {
 // including navigation files and materialization of the project layout.
 type materializer interface {
 	Materialize(hfile project.FileHandler, hfold project.FolderHandler) error
-	CreateFile(name string, content []byte) error
+	HandleFile(name string, content []byte) error
 }
 
 // navigator defines methods for managing navigation files within a project.
 type navigator interface {
 	LoadNav(key string) ([]byte, error)
 	AddNav(key, ext string, content []byte) error
-	Content(key string) (string, error)
+	NavContent(key string) (string, error)
 }

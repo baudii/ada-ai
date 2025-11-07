@@ -39,9 +39,11 @@ func (a *app) Run(ctx context.Context) error {
 		}
 		return fmt.Errorf("add navs: %w", err)
 	}
+
 	if err := a.MaterializeProject(ctx); err != nil {
 		return fmt.Errorf("materialize project: %w", err)
 	}
+
 	a.logger.Debug("project materialized")
 	return nil
 }
@@ -112,7 +114,7 @@ func (a *app) fileGen(ctx context.Context, path string) error {
 		return fmt.Errorf("generate file %w", err)
 	}
 
-	if err := a.materializer.CreateFile(path, res); err != nil {
+	if err := a.materializer.HandleFile(path, res); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
 	a.logger.Info("success", "path", path)
@@ -155,7 +157,7 @@ func (a *app) sysHumanPrompts(p string, args ...any) (string, string, error) {
 func (a *app) injectNavContent(args ...any) ([]any, error) {
 	for i := range args {
 		if idx, ok := args[i].(int); ok {
-			r, err := a.navigator.Content(defaultNavNames[idx])
+			r, err := a.navigator.NavContent(defaultNavNames[idx])
 			if err != nil {
 				return nil, fmt.Errorf("retrieve nav %q: %w", defaultNavNames[idx], err)
 			}

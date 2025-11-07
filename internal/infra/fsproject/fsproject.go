@@ -16,10 +16,10 @@ var NavFolder = "nav"
 
 // Data represents a filesystem-backed project with navigation state and roots.
 type Data struct {
-    Tree    map[string]any
-    root    string
-    navRoot string
-    store   navStore
+	Tree    map[string]any
+	root    string
+	navRoot string
+	store   navStore
 }
 
 type navStore interface {
@@ -29,24 +29,24 @@ type navStore interface {
 }
 
 var (
-    // DefaultFileHandler creates a new empty file at the given path.
-    DefaultFileHandler = func(path string) error {
-        f, err := os.Create(path)
-        if err != nil {
-            return fmt.Errorf("create file: %w", err)
-        }
-        defer func() { _ = f.Close() }()
-        return nil
-    }
+	// DefaultFileHandler creates a new empty file at the given path.
+	DefaultFileHandler = func(path string) error {
+		f, err := os.Create(path)
+		if err != nil {
+			return fmt.Errorf("create file: %w", err)
+		}
+		defer func() { _ = f.Close() }()
+		return nil
+	}
 
-    // DefaultFolderHandler creates all missing directories for the given path.
-    DefaultFolderHandler = func(path string) error {
-        err := os.MkdirAll(path, 0755)
-        if err != nil {
-            return fmt.Errorf("create folder: %w", err)
-        }
-        return nil
-    }
+	// DefaultFolderHandler creates all missing directories for the given path.
+	DefaultFolderHandler = func(path string) error {
+		err := os.MkdirAll(path, 0755)
+		if err != nil {
+			return fmt.Errorf("create folder: %w", err)
+		}
+		return nil
+	}
 )
 
 // New creates a new LocalProj instance with the given project root path.
@@ -113,8 +113,8 @@ func (l *Data) AddNav(key, ext string, content []byte) error {
 }
 
 // CreateFile writes the provided content to the absolute file path.
-func (l *Data) CreateFile(path string, content []byte) error {
-    return os.WriteFile(path, content, 0644)
+func (l *Data) HandleFile(path string, content []byte) error {
+	return os.WriteFile(path, content, 0644)
 }
 
 // LoadNav retrieves a navigation file by its filename. It returns the file content
@@ -128,9 +128,9 @@ func (l *Data) LoadNav(filename string) ([]byte, error) {
 	return data, nil
 }
 
-// Content retrieves the content of a navigation file by its key.
+// NavContent retrieves the content of a navigation file by its key.
 // It returns the content as a compacted JSON string.
-func (l *Data) Content(key string) (string, error) {
+func (l *Data) NavContent(key string) (string, error) {
 	item, ok := l.store.Get(key)
 	if !ok {
 		return "", fmt.Errorf("nav item %q not found", key)

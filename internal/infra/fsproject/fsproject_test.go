@@ -162,7 +162,7 @@ func TestContent(t *testing.T) {
 			if v.mockFile != nil {
 				v.mockFile.Content = []byte(v.content)
 			}
-			res, err := s.Content(v.key)
+			res, err := s.NavContent(v.key)
 			if v.err != "" {
 				assert.ErrorContains(t, err, v.err)
 			} else {
@@ -213,7 +213,7 @@ func TestCreateFile(t *testing.T) {
 	t.Parallel()
 	d := t.TempDir()
 	s := &Data{navRoot: d}
-	err := s.CreateFile(filepath.Join(d, "file.txt"), []byte("content"))
+	err := s.HandleFile(filepath.Join(d, "file.txt"), []byte("content"))
 	require.NoError(t, err)
 	data, err := os.ReadFile(filepath.Join(d, "file.txt"))
 	require.NoError(t, err)

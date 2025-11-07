@@ -35,7 +35,7 @@ func (m *mockMaterializer) Materialize(hfile project.FileHandler, hfold project.
 	return nil
 }
 
-func (m *mockMaterializer) CreateFile(name string, content []byte) error {
+func (m *mockMaterializer) HandleFile(name string, content []byte) error {
 	return m.fileErr
 }
 
@@ -52,7 +52,7 @@ func (m *mockNavigator) LoadNav(key string) ([]byte, error) {
 func (m *mockNavigator) AddNav(key, ext string, content []byte) error {
 	return m.addNavErr
 }
-func (m *mockNavigator) Content(key string) (string, error) {
+func (m *mockNavigator) NavContent(key string) (string, error) {
 	return "", m.contentErr
 }
 
