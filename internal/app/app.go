@@ -9,10 +9,7 @@ const (
 	business  = "business"
 	technical = "technical"
 	scope     = "scope"
-	filler    = "filler"
 )
-
-const ext = "json"
 
 // Run initializes and runs the CLI application. It sets up the AI model,
 // configures the Ada AI workflow, and handles user input to generate and

@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -23,35 +22,21 @@ type OpenAPIProject struct {
 	outputDir   string
 }
 
-type FieldInfo struct {
-	Name string
-	Type string
-	Tags reflect.StructTag
-	Doc  string
-}
-
-type ParamInfo struct {
-	Name       string
-	Type       string
-	IsStruct   bool
-	StructName string
-	Fields     []FieldInfo
-}
-
 const (
 	OAPI_FOLDER         = "oapi"
-	SERVER_INTERFACE    = "ServerInterface"
 	OAPI_GENERATED_FILE = "server.gen.go"
 )
 
 type option func(*OpenAPIProject)
 
+// WithLogger sets the logger for the OpenAPIProject.
 func WithLogger(logger *slog.Logger) option {
 	return func(p *OpenAPIProject) {
 		p.logger = logger
 	}
 }
 
+// New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
 	specPath := filepath.Join(outputDir, OAPI_FOLDER, "openapi.json")
 	oapiCfgPath := filepath.Join(outputDir, OAPI_FOLDER, "cfg.yaml")
@@ -66,6 +51,7 @@ func New(outputDir string, opts ...option) *OpenAPIProject {
 	return project
 }
 
+// Materialize generates the project structure and code based on the OpenAPI specification.
 func (p *OpenAPIProject) Materialize(ctx context.Context) error {
 	// Copy OpenAPI spec and config files to output directory
 
@@ -77,9 +63,17 @@ func (p *OpenAPIProject) Materialize(ctx context.Context) error {
 	if err := os.MkdirAll(filepath.Join(p.outputDir, "handlers"), 0755); err != nil {
 		return err
 	}
+	cfg := &packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
+	}
+
+	pkgs, err := packages.Load(cfg, filepath.Join(p.outputDir, OAPI_GENERATED_FILE))
+	if err != nil {
+		return err
+	}
 
 	// Implement interface and create every handler from the generated file
-	if err := p.ExtractServerInterface(p.MaterializeHandler); err != nil {
+	if err := ExtractServerInterface(pkgs, p.MaterializeHandler); err != nil {
 		return err
 	}
 
@@ -88,20 +82,22 @@ func (p *OpenAPIProject) Materialize(ctx context.Context) error {
 	return nil
 }
 
+// MaterializeHandler generates a handler file for the given method of the ServerInterface.
 func (p *OpenAPIProject) MaterializeHandler(method *types.Func, cg *ast.CommentGroup, pkg *packages.Package) {
 	var out strings.Builder
-
-	out.WriteString(fmt.Sprintf("// Handler for %s\n", method.Name()))
+	out.WriteString("// This file is auto-generated.\n")
+	out.WriteString(fmt.Sprintf("//\n// Handler for %s method\n", method.Name()))
 
 	if cg != nil {
+		out.WriteString("//\n// DESCRIPTION:\n")
 		for _, c := range cg.List {
 			out.WriteString(c.Text + "\n")
 		}
 	}
 
-	params, _ := p.AnalyzeMethodParams(method, pkg)
+	params, _ := AnalyzeMethodParams(method, pkg)
 
-	out.WriteString("\n// PARAMETERS:\n")
+	out.WriteString("//\n// PARAMETERS:\n")
 	for _, prm := range params {
 		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
 	}
@@ -126,123 +122,8 @@ func (p *OpenAPIProject) MaterializeHandler(method *types.Func, cg *ast.CommentG
 		}
 	}
 
-	file := filepath.Join(p.outputDir, "handlers", method.Name()+".go")
+	file := filepath.Join(p.outputDir, "handlers", PascalToKebab(method.Name())+".go")
 	_ = os.WriteFile(file, []byte(out.String()), 0644)
-}
-
-func (p *OpenAPIProject) AnalyzeMethodParams(method *types.Func, pkg *packages.Package) ([]ParamInfo, error) {
-	sig := method.Type().(*types.Signature)
-
-	params := []ParamInfo{}
-
-	// Для удобного поиска AST TypeSpec
-	typeSpecs := map[string]*ast.TypeSpec{}
-	for _, f := range pkg.Syntax {
-		for _, decl := range f.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok {
-				continue
-			}
-			for _, spec := range gd.Specs {
-				if ts, ok := spec.(*ast.TypeSpec); ok {
-					typeSpecs[ts.Name.Name] = ts
-				}
-			}
-		}
-	}
-
-	for i := 0; i < sig.Params().Len(); i++ {
-		pv := sig.Params().At(i)
-		param := ParamInfo{
-			Name: pv.Name(),
-			Type: pv.Type().String(),
-		}
-
-		// Проверяем, структура ли это
-		if named, ok := pv.Type().(*types.Named); ok {
-			if st, ok := named.Underlying().(*types.Struct); ok {
-				param.IsStruct = true
-				param.StructName = named.Obj().Name()
-
-				// Находим AST TypeSpec для структуры
-				if ts, ok := typeSpecs[named.Obj().Name()]; ok {
-					if structNode, ok := ts.Type.(*ast.StructType); ok {
-						for idx, field := range structNode.Fields.List {
-							fi := FieldInfo{
-								Name: field.Names[0].Name,
-								Type: st.Field(idx).Type().String(),
-							}
-
-							if field.Tag != nil {
-								tag := reflect.StructTag(field.Tag.Value[1 : len(field.Tag.Value)-1])
-								fi.Tags = tag
-							}
-
-							if field.Doc != nil {
-								for _, c := range field.Doc.List {
-									fi.Doc += c.Text + "\n"
-								}
-							}
-
-							param.Fields = append(param.Fields, fi)
-						}
-					}
-				}
-			}
-		}
-
-		params = append(params, param)
-	}
-
-	return params, nil
-}
-
-// ExtractServerInterface reads the generated server code and extracts method information
-// from the ServerInterface.
-func (p *OpenAPIProject) ExtractServerInterface(callback func(*types.Func, *ast.CommentGroup, *packages.Package)) error {
-	cfg := &packages.Config{
-		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
-	}
-
-	pkgs, err := packages.Load(cfg, filepath.Join(p.outputDir, OAPI_GENERATED_FILE))
-	if err != nil {
-		return err
-	}
-
-	for _, pkg := range pkgs {
-		scope := pkg.Types.Scope()
-
-		obj := scope.Lookup(SERVER_INTERFACE)
-		if obj == nil {
-			continue
-		}
-
-		if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
-			for method := range iface.Methods() {
-				for _, file := range pkg.Syntax {
-					ast.Inspect(
-						file,
-						func(n ast.Node) bool {
-							td, ok := n.(*ast.TypeSpec)
-							if !ok || td.Name.Name != SERVER_INTERFACE {
-								return true
-							}
-
-							if ifaceType, ok := td.Type.(*ast.InterfaceType); ok {
-								for _, f := range ifaceType.Methods.List {
-									if len(f.Names) > 0 && f.Names[0].Name == method.Name() {
-										callback(method, f.Doc, pkg)
-									}
-								}
-							}
-							return false
-						})
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 func (p *OpenAPIProject) Validate(ctx context.Context) error {
