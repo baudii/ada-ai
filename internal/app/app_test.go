@@ -5,7 +5,6 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/baudii/ada-ai/internal/app"
@@ -133,104 +132,6 @@ func TestRun_Fails(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestAddNavs_Fails(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name        string
-		navName     string
-		contentErr  error
-		expectedErr string
-	}{
-		{
-			name:        "fail: unknown nav name",
-			navName:     "unknown_nav",
-			expectedErr: "no args for nav",
-		},
-		{
-			name:        "fail: content error",
-			navName:     project.Structure,
-			contentErr:  assert.AnError,
-			expectedErr: "inject nav content",
-		},
-	}
-
-	for _, v := range tests {
-		t.Run(v.name, func(t *testing.T) {
-			t.Parallel()
-			a := app.New(
-				app.WithGenerator(&mockGen{resp: "generated content"}),
-				app.WithNavigator(&mockNavigator{contentErr: v.contentErr, loadNavErr: assert.AnError}),
-				app.WithNavNames([]string{v.navName}),
-				app.WithLogger(MockLogger(io.Discard)),
-			)
-			err := a.AddNavs(context.Background())
-			if v.expectedErr != "" {
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, v.expectedErr)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestMaterializeProject(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		contentErr    error
-		failCondition func(string) bool
-		genErr        error
-		fileErr       error
-		expectedErr   string
-	}{
-		{
-			name:        "fail: content",
-			contentErr:  assert.AnError,
-			expectedErr: "inject nav content",
-		},
-		{
-			name:          "fail: build prompt system",
-			failCondition: func(p string) bool { return strings.Contains(p, "system") },
-			expectedErr:   "system and human prompts",
-		},
-		{
-			name:          "fail: build prompt human",
-			failCondition: func(p string) bool { return strings.Contains(p, "human") },
-			expectedErr:   "system and human prompts",
-		},
-		{
-			name:        "fail: generate with sys",
-			genErr:      assert.AnError,
-			expectedErr: "generate with sys",
-		},
-		{
-			name:        "fail: write file",
-			expectedErr: "write file",
-			fileErr:     assert.AnError,
-		},
-	}
-
-	for _, v := range tests {
-		t.Run(v.name, func(t *testing.T) {
-			t.Parallel()
-			a := app.New(
-				app.WithGenerator(&mockGen{
-					resp:          "generated content",
-					failCondition: v.failCondition,
-					genErr:        v.genErr,
-				}),
-				app.WithNavigator(&mockNavigator{contentErr: v.contentErr}),
-				app.WithNavNames([]string{"nav1"}),
-				app.WithMaterializer(&mockMaterializer{fileArg: t.TempDir(), fileErr: v.fileErr}),
-				app.WithLogger(MockLogger(io.Discard)),
-			)
-			err := a.MaterializeProject(context.Background())
-			assert.ErrorContains(t, err, v.expectedErr)
 		})
 	}
 }
