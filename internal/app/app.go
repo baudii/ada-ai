@@ -27,6 +27,7 @@ func (a *app) Run(ctx context.Context) error {
 	// Generate OpenAPI specification
 
 	// Use it with the openapi spec generator to create the project
+	
 
 	// Add additional logic to the generated project
 	return nil

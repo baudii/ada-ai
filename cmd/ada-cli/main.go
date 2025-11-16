@@ -5,11 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/core/seqdir"
 	"github.com/baudii/ada-ai/internal/infra"
 	"github.com/baudii/ada-ai/internal/infra/ai"
 	"github.com/baudii/ada-ai/internal/infra/config"
@@ -21,7 +19,7 @@ import (
 func main() {
 	// Parse command-line flags
 	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
-	mode := flag.Int("mode", 0, "project mode: 0=reuse existing, 1=create new, default is 0")
+	_ = flag.Int("mode", 0, "project mode: 0=reuse existing, 1=create new, default is 0")
 	deg := flag.Int("deg", 4, "degree of concurrency for project materialization")
 	flag.Parse()
 
@@ -41,15 +39,12 @@ func main() {
 		ai.WithTimeout(opts.Timeout),
 	)
 
-	lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
+	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
 	app := app.New(
 		app.WithDegree(*deg),
-		app.WithMode(seqdir.Mode(*mode)),
 		app.WithOptions(opts),
 		app.WithProjectData(c),
 		app.WithGenerator(gen),
-		app.WithNavigator(lp),
-		app.WithMaterializer(lp),
 		app.WithLogger(logger),
 	)
 

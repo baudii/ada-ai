@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/baudii/ada-ai/internal/core/project"
-	"github.com/baudii/ada-ai/internal/core/seqdir"
 )
 
 // ConfigFile is the default application configuration filename.
@@ -14,10 +13,7 @@ var defaultNavNames = []string{business, technical, scope, project.Structure}
 
 type app struct {
 	deg            int
-	mode           seqdir.Mode
 	gen            generator
-	materializer   materializer
-	navigator      navigator
 	projectContext project.Context
 	opts           Options
 	navNames       []string
@@ -40,13 +36,6 @@ func WithGenerator(gen generator) option {
 	}
 }
 
-// WithNavigator sets the NavHandler for the application to manage navigation files.
-func WithNavigator(n navigator) option {
-	return func(a *app) {
-		a.navigator = n
-	}
-}
-
 // WithOptions sets the application options.
 func WithOptions(opts Options) option {
 	return func(a *app) {
@@ -54,32 +43,10 @@ func WithOptions(opts Options) option {
 	}
 }
 
-// WithProject sets the project manager for the application.
-func WithProject(proj materializer) option {
-	return func(a *app) {
-		a.materializer = proj
-	}
-}
-
-// WithMode sets whether to create a new project folder or reuse an existing one.
-// Default is false (reuse existing).
-func WithMode(mode seqdir.Mode) option {
-	return func(a *app) {
-		a.mode = mode
-	}
-}
-
 // WithProjectData sets the project data for the application.
 func WithProjectData(data project.Context) option {
 	return func(a *app) {
 		a.projectContext = data
-	}
-}
-
-// WithMaterializer sets the materializer for the application to handle project materialization.
-func WithMaterializer(m materializer) option {
-	return func(a *app) {
-		a.materializer = m
 	}
 }
 
