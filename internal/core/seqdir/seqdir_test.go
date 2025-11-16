@@ -101,8 +101,8 @@ func TestProjectFolder(t *testing.T) {
 			t.Parallel()
 			sd := seqdir.New(func(name string) ([]fs.DirEntry, error) {
 				return v.mockFiles, v.mockErr
-			})
-			folder, err := sd.ProjectFolder("basepath", v.mode)
+			}, seqdir.WithMode(v.mode))
+			folder, err := sd.ProjectFolder("basepath")
 			if v.expectErr != "" {
 				assert.ErrorContains(t, err, v.expectErr)
 			} else {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/baudii/ada-ai/internal/core/nav"
 	"github.com/baudii/ada-ai/internal/core/project"
-	"github.com/baudii/ada-ai/internal/core/seqdir"
 	"github.com/baudii/ada-ai/internal/infra/ai"
 	"github.com/baudii/ada-ai/internal/infra/config"
 	"github.com/baudii/ada-ai/internal/infra/fsproject"
@@ -23,7 +22,7 @@ type Templates struct {
 // folderProvider defines an interface for providing folder names based on a base path
 // and a flag indicating whether to create a new folder.
 type folderProvider interface {
-	ProjectFolder(base string, mode seqdir.Mode) (string, error)
+	ProjectFolder(base string) (string, error)
 }
 
 // NewAI initializes the Ada AI model with the specified LLM provider
@@ -45,9 +44,9 @@ func NewAI(provider, configPath string) (llms.Model, error) {
 
 // NewFSProject initializes a filesystem-backed project under the user/project root.
 // It chooses the project folder according to the mode and returns the project handle.
-func NewFSProject(projRoot string, projData project.Context, mode seqdir.Mode, folderer folderProvider) (*fsproject.Data, error) {
+func NewFSProject(projRoot string, projData project.Context, folderer folderProvider) (*fsproject.Data, error) {
 	base := filepath.Join(projRoot, projData.UserName, projData.Name)
-	projRoot, err := folderer.ProjectFolder(base, mode)
+	projRoot, err := folderer.ProjectFolder(base)
 	if err != nil {
 		return nil, fmt.Errorf("project folder: %w", err)
 	}

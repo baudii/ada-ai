@@ -15,21 +15,35 @@ type Mode int
 type dirReader func(name string) ([]fs.DirEntry, error)
 
 const (
-    // UseLatest selects the latest existing numeric project folder.
-    UseLatest Mode = iota
-    // CreateNew creates a new project folder with the next index.
-    CreateNew
+	// UseLatest selects the latest existing numeric project folder.
+	UseLatest Mode = iota
+	// CreateNew creates a new project folder with the next index.
+	CreateNew
 )
 
 // seqDir implements the DirProvider interface to provide
 // sequentially numbered project folder names.
 type seqDir struct {
 	read dirReader
+	mode Mode
+}
+
+type option func(*seqDir)
+
+// WithMode sets the folder naming strategy for the seqDir.
+func WithMode(mode Mode) option {
+	return func(d *seqDir) {
+		d.mode = mode
+	}
 }
 
 // New creates a new seqDir instance with the provided ReadDirFS.
-func New(reader dirReader) *seqDir {
-	return &seqDir{read: reader}
+func New(reader dirReader, opts ...option) *seqDir {
+	d := &seqDir{read: reader}
+	for _, o := range opts {
+		o(d)
+	}
+	return d
 }
 
 // ProjectFolder returns the folder name based on the existing directories
@@ -37,7 +51,7 @@ func New(reader dirReader) *seqDir {
 // by incrementing the highest existing integer-named folder. If false,
 // it returns the highest existing integer-named folder or creates a new
 // one if none exist.
-func (d *seqDir) ProjectFolder(base string, mode Mode) (string, error) {
+func (d *seqDir) ProjectFolder(base string) (string, error) {
 	dirEntries, err := d.read(base)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -48,13 +62,13 @@ func (d *seqDir) ProjectFolder(base string, mode Mode) (string, error) {
 	}
 
 	var lastIdx int
-	switch mode {
+	switch d.mode {
 	case CreateNew:
 		lastIdx = newDir(dirEntries)
 	case UseLatest:
 		lastIdx = lastOrNew(dirEntries)
 	default:
-		return "", fmt.Errorf("unknown mode %v", mode)
+		return "", fmt.Errorf("unknown mode %v", d.mode)
 	}
 	return filepath.Join(base, strconv.Itoa(lastIdx)), nil
 }

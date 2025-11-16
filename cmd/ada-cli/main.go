@@ -41,7 +41,7 @@ func main() {
 		ai.WithTimeout(opts.Timeout),
 	)
 
-	lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.Mode(*mode), seqdir.New(os.ReadDir)))
+	lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
 	app := app.New(
 		app.WithDegree(*deg),
 		app.WithMode(seqdir.Mode(*mode)),

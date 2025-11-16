@@ -13,20 +13,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var mdpErr = &mockDirProvider{err: os.ErrClosed}
+var mdpErr = &mockDirProvider{
+	err: os.ErrClosed,
+}
 
 type mockDirProvider struct {
 	path string
+	mode seqdir.Mode
 	err  error
 }
 
-func (m *mockDirProvider) ProjectFolder(base string, mode seqdir.Mode) (string, error) {
+func (m *mockDirProvider) ProjectFolder(base string) (string, error) {
 	return m.path, m.err
 }
 
 func TestInitLocalProject_FailsProjectFolder(t *testing.T) {
 	t.Parallel()
-	lp, err := infra.NewFSProject(t.TempDir(), project.Context{}, 0, mdpErr)
+	lp, err := infra.NewFSProject(t.TempDir(), project.Context{}, mdpErr)
 	assert.Nil(t, lp)
 	assert.ErrorContains(t, err, "project folder")
 }
@@ -37,14 +40,14 @@ func TestInitLocalProject_FailsToCreateProjectManager(t *testing.T) {
 	f, err := os.Create(d)
 	require.NoError(t, err)
 	_ = f.Close()
-	ai, err := infra.NewFSProject(t.TempDir(), project.Context{}, seqdir.CreateNew, &mockDirProvider{path: d})
+	ai, err := infra.NewFSProject(t.TempDir(), project.Context{}, &mockDirProvider{path: d, mode: seqdir.CreateNew})
 	assert.Nil(t, ai)
 	assert.ErrorContains(t, err, "create local project")
 }
 
 func TestInitLocalProject_Success(t *testing.T) {
 	t.Parallel()
-	ai, err := infra.NewFSProject(t.TempDir(), project.Context{}, seqdir.CreateNew, &mockDirProvider{path: t.TempDir()})
+	ai, err := infra.NewFSProject(t.TempDir(), project.Context{}, &mockDirProvider{path: t.TempDir(), mode: seqdir.CreateNew})
 	require.NotNil(t, ai)
 	require.NoError(t, err)
 }
