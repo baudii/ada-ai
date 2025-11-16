@@ -41,7 +41,7 @@ func main() {
 	)
 
 	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
-	materializer := openapiproject.New(folders.Projects)
+	materializer := openapiproject.New(filepath.Join(folders.Projects, "oapitest"))
 	app := app.New(
 		app.WithMaterializer(materializer),
 		app.WithDegree(*deg),

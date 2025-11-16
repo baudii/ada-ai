@@ -6,6 +6,7 @@ require (
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tmc/langchaingo v0.1.13
+	golang.org/x/tools v0.39.0
 )
 
 require (
@@ -23,5 +24,7 @@ require (
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/woodsbury/decimal128 v1.3.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
