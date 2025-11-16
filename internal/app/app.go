@@ -27,7 +27,9 @@ func (a *app) Run(ctx context.Context) error {
 	// Generate OpenAPI specification
 
 	// Use it with the openapi spec generator to create the project
-	
+	if err := a.materializer.Materialize(ctx); err != nil {
+		return err
+	}
 
 	// Add additional logic to the generated project
 	return nil

@@ -13,13 +13,14 @@ import (
 	"github.com/baudii/ada-ai/internal/infra/config"
 	"github.com/baudii/ada-ai/internal/infra/dailylogger"
 	"github.com/baudii/ada-ai/internal/infra/folders"
+	"github.com/baudii/ada-ai/internal/infra/openapiproject"
 	"github.com/baudii/ada-ai/internal/ui/cli"
 )
 
 func main() {
 	// Parse command-line flags
 	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
-	_ = flag.Int("mode", 0, "project mode: 0=reuse existing, 1=create new, default is 0")
+	// mode := flag.Int("mode", 0, "project mode: 0=reuse existing, 1=create new, default is 0")
 	deg := flag.Int("deg", 4, "degree of concurrency for project materialization")
 	flag.Parse()
 
@@ -40,7 +41,9 @@ func main() {
 	)
 
 	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
+	materializer := openapiproject.New(folders.Projects)
 	app := app.New(
+		app.WithMaterializer(materializer),
 		app.WithDegree(*deg),
 		app.WithOptions(opts),
 		app.WithProjectData(c),

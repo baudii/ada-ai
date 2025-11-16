@@ -3,6 +3,7 @@ package openapiproject
 import (
 	"context"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -13,7 +14,11 @@ type OpenAPIProject struct {
 	outputDir   string
 }
 
-func New(specPath, oapiCfgPath, outputDir string) *OpenAPIProject {
+const OAPI_FOLDER = "oapi"
+
+func New(outputDir string) *OpenAPIProject {
+	specPath := filepath.Join(outputDir, OAPI_FOLDER, "openapi.json")
+	oapiCfgPath := filepath.Join(outputDir, OAPI_FOLDER, "cfg.yaml")
 	return &OpenAPIProject{
 		specPath:    specPath,
 		outputDir:   outputDir,
@@ -21,15 +26,15 @@ func New(specPath, oapiCfgPath, outputDir string) *OpenAPIProject {
 	}
 }
 
-func (p *OpenAPIProject) GenerateProject() error {
-	if err := p.runOapiCodegen(); err != nil {
+func (p *OpenAPIProject) Materialize(ctx context.Context) error {
+	if err := p.runOapiCodegen(ctx); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *OpenAPIProject) ValidateSpec(ctx context.Context) error {
+func (p *OpenAPIProject) Validate(ctx context.Context) error {
 	loader := openapi3.NewLoader()
 	doc, err := loader.LoadFromFile(p.specPath)
 	if err != nil {
@@ -39,10 +44,10 @@ func (p *OpenAPIProject) ValidateSpec(ctx context.Context) error {
 	return doc.Validate(ctx)
 }
 
-func (p *OpenAPIProject) runOapiCodegen() error {
+func (p *OpenAPIProject) runOapiCodegen(ctx context.Context) error {
 	command := "oapi-codegen"
 	args := []string{"-config", p.oapiCfgPath, p.specPath}
-	cmd := exec.Command(command, args...)
+	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = p.outputDir
 
 	return cmd.Run()

@@ -12,10 +12,11 @@ const ConfigFile = "ada.json"
 var defaultNavNames = []string{business, technical, scope, project.Structure}
 
 type app struct {
-	deg            int
-	gen            generator
+	parallelism    int
+	generator      generator
+	materializer   materializer
 	projectContext project.Context
-	opts           Options
+	options        Options
 	navNames       []string
 	logger         *slog.Logger
 }
@@ -32,14 +33,20 @@ type option func(*app)
 // WithGenerator sets the Generator instance for the application to generate content.
 func WithGenerator(gen generator) option {
 	return func(a *app) {
-		a.gen = gen
+		a.generator = gen
 	}
 }
 
 // WithOptions sets the application options.
 func WithOptions(opts Options) option {
 	return func(a *app) {
-		a.opts = opts
+		a.options = opts
+	}
+}
+
+func WithMaterializer(m materializer) option {
+	return func(a *app) {
+		a.materializer = m
 	}
 }
 
@@ -60,7 +67,7 @@ func WithNavNames(names []string) option {
 // WithDegree sets the maximum degree of concurrency for the application.
 func WithDegree(deg int) option {
 	return func(a *app) {
-		a.deg = deg
+		a.parallelism = deg
 	}
 }
 
@@ -74,8 +81,8 @@ func WithLogger(logger *slog.Logger) option {
 // New creates a new application instance with the provided options.
 func New(opts ...option) *app {
 	a := &app{
-		deg:      1,
-		navNames: defaultNavNames,
+		parallelism: 1,
+		navNames:    defaultNavNames,
 	}
 	for _, o := range opts {
 		o(a)
