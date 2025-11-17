@@ -4,19 +4,20 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
-	"go/types"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/getkin/kin-openapi/openapi3"
 	"golang.org/x/tools/go/packages"
 )
 
 type OpenAPIProject struct {
 	logger      *slog.Logger
+	projectName string
 	specPath    string
 	oapiCfgPath string
 	outputDir   string
@@ -36,6 +37,13 @@ func WithLogger(logger *slog.Logger) option {
 	}
 }
 
+// WithProjectName sets the project name for the OpenAPIProject.
+func WithProjectName(name string) option {
+	return func(p *OpenAPIProject) {
+		p.projectName = name
+	}
+}
+
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
 	specPath := filepath.Join(outputDir, OAPI_FOLDER, "openapi.json")
@@ -52,7 +60,7 @@ func New(outputDir string, opts ...option) *OpenAPIProject {
 }
 
 // Materialize generates the project structure and code based on the OpenAPI specification.
-func (p *OpenAPIProject) Materialize(ctx context.Context) error {
+func (p *OpenAPIProject) Materialize(ctx context.Context, hfile project.FileHandler, hfold project.FolderHandler) error {
 	// Copy OpenAPI spec and config files to output directory
 
 	// Run oapi-codegen to generate server code
@@ -73,7 +81,7 @@ func (p *OpenAPIProject) Materialize(ctx context.Context) error {
 	}
 
 	// Implement interface and create every handler from the generated file
-	if err := ExtractServerInterface(pkgs, p.MaterializeHandler); err != nil {
+	if err := ExtractServerInterface(pkgs, p.MaterializeHandler, hfile); err != nil {
 		return err
 	}
 
@@ -83,46 +91,26 @@ func (p *OpenAPIProject) Materialize(ctx context.Context) error {
 }
 
 // MaterializeHandler generates a handler file for the given method of the ServerInterface.
-func (p *OpenAPIProject) MaterializeHandler(method *types.Func, cg *ast.CommentGroup, pkg *packages.Package) {
-	var out strings.Builder
-	out.WriteString("// This file is auto-generated.\n")
-	out.WriteString(fmt.Sprintf("//\n// Handler for %s method\n", method.Name()))
+func (p *OpenAPIProject) MaterializeHandler(
+	methodInfo MethodInfo,
+	comments *ast.CommentGroup,
+	hfile project.FileHandler,
+) {
+	var out *strings.Builder = &strings.Builder{}
+	WriteComments(out, comments, "", methodInfo.Params)
+	// out.WriteString(`
+	// package handlers
 
-	if cg != nil {
-		out.WriteString("//\n// DESCRIPTION:\n")
-		for _, c := range cg.List {
-			out.WriteString(c.Text + "\n")
-		}
-	}
+	// import (
+	// 	"net/http"
+	// )
 
-	params, _ := AnalyzeMethodParams(method, pkg)
+	// func ` + method.Name() + `() {
 
-	out.WriteString("//\n// PARAMETERS:\n")
-	for _, prm := range params {
-		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
-	}
-
-	for _, prm := range params {
-		if prm.IsStruct {
-			out.WriteString(fmt.Sprintf("\n// STRUCT %s:\n", prm.StructName))
-			for _, f := range prm.Fields {
-				out.WriteString(fmt.Sprintf("//   FIELD: %s (%s)\n", f.Name, f.Type))
-
-				if tag := f.Tags.Get("json"); tag != "" {
-					out.WriteString(fmt.Sprintf("//     TAG json: %s\n", tag))
-				}
-				if tag := f.Tags.Get("form"); tag != "" {
-					out.WriteString(fmt.Sprintf("//     TAG form: %s\n", tag))
-				}
-
-				if f.Doc != "" {
-					out.WriteString("//     DOC: " + f.Doc)
-				}
-			}
-		}
-	}
-
-	file := filepath.Join(p.outputDir, "handlers", PascalToKebab(method.Name())+".go")
+	// }
+	// `)
+	file := filepath.Join(p.outputDir, "handlers", PascalToKebab(methodInfo.Name)+".go")
+	hfile(file)
 	_ = os.WriteFile(file, []byte(out.String()), 0644)
 }
 
@@ -142,5 +130,15 @@ func (p *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = p.outputDir
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("run oapi-codegen: %w", err)
+	}
+
+	cmd = exec.CommandContext(ctx, "go", "mod", "init", p.projectName)
+	cmd.Dir = p.outputDir
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("initialize go module: %w", err)
+	}
+
+	return nil
 }

@@ -1,15 +1,23 @@
 package openapiproject
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 	"reflect"
+	"strings"
 	"unicode"
 
+	"github.com/baudii/ada-ai/internal/core/project"
 	"golang.org/x/tools/go/packages"
 )
 
 const SERVER_INTERFACE = "ServerInterface"
+
+type MethodInfo struct {
+	Name   string
+	Params []ParamInfo
+}
 
 type FieldInfo struct {
 	Name string
@@ -20,6 +28,7 @@ type FieldInfo struct {
 
 type ParamInfo struct {
 	Name       string
+	MethodName string
 	Type       string
 	IsStruct   bool
 	StructName string
@@ -43,7 +52,7 @@ func PascalToKebab(s string) string {
 	return string(out)
 }
 
-func AnalyzeMethodParams(method *types.Func, pkg *packages.Package) ([]ParamInfo, error) {
+func AnalyzeMethodParams(method *types.Func, pkg *packages.Package) []ParamInfo {
 	sig := method.Type().(*types.Signature)
 
 	params := []ParamInfo{}
@@ -104,14 +113,15 @@ func AnalyzeMethodParams(method *types.Func, pkg *packages.Package) ([]ParamInfo
 		params = append(params, param)
 	}
 
-	return params, nil
+	return params
 }
 
 // ExtractServerInterface reads the generated server code and extracts method information
 // from the ServerInterface.
 func ExtractServerInterface(
 	pkgs []*packages.Package,
-	callback func(*types.Func, *ast.CommentGroup, *packages.Package),
+	callback func(MethodInfo, *ast.CommentGroup, project.FileHandler),
+	hfile project.FileHandler,
 ) error {
 	for _, pkg := range pkgs {
 		scope := pkg.Types.Scope()
@@ -135,7 +145,11 @@ func ExtractServerInterface(
 							if ifaceType, ok := td.Type.(*ast.InterfaceType); ok {
 								for _, f := range ifaceType.Methods.List {
 									if len(f.Names) > 0 && f.Names[0].Name == method.Name() {
-										callback(method, f.Doc, pkg)
+										methodInfo := MethodInfo{
+											Name:   method.Name(),
+											Params: AnalyzeMethodParams(method, pkg),
+										}
+										callback(methodInfo, f.Doc, hfile)
 									}
 								}
 							}
@@ -147,4 +161,41 @@ func ExtractServerInterface(
 	}
 
 	return nil
+}
+
+func WriteComments(out *strings.Builder, cg *ast.CommentGroup, methodName string, params []ParamInfo) {
+	out.WriteString("// This file is auto-generated.\n")
+	out.WriteString(fmt.Sprintf("//\n// Handler for %s method\n", methodName))
+
+	if cg != nil {
+		out.WriteString("//\n// DESCRIPTION:\n")
+		for _, c := range cg.List {
+			out.WriteString(c.Text + "\n")
+		}
+	}
+
+	out.WriteString("//\n// PARAMETERS:\n")
+	for _, prm := range params {
+		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
+	}
+
+	for _, prm := range params {
+		if prm.IsStruct {
+			out.WriteString(fmt.Sprintf("//\n// STRUCT %s:\n", prm.StructName))
+			for _, f := range prm.Fields {
+				out.WriteString(fmt.Sprintf("//   FIELD: %s (%s)\n", f.Name, f.Type))
+
+				if tag := f.Tags.Get("json"); tag != "" {
+					out.WriteString(fmt.Sprintf("//     TAG json: %s\n", tag))
+				}
+				if tag := f.Tags.Get("form"); tag != "" {
+					out.WriteString(fmt.Sprintf("//     TAG form: %s\n", tag))
+				}
+
+				if f.Doc != "" {
+					out.WriteString("//     DOC: " + f.Doc)
+				}
+			}
+		}
+	}
 }

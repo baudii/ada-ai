@@ -28,7 +28,17 @@ func (a *app) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := a.materializer.Materialize(ctx); err != nil {
+	err := a.materializer.Materialize(
+		ctx,
+		func(path string) error {
+
+			return nil
+		},
+		func(s string) error {
+			return nil
+		})
+
+	if err != nil {
 		return err
 	}
 
