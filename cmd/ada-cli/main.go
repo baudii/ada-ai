@@ -42,9 +42,10 @@ func main() {
 
 	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
 	materializer := openapiproject.New(
-		filepath.Join(folders.Projects, "oapitest"),
-		openapiproject.WithProjectName("oapitest"),
+		filepath.Join(folders.Projects, "oapitest2"),
+		openapiproject.WithProjectName("oapitest2"),
 		openapiproject.WithLogger(logger),
+		openapiproject.WithSpec("openapi.yaml"),
 	)
 
 	app := app.New(
