@@ -126,10 +126,9 @@ func (p *OpenAPIProject) Validate(ctx context.Context) error {
 
 func (p *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	command := "oapi-codegen"
-	args := []string{"-config", p.oapiCfgPath, p.specPath}
-	cmd := exec.CommandContext(ctx, command, args...)
-	cmd.Dir = p.outputDir
 
+	cmd := exec.CommandContext(ctx, command, "-config", p.oapiCfgPath, p.specPath)
+	cmd.Dir = p.outputDir
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("run oapi-codegen: %w", err)
 	}
