@@ -31,12 +31,13 @@ func (a *app) Run(ctx context.Context) error {
 	err := a.materializer.Materialize(
 		ctx,
 		func(path string) error {
-
+			// Here I should use LLM to generate the contents of the file.
+			// File already exists at 'path' and contains the description
+			// of the method to implement.
 			return nil
 		},
-		func(s string) error {
-			return nil
-		})
+		nil, // Folder handler not needed for OpenAPI project
+	)
 
 	if err != nil {
 		return err

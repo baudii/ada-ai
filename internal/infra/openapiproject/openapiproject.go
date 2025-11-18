@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
-	"go/types"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -23,11 +23,20 @@ type OpenAPIProject struct {
 	specPath    string
 	oapiCfgPath string
 	outputDir   string
+	moduleName  string
 }
 
 const (
-	OAPI_FOLDER         = "oapi"
 	OAPI_GENERATED_FILE = "server.gen.go"
+)
+
+// Constants for folder names.
+const (
+	GENERATED_FOLDER = "generated"
+	INTERNAL_FOLDER  = "internal"
+	CONFIG_FOLDER    = "config"
+	API_FOLDER       = "api"
+	HANDLERS_FOLDER  = "handlers"
 )
 
 type option func(*OpenAPIProject)
@@ -48,13 +57,13 @@ func WithProjectName(name string) option {
 
 func WithSpec(specFile string) option {
 	return func(p *OpenAPIProject) {
-		p.specPath = filepath.Join(p.outputDir, OAPI_FOLDER, specFile)
+		p.specPath = filepath.Join(p.outputDir, API_FOLDER, specFile)
 	}
 }
 
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
-	oapiCfgPath := filepath.Join(outputDir, OAPI_FOLDER, "cfg.yaml")
+	oapiCfgPath := filepath.Join(outputDir, CONFIG_FOLDER, "oapi.cfg.yaml")
 	project := &OpenAPIProject{
 		outputDir:   outputDir,
 		oapiCfgPath: oapiCfgPath,
@@ -74,16 +83,16 @@ func (o *OpenAPIProject) Materialize(ctx context.Context, hfile project.FileHand
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(o.outputDir, "handlers"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER), 0755); err != nil {
 		return err
 	}
 
 	// Implement interface and create every handler from the generated file
-	if err := o.MaterializeHandlers(o.MaterializeHandler, hfile); err != nil {
+	if err := o.MaterializeHandlers(hfile); err != nil {
 		return err
 	}
 
-	// Use SQLite to handle storage operations (maybe add other later?)
+	// Use SQLite to handle storage operations (maybe add other DBMS later?)
 
 	return nil
 }
@@ -98,54 +107,18 @@ func FormatParameters(params []ParamInfo) []string {
 
 // MaterializeHandlers reads the generated server code and extracts method information
 // from the ServerInterface.
-func (o *OpenAPIProject) MaterializeHandlers(
-	callback func(MethodInfo, *ast.CommentGroup, project.FileHandler, *packages.Package),
-	hfile project.FileHandler,
-) error {
+func (o *OpenAPIProject) MaterializeHandlers(hfile project.FileHandler) error {
 	cfg := &packages.Config{
 		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
 		Dir:  o.outputDir,
 	}
 
-	pkgs, err := packages.Load(cfg, o.outputDir)
+	pkgs, err := packages.Load(cfg, fmt.Sprintf("%s/%s/%s", o.moduleName, INTERNAL_FOLDER, GENERATED_FOLDER))
 	if err != nil {
-		return err
+		return fmt.Errorf("load package: %w", err)
 	}
 
-	for _, pkg := range pkgs {
-		scope := pkg.Types.Scope()
-
-		obj := scope.Lookup(SERVER_INTERFACE)
-		if obj == nil {
-			continue
-		}
-
-		if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
-			for method := range iface.Methods() {
-				for _, file := range pkg.Syntax {
-					ast.Inspect(
-						file,
-						func(n ast.Node) bool {
-							td, ok := n.(*ast.TypeSpec)
-							if !ok || td.Name.Name != SERVER_INTERFACE {
-								return true
-							}
-
-							if ifaceType, ok := td.Type.(*ast.InterfaceType); ok {
-								for _, f := range ifaceType.Methods.List {
-									if len(f.Names) > 0 && f.Names[0].Name == method.Name() {
-										methodInfo := analyzeMethodParams(method, pkg)
-										callback(methodInfo, f.Doc, hfile, pkg)
-									}
-								}
-							}
-							return false
-						})
-				}
-			}
-		}
-	}
-
+	processServerInterfaceMethods(o.logger, pkgs, hfile, o.MaterializeHandler)
 	return nil
 }
 
@@ -155,25 +128,34 @@ func (o *OpenAPIProject) MaterializeHandler(
 	comments *ast.CommentGroup,
 	hfile project.FileHandler,
 	pkg *packages.Package,
-) {
+) error {
 	var out *strings.Builder = &strings.Builder{}
 	writeComments(out, comments, methodInfo, pkg)
 	o.writeBody(out, methodInfo)
 
-	file := filepath.Join(o.outputDir, "handlers", PascalToKebab(methodInfo.Name)+".go")
-	opts := &imports.Options{
-		Comments:  true,
-		TabIndent: true,
-		TabWidth:  8,
+	snakeName := PascalToSnake(methodInfo.Name)
+
+	spl := strings.Split(snakeName, "_")
+	httpMethod := spl[0]
+	spl = spl[1:]
+	folderForFile := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, filepath.Join(spl...))
+
+	if err := os.MkdirAll(folderForFile, 0755); err != nil {
+		return fmt.Errorf("failed to create handler folder %s: %w", folderForFile, err)
 	}
 
-	formatted, err := imports.Process(file, []byte(out.String()), opts)
+	file := filepath.Join(folderForFile, httpMethod+".go")
+	formatted, err := imports.Process(file, []byte(out.String()), nil)
 	if err != nil {
-		o.logger.Error("failed to format generated handler", "file", file, "error", err)
+		o.logger.Error("file formatting finished with error", "file", file, "error", err)
 	}
 
-	_ = os.WriteFile(file, formatted, 0644)
-	hfile(file)
+	err = os.WriteFile(file, formatted, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write generated handler %s: %w", file, err)
+	}
+
+	return hfile(file)
 }
 
 func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo) {
@@ -207,9 +189,14 @@ func (o *OpenAPIProject) Validate(ctx context.Context) error {
 }
 
 func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
+	err := os.MkdirAll(filepath.Join(o.outputDir, INTERNAL_FOLDER, GENERATED_FOLDER), 0755)
+	if err != nil {
+		return err
+	}
+
 	command := "oapi-codegen"
 	cmd := exec.CommandContext(ctx, command, "-config", o.oapiCfgPath, o.specPath)
-	cmd.Dir = o.outputDir
+	cmd.Dir = path.Join(o.outputDir, INTERNAL_FOLDER, GENERATED_FOLDER)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
 	}
@@ -227,5 +214,13 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
 	}
+	cmd = exec.Command("go", "list", "-m")
+	cmd.Dir = o.outputDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
+	}
+
+	o.moduleName = strings.TrimSpace(string(output))
 	return nil
 }

@@ -6,10 +6,12 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/types"
+	"log/slog"
 	"reflect"
 	"strings"
 	"unicode"
 
+	"github.com/baudii/ada-ai/internal/core/project"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -38,7 +40,7 @@ type ParamInfo struct {
 	TypeSpec   *ast.TypeSpec
 }
 
-func PascalToKebab(s string) string {
+func PascalToSnake(s string) string {
 	var out []rune
 
 	for i, r := range s {
@@ -54,7 +56,7 @@ func PascalToKebab(s string) string {
 
 	return string(out)
 }
-func analyzeMethodParams(method *types.Func, pkg *packages.Package) MethodInfo {
+func getMethodInfo(method *types.Func, pkg *packages.Package) MethodInfo {
 	sig := method.Type().(*types.Signature)
 	var params []ParamInfo
 
@@ -192,6 +194,50 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 		}
 	}
 
+}
+
+func processServerInterfaceMethods(
+	logger *slog.Logger,
+	pkgs []*packages.Package,
+	hfile project.FileHandler,
+	callback func(MethodInfo, *ast.CommentGroup, project.FileHandler, *packages.Package) error,
+) {
+	for _, pkg := range pkgs {
+		scope := pkg.Types.Scope()
+
+		obj := scope.Lookup(SERVER_INTERFACE)
+		if obj == nil {
+			continue
+		}
+
+		if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
+			for method := range iface.Methods() {
+				for _, file := range pkg.Syntax {
+					ast.Inspect(
+						file,
+						func(n ast.Node) bool {
+							td, ok := n.(*ast.TypeSpec)
+							if !ok || td.Name.Name != SERVER_INTERFACE {
+								return true
+							}
+
+							if ifaceType, ok := td.Type.(*ast.InterfaceType); ok {
+								for _, f := range ifaceType.Methods.List {
+									if len(f.Names) > 0 && f.Names[0].Name == method.Name() {
+										methodInfo := getMethodInfo(method, pkg)
+										err := callback(methodInfo, f.Doc, hfile, pkg)
+										if err != nil {
+											logger.Error("failed to materialize handler", "method", method.Name(), "error", err)
+										}
+									}
+								}
+							}
+							return false
+						})
+				}
+			}
+		}
+	}
 }
 
 func findLeadingComment(ts *ast.TypeSpec, file *ast.File) *ast.CommentGroup {
