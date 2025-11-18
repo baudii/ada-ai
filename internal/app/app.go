@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/baudii/ada-ai/internal/core/gen"
@@ -36,7 +37,7 @@ func (a *app) Run(ctx context.Context) error {
 			// Here I should use LLM to generate the contents of the file.
 			// File already exists at 'path' and contains the description
 			// of the method to implement.
-			return nil
+			return a.generateFromContent(ctx, path)
 		},
 		nil, // Folder handler not needed for OpenAPI project
 	)
@@ -50,7 +51,12 @@ func (a *app) Run(ctx context.Context) error {
 }
 
 func (a *app) generateFromContent(ctx context.Context, path string) error {
-	res, err := a.sendInstructions(ctx, filler, nil)
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read file: %w", err)
+	}
+
+	res, err := a.sendInstructions(ctx, filler, []any{string(f)})
 	if err != nil {
 		return fmt.Errorf("generate file %w", err)
 	}

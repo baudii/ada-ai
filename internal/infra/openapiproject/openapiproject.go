@@ -143,11 +143,6 @@ func (o *OpenAPIProject) MaterializeHandlers(hfile project.FileHandler) error {
 	return nil
 }
 
-func (o *OpenAPIProject) ApplyContent(ctx context.Context, path string, content []byte) error {
-
-	return nil
-}
-
 // MaterializeHandler generates a handler file for the given method of the ServerInterface.
 func (o *OpenAPIProject) MaterializeHandler(
 	methodInfo MethodInfo,

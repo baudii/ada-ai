@@ -1,101 +1,132 @@
-### Your goals
+You will receive:
 
-1. **Implement only the body of the handler function** (i.e. replace `// WRITE YOUR CODE HERE` with real code).
-2. If, in order to implement the handler correctly, you need to talk to some data storage (database, cache, etc.), you **must do it through a repository** that is considered to be a field of the `Server` type (for example, `s.AddressRepository` or similar).
-3. If you invent such a repository interface, you must **return its definition** as part of your answer, in a separate section, so it can be implemented elsewhere in the codebase.
-4. Do **not** change anything else in the file (no extra functions, no renaming, no moving code). Assume imports and the `Server` struct can be adjusted later if needed.
+1. A Go file contents that contains a comment that describes the file, and go code including: package, imports, a handler function with a placeholder comment.
+The file will be wrapped like this:
 
----
+--- HANDLER_FILE_START ---
+<full Go file with handler and placeholder>
+--- HANDLER_FILE_END ---
 
-### Repository rules
+2. An "Existing interfaces context" section, which contains Go code with previously defined interfaces and their methods, including comments describing each interface and method.
+This context represents dependencies that already exist in the project and may be reused or extended.
+The context will be wrapped like this:
 
-* Only introduce a repository if it is logically needed to fulfill the handler’s behavior (e.g. loading/saving data).
-* Assume the repository is a field on `Server` (for example: `s.AddressRepository`, `s.Repo`, or another reasonable name you choose).
-* If you introduce a repository:
+--- EXISTING_INTERFACES_START ---
+<Go code with existing interfaces and comments, or 'none'>
+--- EXISTING_INTERFACES_END ---
 
-  * Give it a **clear, descriptive name** (e.g. `AddressRepository`).
-  * Define it as a **Go interface**.
-  * Include all the methods you actually call in the handler.
-* If the handler does **not** need a repository, explicitly say so in the output format (see below).
+Your task:
 
----
+* Generate ONLY the body of the handler function (the code that replaces the placeholder comment).
+* Do NOT output the function signature.
+* Do NOT output unrelated code.
+* Focus only on the logic required inside the handler.
 
-### Output format (very important)
+When the handler needs to call data storage, business logic, external systems, or any other dependency, you must decide how to use interfaces based on the "Existing interfaces context":
 
-Return your answer in **Markdown** with exactly these three sections, in this order:
+You must choose one of the following:
 
-#### 1. `## function`
+1. Use an existing interface and an existing method from the context.
+2. Use an existing interface from the context but add a NEW method to it.
+3. Define a completely NEW interface if nothing appropriate exists.
 
-This section must contain **only** the complete implementation of the handler function, inside a Go code block.
-You should output the entire function, not just the body.
+Assume that any interface you use is (or will be) available as a field on the `Server` struct (e.g., repositories, services, providers, clients, etc.).
 
-Example structure (the actual code will differ):
+If you introduce a new interface or add new methods to an existing interface, you must:
 
-````markdown
-## function
+* Provide the full interface definition in the `## interfaces` section.
+* Provide a structured description in the `## interfaces_description` section.
+
+Do NOT repeat unchanged interfaces from the context in the `## interfaces` section. Only include:
+
+* completely new interfaces, or
+* existing interfaces that you are extending with new methods.
+
+Your output must contain EXACTLY three sections, in this order:
+
+1. ## function
+2. ## interfaces
+3. ## interfaces_description
+
+### Section: ## function
+
+This section must contain a Go code block with ONLY the body of the handler function, without the function signature.
+
+Example structure (placeholder):
+
 ```go
-func (s Server) GetAddresses(w http.ResponseWriter, r *http.Request) {
-    // ... your implementation ...
+ctx := r.Context()
+
+addresses, err := s.AddressRepository.GetAddresses(ctx)
+if err != nil {
+    http.Error(w, "failed to load addresses", http.StatusInternalServerError)
+    return
 }
-````
 
-````
+w.Header().Set("Content-Type", "application/json")
+if err := json.NewEncoder(w).Encode(addresses); err != nil {
+    http.Error(w, "failed to write response", http.StatusInternalServerError)
+    return
+}
+```
 
----
+### Section: ## interfaces
 
-#### 2. `## repository_interface`
+If you introduced any new interfaces or extended existing ones with new methods, list EACH such interface here in a Go code block, with the full up-to-date interface definition.
 
-If you introduced a repository, define its interface here inside a Go code block.
+Example:
 
-Example structure:
-
-```markdown
-## repository_interface
 ```go
 type AddressRepository interface {
     GetAddresses(ctx context.Context) ([]Address, error)
+    CreateAddress(ctx context.Context, addr Address) error
 }
-````
-
-````
-
-If the handler does **not** require a repository, write exactly:
-
-```markdown
-## repository_interface
-none
-````
-
----
-
-#### 3. `## notes`
-
-Add a short, concise explanation of any assumptions you made. For example:
-
-* Why a repository was needed or not.
-* Repository name and the assumed field on `Server`.
-* Any important behavior or edge cases you handled.
-
-Example structure:
-
-```markdown
-## notes
-- Repository was required to load user addresses from storage.
-- Repository name: AddressRepository
-- Assumed field on Server: AddressRepository
-- Returns 500 on storage errors, 200 with JSON on success.
 ```
 
----
+If you did NOT introduce or change any interfaces, output exactly:
 
-### Additional constraints
+```
+none
+```
 
-* Write **valid, idiomatic Go code**.
-* Use proper HTTP status codes and headers where appropriate.
-* Prefer clear, production-quality code over clever tricks.
-* Do **not** modify or reformat parts of the file outside the handler function in `## function`.
-* Do **not** output anything outside the three sections:
+### Section: ## interfaces_description
 
-  * `## function`
-  * `## repository_interface`
-  * `## notes`
+Provide a structured, machine-readable description for EVERY interface that appears in the `## interfaces` section.
+
+For each interface, use the following format:
+
+```
+Interface: <Name>
+Description: <description of what this interface represents and why it is needed>
+
+Methods:
+  - <MethodName>
+    Signature: <full Go method signature>
+    Description: <what the method does and why it is needed>
+```
+
+If you did NOT introduce or change any interfaces (i.e., `## interfaces` is `none`), then output exactly:
+
+```
+none
+```
+
+### Rules
+
+* Output ONLY the three required sections in the exact order:
+
+  * ## function
+  * ## interfaces
+  * ## interfaces_description
+* Never include the function signature in `## function` — only the body.
+* All code must be valid, idiomatic Go. Imports will be handled separately.
+* Use the "Existing interfaces context" to avoid redefining interfaces that already exist.
+* Prefer reusing and extending existing interfaces over creating new ones when it makes sense.
+
+--- HANDLER_FILE_START ---
+%v
+--- HANDLER_FILE_END ---
+
+--- EXISTING_INTERFACES_START ---
+%v
+--- EXISTING_INTERFACES_END ---
