@@ -1,0 +1,101 @@
+### Your goals
+
+1. **Implement only the body of the handler function** (i.e. replace `// WRITE YOUR CODE HERE` with real code).
+2. If, in order to implement the handler correctly, you need to talk to some data storage (database, cache, etc.), you **must do it through a repository** that is considered to be a field of the `Server` type (for example, `s.AddressRepository` or similar).
+3. If you invent such a repository interface, you must **return its definition** as part of your answer, in a separate section, so it can be implemented elsewhere in the codebase.
+4. Do **not** change anything else in the file (no extra functions, no renaming, no moving code). Assume imports and the `Server` struct can be adjusted later if needed.
+
+---
+
+### Repository rules
+
+* Only introduce a repository if it is logically needed to fulfill the handler’s behavior (e.g. loading/saving data).
+* Assume the repository is a field on `Server` (for example: `s.AddressRepository`, `s.Repo`, or another reasonable name you choose).
+* If you introduce a repository:
+
+  * Give it a **clear, descriptive name** (e.g. `AddressRepository`).
+  * Define it as a **Go interface**.
+  * Include all the methods you actually call in the handler.
+* If the handler does **not** need a repository, explicitly say so in the output format (see below).
+
+---
+
+### Output format (very important)
+
+Return your answer in **Markdown** with exactly these three sections, in this order:
+
+#### 1. `## function`
+
+This section must contain **only** the complete implementation of the handler function, inside a Go code block.
+You should output the entire function, not just the body.
+
+Example structure (the actual code will differ):
+
+````markdown
+## function
+```go
+func (s Server) GetAddresses(w http.ResponseWriter, r *http.Request) {
+    // ... your implementation ...
+}
+````
+
+````
+
+---
+
+#### 2. `## repository_interface`
+
+If you introduced a repository, define its interface here inside a Go code block.
+
+Example structure:
+
+```markdown
+## repository_interface
+```go
+type AddressRepository interface {
+    GetAddresses(ctx context.Context) ([]Address, error)
+}
+````
+
+````
+
+If the handler does **not** require a repository, write exactly:
+
+```markdown
+## repository_interface
+none
+````
+
+---
+
+#### 3. `## notes`
+
+Add a short, concise explanation of any assumptions you made. For example:
+
+* Why a repository was needed or not.
+* Repository name and the assumed field on `Server`.
+* Any important behavior or edge cases you handled.
+
+Example structure:
+
+```markdown
+## notes
+- Repository was required to load user addresses from storage.
+- Repository name: AddressRepository
+- Assumed field on Server: AddressRepository
+- Returns 500 on storage errors, 200 with JSON on success.
+```
+
+---
+
+### Additional constraints
+
+* Write **valid, idiomatic Go code**.
+* Use proper HTTP status codes and headers where appropriate.
+* Prefer clear, production-quality code over clever tricks.
+* Do **not** modify or reformat parts of the file outside the handler function in `## function`.
+* Do **not** output anything outside the three sections:
+
+  * `## function`
+  * `## repository_interface`
+  * `## notes`

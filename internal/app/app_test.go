@@ -41,7 +41,6 @@ func TestRun_Success(t *testing.T) {
 	a := app.New(
 		app.WithGenerator(&mockGen{resp: "generated content"}),
 		app.WithProjectData(project.Context{}),
-		app.WithNavNames([]string{project.Structure}),
 		app.WithLogger(MockLogger(io.Discard)),
 	)
 	err := a.Run(context.Background())
@@ -79,7 +78,6 @@ func TestRun_Fails(t *testing.T) {
 			t.Parallel()
 			a := app.New(
 				app.WithGenerator(&mockGen{resp: "generated content"}),
-				app.WithNavNames([]string{"nav1"}),
 				app.WithLogger(MockLogger(io.Discard)),
 			)
 			err := a.Run(context.Background())

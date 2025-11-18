@@ -16,4 +16,5 @@ type generator interface {
 type materializer interface {
 	Validate(ctx context.Context) error
 	Materialize(ctx context.Context, hfile project.FileHandler, hfold project.FolderHandler) error
+	ApplyContent(ctx context.Context, path string, content []byte) error
 }

@@ -9,15 +9,12 @@ import (
 // ConfigFile is the default application configuration filename.
 const ConfigFile = "ada.json"
 
-var defaultNavNames = []string{business, technical, scope, project.Structure}
-
 type app struct {
 	parallelism    int
 	generator      generator
 	materializer   materializer
 	projectContext project.Context
 	options        Options
-	navNames       []string
 	logger         *slog.Logger
 }
 
@@ -57,13 +54,6 @@ func WithProjectData(data project.Context) option {
 	}
 }
 
-// WithNavNames sets the names of the navigation files to be used in the application.
-func WithNavNames(names []string) option {
-	return func(a *app) {
-		a.navNames = names
-	}
-}
-
 // WithDegree sets the maximum degree of concurrency for the application.
 func WithDegree(deg int) option {
 	return func(a *app) {
@@ -82,7 +72,6 @@ func WithLogger(logger *slog.Logger) option {
 func New(opts ...option) *app {
 	a := &app{
 		parallelism: 1,
-		navNames:    defaultNavNames,
 	}
 	for _, o := range opts {
 		o(a)

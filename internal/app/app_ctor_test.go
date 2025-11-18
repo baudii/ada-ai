@@ -15,7 +15,6 @@ func TestNew(t *testing.T) {
 		app.WithGenerator(nil),
 		app.WithProjectData(project.Context{}),
 		app.WithOptions(app.Options{}),
-		app.WithNavNames([]string{"a", "b"}),
 		app.WithLogger(nil),
 	)
 	require.NotNil(t, a)
