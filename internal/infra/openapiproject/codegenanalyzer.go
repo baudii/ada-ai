@@ -11,7 +11,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/baudii/ada-ai/internal/core/project"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -56,6 +55,7 @@ func PascalToSnake(s string) string {
 
 	return string(out)
 }
+
 func getMethodInfo(method *types.Func, pkg *packages.Package) MethodInfo {
 	sig := method.Type().(*types.Signature)
 	var params []ParamInfo
@@ -199,8 +199,7 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 func processServerInterfaceMethods(
 	logger *slog.Logger,
 	pkgs []*packages.Package,
-	hfile project.FileHandler,
-	callback func(MethodInfo, *ast.CommentGroup, project.FileHandler, *packages.Package) error,
+	callback func(MethodInfo, *ast.CommentGroup, *packages.Package) error,
 ) {
 	for _, pkg := range pkgs {
 		scope := pkg.Types.Scope()
@@ -225,7 +224,7 @@ func processServerInterfaceMethods(
 								for _, f := range ifaceType.Methods.List {
 									if len(f.Names) > 0 && f.Names[0].Name == method.Name() {
 										methodInfo := getMethodInfo(method, pkg)
-										err := callback(methodInfo, f.Doc, hfile, pkg)
+										err := callback(methodInfo, f.Doc, pkg)
 										if err != nil {
 											logger.Error("failed to materialize handler", "method", method.Name(), "error", err)
 										}

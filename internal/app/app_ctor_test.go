@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/baudii/ada-ai/internal/app"
-	"github.com/baudii/ada-ai/internal/core/project"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,7 +12,6 @@ func TestNew(t *testing.T) {
 	a := app.New(
 		app.WithDegree(5),
 		app.WithGenerator(nil),
-		app.WithProjectData(project.Context{}),
 		app.WithOptions(app.Options{}),
 		app.WithLogger(nil),
 	)

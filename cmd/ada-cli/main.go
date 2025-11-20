@@ -33,31 +33,30 @@ func main() {
 	// Create and run the application
 	opts := cli.Must(config.ParseAppOptions(folders.Config))
 	path := filepath.Join(folders.AiConfig, fmt.Sprintf("%s.json", *provider))
-	c := cli.New(cli.WithLogger(logger)).GetProjectData(folders.Artifacts)
+
 	llm := cli.Must(infra.NewAI(*provider, path))
 	gen := ai.NewGenerator(llm,
 		ai.WithPromptsRoot(opts.PromptsRoot),
 		ai.WithTimeout(opts.Timeout),
 	)
-
+	app := app.New(
+		app.WithDegree(*deg),
+		app.WithOptions(opts),
+		app.WithGenerator(gen),
+		app.WithLogger(logger),
+	)
 	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
 	materializer := openapiproject.New(
 		filepath.Join(folders.Projects, "oapitest3"),
 		openapiproject.WithProjectName("oapitest3"),
 		openapiproject.WithLogger(logger),
 		openapiproject.WithSpec("openapi.yaml"),
+		openapiproject.WithApp(*app),
 	)
 
-	app := app.New(
-		app.WithMaterializer(materializer),
-		app.WithDegree(*deg),
-		app.WithOptions(opts),
-		app.WithProjectData(c),
-		app.WithGenerator(gen),
-		app.WithLogger(logger),
-	)
-
-	if err := app.Run(context.Background()); err != nil {
+	c := cli.New(cli.WithLogger(logger), cli.WithMaterializer(materializer))
+	c.GetProjectData(folders.Artifacts)
+	if err := c.Run(context.Background()); err != nil {
 		log.Fatalf("runtime error: %v", err)
 	}
 }

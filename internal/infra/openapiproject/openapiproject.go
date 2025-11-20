@@ -12,7 +12,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/baudii/ada-ai/internal/core/project"
+	"github.com/baudii/ada-ai/internal/app"
+	"github.com/baudii/ada-ai/internal/infra/folders"
+	"github.com/baudii/ada-ai/internal/infra/fsutils"
 	"github.com/getkin/kin-openapi/openapi3"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/imports"
@@ -20,6 +22,8 @@ import (
 
 type OpenAPIProject struct {
 	logger      *slog.Logger
+	app         *app.App
+	spec        *openapi3.T
 	projectName string
 	specPath    string
 	oapiCfgPath string
@@ -29,6 +33,7 @@ type OpenAPIProject struct {
 
 const (
 	OAPI_GENERATED_FILE = "server.gen.go"
+	OAPI_CFG_FILE       = "oapi.cfg.yaml"
 )
 
 // Constants for folder names.
@@ -68,6 +73,12 @@ func WithSpec(specFile string) option {
 	}
 }
 
+func WithApp(a app.App) option {
+	return func(p *OpenAPIProject) {
+		p.app = &a
+	}
+}
+
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
 	oapiCfgPath := filepath.Join(outputDir, CONFIG_FOLDER, "oapi.cfg.yaml")
@@ -82,11 +93,54 @@ func New(outputDir string, opts ...option) *OpenAPIProject {
 }
 
 // Materialize generates the project structure and code based on the OpenAPI specification.
-func (o *OpenAPIProject) Materialize(ctx context.Context, hfile project.FileHandler, hfold project.FolderHandler) error {
+func (o *OpenAPIProject) Materialize(ctx context.Context, openapi string) error {
 	// Copy OpenAPI spec and config files to output directory
+	if err := o.MaterializeSpec(ctx, openapi); err != nil {
+		return err
+	}
 
 	// Run oapi-codegen to generate server code
 	if err := o.runOAPICodegen(ctx); err != nil {
+		return err
+	}
+
+	// Implement interface and create every handler from the generated file
+	if err := o.MaterializeHandlers(); err != nil {
+		return err
+	}
+
+	// Use SQLite to handle storage operations (maybe add other DBMS later?)
+	return nil
+}
+
+func (o *OpenAPIProject) MaterializeSpec(ctx context.Context, openapi string) error {
+	json := strings.HasPrefix(strings.TrimSpace(openapi), "{")
+	specFile := "openapi.yaml"
+	if json {
+		specFile = "openapi.json"
+	}
+
+	specPath := filepath.Join(o.outputDir, API_FOLDER, specFile)
+	if err := os.WriteFile(specPath, []byte(openapi), 0644); err != nil {
+		return err
+	}
+
+	o.specPath = filepath.Join(o.outputDir, API_FOLDER, specFile)
+	return o.Validate(ctx, openapi)
+}
+
+func (o *OpenAPIProject) PrepareOutputDir(ctx context.Context) error {
+	if err := os.MkdirAll(filepath.Join(o.outputDir, API_FOLDER), 0755); err != nil {
+		return err
+	}
+
+	outputSpecFolder := filepath.Join(o.outputDir, CONFIG_FOLDER)
+	if err := os.MkdirAll(outputSpecFolder, 0755); err != nil {
+		return err
+	}
+
+	cfgPath := filepath.Join(outputSpecFolder, OAPI_CFG_FILE)
+	if err := fsutils.CopyFile(filepath.Join(folders.Config, OAPI_CFG_FILE), cfgPath); err != nil {
 		return err
 	}
 
@@ -94,24 +148,23 @@ func (o *OpenAPIProject) Materialize(ctx context.Context, hfile project.FileHand
 		return err
 	}
 
-	// Implement interface and create every handler from the generated file
-	if err := o.MaterializeHandlers(hfile); err != nil {
-		return err
-	}
-
-	// Use SQLite to handle storage operations (maybe add other DBMS later?)
-
+	o.oapiCfgPath = cfgPath
 	return nil
 }
 
-func (o *OpenAPIProject) Validate(ctx context.Context) error {
+func (o *OpenAPIProject) Validate(ctx context.Context, openapi string) error {
 	loader := openapi3.NewLoader()
-	doc, err := loader.LoadFromFile(o.specPath)
+	doc, err := loader.LoadFromData([]byte(openapi))
 	if err != nil {
 		return err
 	}
 
-	return doc.Validate(ctx)
+	if err := doc.Validate(ctx); err != nil {
+		return err
+	}
+
+	o.spec = doc
+	return nil
 }
 
 func FormatParameters(params []ParamInfo) []string {
@@ -119,12 +172,13 @@ func FormatParameters(params []ParamInfo) []string {
 	for _, p := range params {
 		res = append(res, fmt.Sprintf("%s %s", p.Name, p.Type))
 	}
+
 	return res
 }
 
 // MaterializeHandlers reads the generated server code and extracts method information
 // from the ServerInterface.
-func (o *OpenAPIProject) MaterializeHandlers(hfile project.FileHandler) error {
+func (o *OpenAPIProject) MaterializeHandlers() error {
 	cfg := &packages.Config{
 		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
 		Dir:  o.outputDir,
@@ -139,7 +193,7 @@ func (o *OpenAPIProject) MaterializeHandlers(hfile project.FileHandler) error {
 		return err
 	}
 
-	processServerInterfaceMethods(o.logger, pkgs, hfile, o.MaterializeHandler)
+	processServerInterfaceMethods(o.logger, pkgs, o.MaterializeHandler)
 	return nil
 }
 
@@ -147,15 +201,24 @@ func (o *OpenAPIProject) MaterializeHandlers(hfile project.FileHandler) error {
 func (o *OpenAPIProject) MaterializeHandler(
 	methodInfo MethodInfo,
 	comments *ast.CommentGroup,
-	hfile project.FileHandler,
 	pkg *packages.Package,
 ) error {
 	var out *strings.Builder = &strings.Builder{}
 	writeComments(out, comments, methodInfo, pkg)
 	o.writeBody(out, methodInfo)
+	o.createHandler(out, comments)
 
+	// path := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "interfaces.go")
+	// interfaces, err := os.ReadFile(path)
+	_, err := o.app.GenerateFromContent(context.Background(), out.String(), "")
+
+	return err
+}
+
+func (o *OpenAPIProject) createHandler(out *strings.Builder, comments *ast.CommentGroup) error {
 	var fileName string
 	var folders []string
+
 	for _, p := range comments.List {
 		matches := commentGroupRegex.FindStringSubmatch(p.Text)
 		if len(matches) > 1 {
@@ -168,10 +231,12 @@ func (o *OpenAPIProject) MaterializeHandler(
 				if len(folders) < 1 {
 					return fmt.Errorf("failed to process URL: %s", url)
 				}
+
 				parameters := urlParamRegex.FindAllStringSubmatch(folders[len(folders)-1], -1)
 				if len(parameters) > 0 {
 					fileName += "_by_" + strings.ToLower(PascalToSnake(parameters[len(parameters)-1][1]))
 				}
+
 				copy := make([]string, 0)
 				for _, f := range folders {
 					if !urlParamRegex.Match([]byte(f)) {
@@ -191,11 +256,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 
 	path := filepath.Join(folderForFile, fileName+".go")
 
-	if err := formatAndWrite(out, path); err != nil {
-		return err
-	}
-
-	return hfile(path)
+	return formatAndWrite(out, path)
 }
 
 func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo) {
