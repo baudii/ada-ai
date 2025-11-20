@@ -32,6 +32,10 @@ type OpenAPIProject struct {
 }
 
 const (
+	filler = "handler-generator"
+)
+
+const (
 	OAPI_GENERATED_FILE = "server.gen.go"
 	OAPI_CFG_FILE       = "oapi.cfg.yaml"
 )
@@ -40,7 +44,7 @@ const (
 const (
 	GENERATED_FOLDER = "generated"
 	INTERNAL_FOLDER  = "internal"
-	CONFIG_FOLDER    = "config"
+	CONFIGS_FOLDER   = "configs"
 	API_FOLDER       = "api"
 	HANDLERS_FOLDER  = "handlers"
 )
@@ -81,7 +85,7 @@ func WithApp(a app.App) option {
 
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
-	oapiCfgPath := filepath.Join(outputDir, CONFIG_FOLDER, "oapi.cfg.yaml")
+	oapiCfgPath := filepath.Join(outputDir, CONFIGS_FOLDER, "oapi.cfg.yaml")
 	project := &OpenAPIProject{
 		outputDir:   outputDir,
 		oapiCfgPath: oapiCfgPath,
@@ -105,7 +109,7 @@ func (o *OpenAPIProject) Materialize(ctx context.Context, openapi string) error 
 	}
 
 	// Implement interface and create every handler from the generated file
-	if err := o.MaterializeHandlers(); err != nil {
+	if err := o.MaterializeHandlers(ctx); err != nil {
 		return err
 	}
 
@@ -134,7 +138,7 @@ func (o *OpenAPIProject) PrepareOutputDir() error {
 		return err
 	}
 
-	outputSpecFolder := filepath.Join(o.outputDir, CONFIG_FOLDER)
+	outputSpecFolder := filepath.Join(o.outputDir, CONFIGS_FOLDER)
 	if err := os.MkdirAll(outputSpecFolder, 0755); err != nil {
 		return err
 	}
@@ -178,7 +182,7 @@ func FormatParameters(params []ParamInfo) []string {
 
 // MaterializeHandlers reads the generated server code and extracts method information
 // from the ServerInterface.
-func (o *OpenAPIProject) MaterializeHandlers() error {
+func (o *OpenAPIProject) MaterializeHandlers(ctx context.Context) error {
 	cfg := &packages.Config{
 		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
 		Dir:  o.outputDir,
@@ -193,12 +197,13 @@ func (o *OpenAPIProject) MaterializeHandlers() error {
 		return err
 	}
 
-	processServerInterfaceMethods(o.logger, pkgs, o.MaterializeHandler)
+	processServerInterfaceMethods(ctx, o.logger, pkgs, o.MaterializeHandler)
 	return nil
 }
 
 // MaterializeHandler generates a handler file for the given method of the ServerInterface.
 func (o *OpenAPIProject) MaterializeHandler(
+	ctx context.Context,
 	methodInfo MethodInfo,
 	comments *ast.CommentGroup,
 	pkg *packages.Package,
@@ -208,9 +213,25 @@ func (o *OpenAPIProject) MaterializeHandler(
 	o.writeBody(out, methodInfo)
 	o.createHandler(out, comments)
 
-	// path := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "interfaces.go")
-	// interfaces, err := os.ReadFile(path)
-	_, err := o.app.GenerateFromContent(context.Background(), out.String(), "")
+	retryCount := 0
+	outInterfaces := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "interfaces.go")
+	interfaces, err := os.ReadFile(outInterfaces)
+	if err != nil {
+		return fmt.Errorf("read interfaces file: %w", err)
+	}
+
+	for retryCount < 3 {
+		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), string(interfaces)})
+		if err != nil {
+			return err
+		}
+		err = o.ApplyResponse(ctx, response, interfaces)
+		if err == nil {
+			break
+		}
+
+		retryCount++
+	}
 
 	return err
 }

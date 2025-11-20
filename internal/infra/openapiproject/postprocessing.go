@@ -11,7 +11,7 @@ type llmResponse struct {
 	comments     string
 }
 
-func ParseLLMRespones(body string) (*llmResponse, error) {
+func ParseLLMResponse(body string) (*llmResponse, error) {
 	fmt.Println(body)
 	return nil, nil
 }
@@ -36,11 +36,11 @@ func ValidateFunctionBody(body string) error {
 	return nil
 }
 
-func (o *OpenAPIProject) ApplyContent(ctx context.Context, path string, content []byte) error {
+func (o *OpenAPIProject) ApplyResponse(ctx context.Context, content, interfaces []byte) error {
 	// f, err := os.ReadFile(path)
 	// if err != nil {
 	// 	return err
 	// }
-	ParseLLMRespones(string(content))
+	ParseLLMResponse(string(content))
 	return nil
 }

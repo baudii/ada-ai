@@ -9,9 +9,6 @@ import (
 )
 
 // Constants that define folder names containing prompts.
-const (
-	filler = "handler-generator"
-)
 
 // GenerateProject generates a project based on the provided OpenAPI specification.
 func (a *App) GenerateProject(ctx context.Context, m Materializer) error {
@@ -33,20 +30,15 @@ func (a *App) GenerateProject(ctx context.Context, m Materializer) error {
 	return nil
 }
 
-func (a *App) GenerateFromContent(ctx context.Context, content, interfaces string) (string, error) {
-	res, err := a.SendInstructions(ctx, filler, []any{content, interfaces})
-	if err != nil {
-		return "", fmt.Errorf("generate file: %w", err)
-	}
-
-	return string(res), nil
-}
-
+// SendInstructions sends instructions to the AI model using the specified prompt
+// and arguments, returning the generated response as a byte slice.
 func (a *App) SendInstructions(ctx context.Context, promptName string, args []any, opts ...gen.Option) ([]byte, error) {
 	sys, hum, err := a.buildSysAndHumanPrompts(promptName, args...)
 	if err != nil {
 		return nil, fmt.Errorf("system and human prompts: %w", err)
 	}
+
+	fmt.Println(hum)
 
 	resp, err := a.generator.GenerateWithSys(ctx, sys, hum, opts...)
 	if err != nil {
