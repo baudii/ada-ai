@@ -59,8 +59,7 @@ func New(opts ...option) *cliApp {
 func (a *cliApp) Run(ctx context.Context) error {
 	a.logger.Info("starting app session", "user", a.projectContext.UserName, "project", a.projectContext.Name)
 
-	err := a.app.GenerateProject(ctx, a.materializer)
-	if err != nil {
+	if err := a.app.GenerateProject(ctx, a.materializer); err != nil {
 		return err
 	}
 

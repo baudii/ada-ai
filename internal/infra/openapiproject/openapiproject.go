@@ -129,7 +129,7 @@ func (o *OpenAPIProject) MaterializeSpec(ctx context.Context, openapi string) er
 	return o.Validate(ctx, openapi)
 }
 
-func (o *OpenAPIProject) PrepareOutputDir(ctx context.Context) error {
+func (o *OpenAPIProject) PrepareOutputDir() error {
 	if err := os.MkdirAll(filepath.Join(o.outputDir, API_FOLDER), 0755); err != nil {
 		return err
 	}

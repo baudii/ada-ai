@@ -14,4 +14,5 @@ type Generator interface {
 
 type Materializer interface {
 	Materialize(ctx context.Context, openapi string) error
+	PrepareOutputDir() error
 }

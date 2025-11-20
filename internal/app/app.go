@@ -22,6 +22,10 @@ func (a *App) GenerateProject(ctx context.Context, m Materializer) error {
 	}
 
 	// Use it with the openapi spec generator to create the project
+	if err := m.PrepareOutputDir(); err != nil {
+		return fmt.Errorf("prepare output dir: %w", err)
+	}
+
 	if err := m.Materialize(ctx, spec); err != nil {
 		return fmt.Errorf("materialize project: %w", err)
 	}
