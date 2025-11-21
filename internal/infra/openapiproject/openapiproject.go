@@ -1,6 +1,7 @@
 package openapiproject
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"go/ast"
@@ -16,6 +17,7 @@ import (
 	"github.com/baudii/ada-ai/internal/infra/folders"
 	"github.com/baudii/ada-ai/internal/infra/fsutils"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/mohae/deepcopy"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/imports"
 )
@@ -38,15 +40,6 @@ const (
 const (
 	OAPI_GENERATED_FILE = "server.gen.go"
 	OAPI_CFG_FILE       = "oapi.cfg.yaml"
-)
-
-// Constants for folder names.
-const (
-	GENERATED_FOLDER = "generated"
-	INTERNAL_FOLDER  = "internal"
-	CONFIGS_FOLDER   = "configs"
-	API_FOLDER       = "api"
-	HANDLERS_FOLDER  = "handlers"
 )
 
 var (
@@ -85,7 +78,7 @@ func WithApp(a app.App) option {
 
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
-	oapiCfgPath := filepath.Join(outputDir, CONFIGS_FOLDER, "oapi.cfg.yaml")
+	oapiCfgPath := filepath.Join(outputDir, CONFIGS_FOLDER, OAPI_CFG_FILE)
 	project := &OpenAPIProject{
 		outputDir:   outputDir,
 		oapiCfgPath: oapiCfgPath,
@@ -138,12 +131,12 @@ func (o *OpenAPIProject) PrepareOutputDir() error {
 		return err
 	}
 
-	outputSpecFolder := filepath.Join(o.outputDir, CONFIGS_FOLDER)
-	if err := os.MkdirAll(outputSpecFolder, 0755); err != nil {
+	outputConfigsFolder := filepath.Join(o.outputDir, CONFIGS_FOLDER)
+	if err := os.MkdirAll(outputConfigsFolder, 0755); err != nil {
 		return err
 	}
 
-	cfgPath := filepath.Join(outputSpecFolder, OAPI_CFG_FILE)
+	cfgPath := filepath.Join(outputConfigsFolder, OAPI_CFG_FILE)
 	if err := fsutils.CopyFile(filepath.Join(folders.Config, OAPI_CFG_FILE), cfgPath); err != nil {
 		return err
 	}
@@ -209,38 +202,70 @@ func (o *OpenAPIProject) MaterializeHandler(
 	pkg *packages.Package,
 ) error {
 	var out *strings.Builder = &strings.Builder{}
-	writeComments(out, comments, methodInfo, pkg)
-	o.writeBody(out, methodInfo)
-	err := o.createHandler(out, comments)
+	fileName, err := o.ParseComments(comments)
 	if err != nil {
 		return err
+	}
+	writeComments(out, comments, methodInfo, pkg)
+	o.writeBody(out, methodInfo, "handlers")
+	err = o.createHandler(out, fileName)
+	if err != nil {
+		return fmt.Errorf("create handler: %w", err)
 	}
 
 	retryCount := 0
 	interfaces, err := o.ParseProjectInterfaces()
 	if err != nil {
-		return err
+		return fmt.Errorf("parse project interfaces: %w", err)
 	}
+	reserveCopy := deepcopy.Copy(interfaces.m).(map[string]*ProjectInterface)
 
 	for retryCount < 3 {
 		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), interfaces.s})
 		if err != nil {
-			return err
+			return fmt.Errorf("send instructions: %w", err)
 		}
-		err = o.ApplyResponse(ctx, response, interfaces.m)
-		if err == nil {
-			break
+		o.logger.Debug(string(response))
+		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m)
+		if err != nil {
+			retryCount++
+			o.logger.Warn("retrying to create handler due to error during response processing", "error", err, "retryCount", retryCount)
+			continue
+		}
+		o.WriteProjectInterfaces(llmResponseObj.interfacesDescriptions)
+		outWithFunction := o.insertFunction(*out, llmResponseObj.functionBody)
+		err = o.createHandler(&outWithFunction, fileName)
+		if err != nil {
+			o.WriteProjectInterfaces(reserveCopy)
+			retryCount++
+			o.logger.Warn("retrying to create handler due to error during handler creation", "error", err, "retryCount", retryCount)
+			continue
 		}
 
-		retryCount++
+		o.logger.Info("handler created successfully", "method", methodInfo.Name)
+		break
 	}
 
 	return err
 }
 
-func (o *OpenAPIProject) createHandler(out *strings.Builder, comments *ast.CommentGroup) error {
+func (o *OpenAPIProject) insertFunction(out strings.Builder, functionContent string) strings.Builder {
+	copy := strings.Builder{}
+	reader := strings.NewReader(out.String())
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "// WRITE YOUR CODE HERE") {
+			copy.WriteString(functionContent)
+		} else {
+			copy.WriteString(line + "\n")
+		}
+	}
+	return copy
+}
+
+func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, error) {
 	var fileName string
-	var folders []string
 
 	for _, p := range comments.List {
 		matches := commentGroupRegex.FindStringSubmatch(p.Text)
@@ -249,29 +274,41 @@ func (o *OpenAPIProject) createHandler(out *strings.Builder, comments *ast.Comme
 			if len(matches) > 0 {
 				method := matches[0]
 				url := matches[1]
-				fileName = strings.ToLower(method)
-				folders = strings.Split(url, "/")
-				if len(folders) < 1 {
-					return fmt.Errorf("failed to process URL: %s", url)
+				resources := strings.Split(url, "/")
+				if len(resources) < 1 {
+					return "", fmt.Errorf("failed to process URL: %s", url)
 				}
 
-				parameters := urlParamRegex.FindAllStringSubmatch(folders[len(folders)-1], -1)
-				if len(parameters) > 0 {
-					fileName += "_by_" + strings.ToLower(PascalToSnake(parameters[len(parameters)-1][1]))
-				}
-
-				copy := make([]string, 0)
-				for _, f := range folders {
-					if !urlParamRegex.Match([]byte(f)) {
-						copy = append(copy, f)
+				lastParam := urlParamRegex.FindStringSubmatch(resources[len(resources)-1])
+				if lastParam != nil {
+					out := []string{}
+					for i := len(resources) - 1; i >= 0; i-- {
+						param := urlParamRegex.FindStringSubmatch(resources[i])
+						if len(param) > 0 {
+							out = append(out, "_by_"+param[1])
+						}
+						if !urlParamRegex.MatchString(resources[i]) {
+							out = append(out, resources[i])
+							break
+						}
 					}
+					res := strings.Builder{}
+					for i := len(out) - 1; i >= 0; i-- {
+						res.WriteString(out[i])
+					}
+					fileName = strings.ToLower(method + "_" + res.String())
+				} else {
+					fileName = strings.ToLower(method + "_" + resources[len(resources)-1])
 				}
-				folders = copy
 			}
 		}
 	}
+	return fileName, nil
+}
 
-	folderForFile := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, filepath.Join(folders...))
+func (o *OpenAPIProject) createHandler(out *strings.Builder, fileName string) error {
+
+	folderForFile := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER)
 
 	if err := os.MkdirAll(folderForFile, 0755); err != nil {
 		return fmt.Errorf("failed to create handler folder %s: %w", folderForFile, err)
@@ -282,8 +319,8 @@ func (o *OpenAPIProject) createHandler(out *strings.Builder, comments *ast.Comme
 	return formatAndWrite(out, path)
 }
 
-func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo) {
-	out.WriteString("package handlers\n\n")
+func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, packageName string) {
+	out.WriteString("package " + packageName + "\n\n")
 	out.WriteString("import (\n")
 	for alias, path := range methodInfo.Imports {
 		pkgName := path[strings.LastIndex(path, "/")+1:]
@@ -295,7 +332,7 @@ func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo) 
 	}
 
 	out.WriteString(")\n\n")
-	out.WriteString("func (s Server) " + methodInfo.Name + "(")
+	out.WriteString("func (s *Server) " + methodInfo.Name + "(")
 	out.WriteString(strings.Join(FormatParameters(methodInfo.Params), ", "))
 	out.WriteString(") {\n")
 	out.WriteString("// WRITE YOUR CODE HERE\n")
@@ -303,7 +340,7 @@ func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo) 
 }
 
 func (o *OpenAPIProject) createServerFile() error {
-	path := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "server.go")
+	path := o.ServerFilePath()
 	out := &strings.Builder{}
 	out.WriteString("// This file is generated by github.com/baudii/ada-ai\n")
 	out.WriteString(`package handlers
@@ -364,7 +401,8 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 }
 
 func formatAndWrite(out *strings.Builder, path string) error {
-	formatted, err := imports.Process(path, []byte(out.String()), nil)
+	content := out.String()
+	formatted, err := imports.Process(path, []byte(content), nil)
 	if err != nil {
 		return fmt.Errorf("format file %s: %w", path, err)
 	}

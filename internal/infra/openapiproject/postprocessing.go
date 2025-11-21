@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -22,7 +23,7 @@ type llmResponseRaw struct {
 type llmResponse struct {
 	functionBody           string
 	interfaces             string
-	interfacesDescriptions []ProjectInterface
+	interfacesDescriptions map[string]*ProjectInterface
 }
 
 func ReadLLMResponse(body string) (*llmResponseRaw, error) {
@@ -70,8 +71,8 @@ func ReadLLMResponse(body string) (*llmResponseRaw, error) {
 	}, nil
 }
 
-func ParseInterfaceDescriptions(ifaceDesc string) []ProjectInterface {
-	var descriptions []ProjectInterface
+func ParseInterfaceDescriptions(ifaceDesc string) map[string]*ProjectInterface {
+	descriptions := make(map[string]*ProjectInterface)
 	spl := strings.SplitSeq(ifaceDesc, "```")
 	for text := range spl {
 		regexpMatches := interfaceRx.FindAllStringSubmatch(text, -1)
@@ -97,7 +98,7 @@ func ParseInterfaceDescriptions(ifaceDesc string) []ProjectInterface {
 				})
 			}
 			projInterface.Methods = pims
-			descriptions = append(descriptions, projInterface)
+			descriptions[projInterface.Name] = &projInterface
 		}
 	}
 
@@ -133,20 +134,44 @@ func ParseMethodSignature(signature string) (name string, params []string, retur
 }
 
 func GetMdBlock(body, blockName string) string {
-	return strings.TrimSuffix(strings.TrimPrefix(body, "```"+blockName+"\n"), "```")
+	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(body), "```"+blockName+"\n"), "```")
 }
 
-func (o *OpenAPIProject) ApplyResponse(ctx context.Context, content []byte, interfaces map[string]*ProjectInterface) error {
-	// raw, err := ReadLLMResponse(string(content))
-	// if err != nil {
-	// 	return err
-	// }
+func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, oldInterfaces map[string]*ProjectInterface) (*llmResponse, error) {
+	raw, err := ReadLLMResponse(string(content))
+	if err != nil {
+		return nil, err
+	}
 
-	// res := &llmResponse{
-	// 	functionBody:           GetMdBlock(raw.functionBody, "go"),
-	// 	interfaces:             GetMdBlock(raw.interfaces, "go"),
-	// 	interfacesDescriptions: ParseInterfaceDescriptions(raw.interfacesDescription),
-	// }
+	newInterfaces := ParseInterfaceDescriptions(raw.interfacesDescription)
 
-	return nil
+	for _, new := range newInterfaces {
+		if old, ok := oldInterfaces[new.Name]; ok {
+			for _, newMethod := range new.Methods {
+				for i, oldMethod := range old.Methods {
+					if oldMethod.Name == newMethod.Name {
+						if !reflect.DeepEqual(oldMethod.Params, newMethod.Params) {
+							// Handle new params in the future for now return error
+							return nil, fmt.Errorf("existing method %s in interface %s has different parameters", newMethod.Name, new.Name)
+						}
+						if !reflect.DeepEqual(oldMethod.Returns, newMethod.Returns) {
+							// Handle new returns in the future for now return error
+							return nil, fmt.Errorf("existing method %s in interface %s has different return values", newMethod.Name, new.Name)
+						}
+						old.Methods[i].Description = newMethod.Description
+					} else {
+						old.Methods = append(old.Methods, newMethod)
+					}
+				}
+			}
+		} else {
+			oldInterfaces[new.Name] = new
+		}
+	}
+
+	return &llmResponse{
+		functionBody:           GetMdBlock(raw.functionBody, "go"),
+		interfaces:             GetMdBlock(raw.interfaces, "go"),
+		interfacesDescriptions: oldInterfaces,
+	}, nil
 }

@@ -106,7 +106,7 @@ type NotAnInterface struct {
 		t.Run(v.name, func(t *testing.T) {
 			t.Parallel()
 			o := New(t.TempDir())
-			outInterfaces := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "interfaces.go")
+			outInterfaces := o.InterfacesFilePath()
 			err := os.MkdirAll(filepath.Dir(outInterfaces), 0o755)
 			require.NoError(t, err)
 			err = os.WriteFile(outInterfaces, []byte(v.contents), 0o644)
@@ -127,4 +127,71 @@ type NotAnInterface struct {
 			}
 		})
 	}
+}
+
+func TestGenerateInterfacesContent(t *testing.T) {
+	t.Parallel()
+	o := New(t.TempDir())
+	interfaces := map[string]*ProjectInterface{
+		"UserHandler": {
+			Name:        "UserHandler",
+			Description: "UserHandler handles user-related operations",
+			Methods: []ProjectInterfaceMethod{
+				{
+					Name:        "CreateUser",
+					Description: "CreateUser creates a new user",
+					Params: []string{
+						"name string",
+						"age int",
+					},
+					Returns: []string{
+						"User",
+						"error",
+					},
+				},
+				{
+					Name:        "GetUser",
+					Description: "GetUser retrieves a user by ID",
+					Params: []string{
+						"id string",
+					},
+					Returns: []string{
+						"User",
+						"error",
+					},
+				},
+			},
+		},
+		"Repository": {
+			Name:        "Repository",
+			Description: "",
+			Methods: []ProjectInterfaceMethod{
+				{
+					Name:        "Save",
+					Description: "",
+					Params: []string{
+						"data string",
+					},
+					Returns: []string{
+						"error",
+					},
+				},
+			},
+		},
+	}
+	expected := `type Repository interface {
+	Save(data string) (error)
+}
+
+// UserHandler handles user-related operations
+type UserHandler interface {
+	// CreateUser creates a new user
+	CreateUser(name string, age int) (User, error)
+	// GetUser retrieves a user by ID
+	GetUser(id string) (User, error)
+}
+
+`
+	actual := o.GenerateInterfacesContent(interfaces)
+	assert.Equal(t, expected, actual)
 }

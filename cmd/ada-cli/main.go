@@ -17,6 +17,8 @@ import (
 	"github.com/baudii/ada-ai/internal/ui/cli"
 )
 
+var projectName = "oapitest4"
+
 func main() {
 	// Parse command-line flags
 	provider := flag.String("provider", "grok", "LLM provider to use (openai, ollama, etc.)")
@@ -47,8 +49,8 @@ func main() {
 	)
 	//lp := cli.Must(infra.NewFSProject(folders.Projects, c, seqdir.New(os.ReadDir, seqdir.WithMode(seqdir.Mode(*mode)))))
 	materializer := openapiproject.New(
-		filepath.Join(folders.Projects, "oapitest3"),
-		openapiproject.WithProjectName("oapitest3"),
+		filepath.Join(folders.Projects, projectName),
+		openapiproject.WithProjectName(projectName),
 		openapiproject.WithLogger(logger),
 		openapiproject.WithSpec("openapi.yaml"),
 		openapiproject.WithApp(*app),
