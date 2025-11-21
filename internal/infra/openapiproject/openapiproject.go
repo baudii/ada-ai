@@ -232,11 +232,17 @@ func (o *OpenAPIProject) MaterializeHandler(
 			o.logger.Warn("retrying to create handler due to error during response processing", "error", err, "retryCount", retryCount)
 			continue
 		}
-		o.WriteProjectInterfaces(llmResponseObj.interfacesDescriptions)
+
+		if err = o.WriteProjectInterfaces(llmResponseObj.interfacesDescriptions); err != nil {
+			return fmt.Errorf("write project interfaces: %w", err)
+		}
+
 		outWithFunction := o.insertFunction(*out, llmResponseObj.functionBody)
 		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
-			o.WriteProjectInterfaces(reserveCopy)
+			if err := o.WriteProjectInterfaces(reserveCopy); err != nil {
+				return fmt.Errorf("restore project interfaces: %w", err)
+			}
 			retryCount++
 			o.logger.Warn("retrying to create handler due to error during handler creation", "error", err, "retryCount", retryCount)
 			continue
