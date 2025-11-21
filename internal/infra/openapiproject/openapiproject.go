@@ -201,7 +201,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 	comments *ast.CommentGroup,
 	pkg *packages.Package,
 ) error {
-	var out *strings.Builder
+	var out strings.Builder
 	fileName, err := o.ParseComments(comments)
 	if err != nil {
 		return err
@@ -237,8 +237,8 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("write project interfaces: %w", err)
 		}
 
-		outWithFunction := o.insertFunction(*out, llmResponseObj.functionBody)
-		err = o.createHandler(&outWithFunction, fileName)
+		outWithFunction := o.insertFunction(out, llmResponseObj.functionBody)
+		err = o.createHandler(outWithFunction, fileName)
 		if err != nil {
 			if err := o.WriteProjectInterfaces(reserveCopy); err != nil {
 				return fmt.Errorf("restore project interfaces: %w", err)
@@ -312,7 +312,7 @@ func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, erro
 	return fileName, nil
 }
 
-func (o *OpenAPIProject) createHandler(out *strings.Builder, fileName string) error {
+func (o *OpenAPIProject) createHandler(out strings.Builder, fileName string) error {
 
 	folderForFile := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER)
 
@@ -325,15 +325,15 @@ func (o *OpenAPIProject) createHandler(out *strings.Builder, fileName string) er
 	return formatAndWrite(out, path)
 }
 
-func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, packageName string) {
+func (o *OpenAPIProject) writeBody(out strings.Builder, methodInfo MethodInfo, packageName string) {
 	out.WriteString("package " + packageName + "\n\n")
 	out.WriteString("import (\n")
 	for alias, path := range methodInfo.Imports {
 		pkgName := path[strings.LastIndex(path, "/")+1:]
 		if alias == pkgName {
-			fmt.Fprintf(out, "%q\n", path)
+			out.WriteString(fmt.Sprintf("%q\n", path))
 		} else {
-			fmt.Fprintf(out, "%s %q\n", alias, path)
+			out.WriteString(fmt.Sprintf("%s %q\n", alias, path))
 		}
 	}
 
@@ -347,7 +347,7 @@ func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, 
 
 func (o *OpenAPIProject) createServerFile() error {
 	path := o.ServerFilePath()
-	out := &strings.Builder{}
+	out := strings.Builder{}
 	out.WriteString(HEADER_COMMENT)
 	out.WriteString(`package handlers
 
@@ -406,7 +406,7 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	return nil
 }
 
-func formatAndWrite(out *strings.Builder, path string) error {
+func formatAndWrite(out strings.Builder, path string) error {
 	content := out.String()
 	formatted, err := imports.Process(path, []byte(content), nil)
 	if err != nil {

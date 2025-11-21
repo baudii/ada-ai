@@ -41,7 +41,7 @@ func NewProjectInterface(name, description string) *ProjectInterface {
 
 func (o *OpenAPIProject) WriteProjectInterfaces(m map[string]*ProjectInterface) error {
 	interfacesPath := o.InterfacesFilePath()
-	content := &strings.Builder{}
+	content := strings.Builder{}
 
 	content.WriteString(HEADER_COMMENT)
 	content.WriteString("package handlers\n\n")

@@ -2,9 +2,6 @@ package fsutils
 
 import "os"
 
-// Copilot, how should i rename this package?
-// Suggestions: 
-
 func CopyFile(src, dst string) error {
 	f, err := os.ReadFile(src)
 	if err != nil {
