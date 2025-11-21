@@ -147,9 +147,9 @@ func makeQualifier(info *types.Info, imports map[string]string) types.Qualifier 
 	}
 }
 
-func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo MethodInfo, pkg *packages.Package) {
+func writeComments(out strings.Builder, cg *ast.CommentGroup, methodInfo MethodInfo, pkg *packages.Package) {
 	out.WriteString(HEADER_COMMENT)
-	fmt.Fprintf(out, "//\n// Handler for %s method\n", methodInfo.Name)
+	fmt.Fprintf(&out, "//\n// Handler for %s method\n", methodInfo.Name)
 
 	if cg != nil {
 		out.WriteString("//\n// DESCRIPTION:\n")
@@ -160,14 +160,14 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 
 	out.WriteString("//\n// PARAMETERS:\n")
 	for _, prm := range methodInfo.Params {
-		fmt.Fprintf(out, "//   %s %s\n", prm.Name, prm.Type)
+		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
 	}
 
 	for _, prm := range methodInfo.Params {
 		if prm.IsStruct && prm.TypeSpec != nil {
 			ts := prm.TypeSpec
 
-			fmt.Fprintf(out, "//\n// STRUCT %s DEFINITION:\n", prm.StructName)
+			out.WriteString(fmt.Sprintf("//\n// STRUCT %s DEFINITION:\n", prm.StructName))
 
 			var leadingDoc *ast.CommentGroup
 
