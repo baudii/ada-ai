@@ -72,7 +72,7 @@ if err := json.NewEncoder(w).Encode(addresses); err != nil {
 
 ### Section: ## interfaces
 
-If you introduced any new interfaces or extended existing ones with new methods, list EACH such interface here in a Go code block, with the full up-to-date interface definition.
+If you introduced any new interfaces or extended existing ones with new methods, list EACH such interface here in a single Go code block, with the full up-to-date interface definition.
 
 Example:
 

@@ -211,21 +211,23 @@ func (o *OpenAPIProject) MaterializeHandler(
 	var out *strings.Builder = &strings.Builder{}
 	writeComments(out, comments, methodInfo, pkg)
 	o.writeBody(out, methodInfo)
-	o.createHandler(out, comments)
+	err := o.createHandler(out, comments)
+	if err != nil {
+		return err
+	}
 
 	retryCount := 0
-	outInterfaces := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER, "interfaces.go")
-	interfaces, err := os.ReadFile(outInterfaces)
+	interfaces, err := o.ParseProjectInterfaces()
 	if err != nil {
-		return fmt.Errorf("read interfaces file: %w", err)
+		return err
 	}
 
 	for retryCount < 3 {
-		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), string(interfaces)})
+		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), interfaces.s})
 		if err != nil {
 			return err
 		}
-		err = o.ApplyResponse(ctx, response, interfaces)
+		err = o.ApplyResponse(ctx, response, interfaces.m)
 		if err == nil {
 			break
 		}

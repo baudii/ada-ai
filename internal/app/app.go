@@ -38,8 +38,6 @@ func (a *App) SendInstructions(ctx context.Context, promptName string, args []an
 		return nil, fmt.Errorf("system and human prompts: %w", err)
 	}
 
-	fmt.Println(hum)
-
 	resp, err := a.generator.GenerateWithSys(ctx, sys, hum, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("generate with sys: %w", err)
