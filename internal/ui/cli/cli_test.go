@@ -44,8 +44,8 @@ func TestProjData(t *testing.T) {
 	}, save: func(any, string) error {
 		return nil
 	}, logger: MockLogger(io.Discard)}
-	pd := c.GetProjectData(t.TempDir())
-	assert.Equal(t, expected, pd)
+	c.GetProjectData(t.TempDir())
+	assert.Equal(t, expected, c.projectContext)
 }
 
 func TestProjData_FailSave(t *testing.T) {
@@ -60,7 +60,7 @@ func TestProjData_FailSave(t *testing.T) {
 		},
 		logger: MockLogger(b),
 	}
-	pd := c.GetProjectData(t.TempDir())
-	assert.NotNil(t, pd)
+	c.GetProjectData(t.TempDir())
+	assert.NotNil(t, c.projectContext)
 	assert.NotEmpty(t, b.String())
 }

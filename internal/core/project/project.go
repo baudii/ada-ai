@@ -11,6 +11,7 @@ const Structure = "structure"
 // FileHandler and FolderHandler are function types used as callbacks
 // during the traversal of a project structure.
 type (
+	//FileHandler func(string, string) (string, error)
 	FileHandler   func(string) error
 	FolderHandler func(string) error
 )
