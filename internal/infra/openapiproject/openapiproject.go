@@ -201,7 +201,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 	comments *ast.CommentGroup,
 	pkg *packages.Package,
 ) error {
-	var out *strings.Builder = &strings.Builder{}
+	var out *strings.Builder
 	fileName, err := o.ParseComments(comments)
 	if err != nil {
 		return err

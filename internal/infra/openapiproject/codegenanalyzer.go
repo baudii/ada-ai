@@ -160,14 +160,14 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 
 	out.WriteString("//\n// PARAMETERS:\n")
 	for _, prm := range methodInfo.Params {
-		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
+		fmt.Fprintf(out, "//   %s %s\n", prm.Name, prm.Type)
 	}
 
 	for _, prm := range methodInfo.Params {
 		if prm.IsStruct && prm.TypeSpec != nil {
 			ts := prm.TypeSpec
 
-			out.WriteString(fmt.Sprintf("//\n// STRUCT %s DEFINITION:\n", prm.StructName))
+			fmt.Fprintf(out, "//\n// STRUCT %s DEFINITION:\n", prm.StructName)
 
 			var leadingDoc *ast.CommentGroup
 
@@ -189,7 +189,10 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 			}
 
 			var buf bytes.Buffer
-			printer.Fprint(&buf, pkg.Fset, ts)
+			err := printer.Fprint(&buf, pkg.Fset, ts)
+			if err != nil {
+				continue
+			}
 
 			for line := range strings.SplitSeq(buf.String(), "\n") {
 				out.WriteString("// " + line + "\n")
