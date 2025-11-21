@@ -4,11 +4,11 @@ import "path/filepath"
 
 // Constants for folder names.
 const (
-	GENERATED_FOLDER = "api"
-	INTERNAL_FOLDER  = "internal"
-	CONFIGS_FOLDER   = "configs"
-	API_FOLDER       = "api"
-	HANDLERS_FOLDER  = "handlers"
+	API_FOLDER      = "api"
+	INTERNAL_FOLDER = "internal"
+	CONFIGS_FOLDER  = "configs"
+	SPEC_FOLDER     = "spec"
+	HANDLERS_FOLDER = "handlers"
 )
 
 func (o *OpenAPIProject) InterfacesFilePath() string {

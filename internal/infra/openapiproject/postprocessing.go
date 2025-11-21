@@ -151,11 +151,11 @@ func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, ol
 				for i, oldMethod := range old.Methods {
 					if oldMethod.Name == newMethod.Name {
 						if !reflect.DeepEqual(oldMethod.Params, newMethod.Params) {
-							// Handle new params in the future for now return error
+							// TODO: Handle new params in the future for now return error
 							return nil, fmt.Errorf("existing method %s in interface %s has different parameters", newMethod.Name, new.Name)
 						}
 						if !reflect.DeepEqual(oldMethod.Returns, newMethod.Returns) {
-							// Handle new returns in the future for now return error
+							// TODO: Handle new returns in the future for now return error
 							return nil, fmt.Errorf("existing method %s in interface %s has different return values", newMethod.Name, new.Name)
 						}
 						old.Methods[i].Description = newMethod.Description
