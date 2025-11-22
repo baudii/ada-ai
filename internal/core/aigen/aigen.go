@@ -1,4 +1,4 @@
-package gen
+package aigen
 
 // Option is a function that configures generation parameters.
 type Option func(*Params)

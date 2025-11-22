@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/baudii/ada-ai/internal/core/gen"
+	"github.com/baudii/ada-ai/internal/core/aigen"
 	"github.com/tmc/langchaingo/llms"
 )
 
 // GenerateWithSys sends a prompt with a system message to the LLM and expects a response.
 // It calls GenerateContent with the provided system prompt.
-func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, opts ...gen.Option) (string, error) {
+func (g *generator) GenerateWithSys(ctx context.Context, sys, user string, opts ...aigen.Option) (string, error) {
 	msgs := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, sys)}
 	callOptions := ToCallOptions(opts...)
 	resp, err := g.GenerateContent(ctx, user, msgs, callOptions...)
@@ -59,8 +59,8 @@ func (g *generator) BuildPrompt(filename string, input ...any) (string, error) {
 }
 
 // ToCallOptions converts generation options into LLM call options.
-func ToCallOptions(opts ...gen.Option) []llms.CallOption {
-	params := &gen.Params{}
+func ToCallOptions(opts ...aigen.Option) []llms.CallOption {
+	params := &aigen.Params{}
 	for _, o := range opts {
 		o(params)
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/baudii/ada-ai/internal/core/gen"
+	"github.com/baudii/ada-ai/internal/core/aigen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmc/langchaingo/llms"
@@ -158,22 +158,22 @@ func TestToCallOption(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name     string
-		opts     []gen.Option
+		opts     []aigen.Option
 		expected []llms.CallOption
 	}{
 		{
 			name:     "no options",
-			opts:     []gen.Option{},
+			opts:     []aigen.Option{},
 			expected: []llms.CallOption{},
 		},
 		{
 			name:     "with temperature",
-			opts:     []gen.Option{gen.WithTemperature(0.5)},
+			opts:     []aigen.Option{aigen.WithTemperature(0.5)},
 			expected: []llms.CallOption{llms.WithTemperature(0.5)},
 		},
 		{
 			name:     "with JSON mode",
-			opts:     []gen.Option{gen.WithJSONMode()},
+			opts:     []aigen.Option{aigen.WithJSONMode()},
 			expected: []llms.CallOption{llms.WithJSONMode()},
 		},
 	}

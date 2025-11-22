@@ -1,9 +1,9 @@
-package gen_test
+package aigen_test
 
 import (
 	"testing"
 
-	"github.com/baudii/ada-ai/internal/core/gen"
+	"github.com/baudii/ada-ai/internal/core/aigen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,33 +11,33 @@ func TestNewParams(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name     string
-		opts     []gen.Option
-		expected *gen.Params
+		opts     []aigen.Option
+		expected *aigen.Params
 	}{
 		{
 			name:     "no options",
-			opts:     []gen.Option{},
-			expected: &gen.Params{},
+			opts:     []aigen.Option{},
+			expected: &aigen.Params{},
 		},
 		{
 			name:     "with temperature",
-			opts:     []gen.Option{gen.WithTemperature(0.5)},
-			expected: &gen.Params{Temperature: floatPtr(0.5)},
+			opts:     []aigen.Option{aigen.WithTemperature(0.5)},
+			expected: &aigen.Params{Temperature: floatPtr(0.5)},
 		},
 		{
 			name:     "with JSON mode",
-			opts:     []gen.Option{gen.WithJSONMode()},
-			expected: &gen.Params{JSONMode: boolPtr(true)},
+			opts:     []aigen.Option{aigen.WithJSONMode()},
+			expected: &aigen.Params{JSONMode: boolPtr(true)},
 		},
 		{
 			name:     "with both options",
-			opts:     []gen.Option{gen.WithTemperature(0.7), gen.WithJSONMode()},
-			expected: &gen.Params{Temperature: floatPtr(0.7), JSONMode: boolPtr(true)},
+			opts:     []aigen.Option{aigen.WithTemperature(0.7), aigen.WithJSONMode()},
+			expected: &aigen.Params{Temperature: floatPtr(0.7), JSONMode: boolPtr(true)},
 		},
 	}
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
-			got := &gen.Params{}
+			got := &aigen.Params{}
 			for _, opt := range v.opts {
 				opt(got)
 			}
