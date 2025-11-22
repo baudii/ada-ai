@@ -217,8 +217,28 @@ func (o *OpenAPIProject) MaterializeHandler(
 		return fmt.Errorf("parse existing models: %w", err)
 	}
 
+	extractedModels, err := Extract[*ast.StructType](filepath.Join(o.ModelsFolder(), mainResource+".go"), "")
+	if err != nil {
+		return fmt.Errorf("extract models: %w", err)
+	}
+	p := o.InterfacesFilePath()
+	extractedInterfaces, err := Extract[*ast.InterfaceType](p, "")
+	if err != nil {
+		return fmt.Errorf("extract interfaces: %w", err)
+	}
+
+	serverStruct, err := Extract[*ast.StructType](filepath.Join(o.HandlersFolder(), "server.go"), "Server")
+	if err != nil {
+		return fmt.Errorf("extract server struct: %w", err)
+	}
+
 	for retryCount < 3 {
-		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), interfaces.s})
+		response, err := o.app.SendInstructions(ctx, filler, []any{
+			out.String(),
+			extractedInterfaces,
+			extractedModels,
+			serverStruct,
+		})
 		if err != nil {
 			return fmt.Errorf("send instructions: %w", err)
 		}
@@ -228,6 +248,12 @@ func (o *OpenAPIProject) MaterializeHandler(
 			retryCount++
 			// TODO: add error details to new requests to the LLM.
 			o.logger.Warn("failed to process response. retrying...", "error", err, "retryCount", retryCount)
+			continue
+		}
+
+		if err = o.InsertFieldsToServer(llmResponseObj); err != nil {
+			retryCount++
+			o.logger.Warn("failed to insert new fields to server. retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
 
@@ -241,13 +267,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("write project interfaces: %w", err)
 		}
 
-		cmd := exec.CommandContext(ctx, "go", "mod", "tidy")
-		cmd.Dir = o.outputDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
-		}
-
-		outWithFunction := o.insertFunction(out.String(), llmResponseObj.functionBody)
+		outWithFunction := o.insertFunctionAndModelImport(out.String(), llmResponseObj.functionBody)
 		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
 			// TODO: Apply rollback if we fail to write the handler file
@@ -262,15 +282,11 @@ func (o *OpenAPIProject) MaterializeHandler(
 		break
 	}
 
-	// if err := reformatFile(filepath.Join(o.HandlersFolder(), fileName+".go")); err != nil {
-	// 	return fmt.Errorf("reformat file %s: %w", fileName, err)
-	// }
-
 	o.logger.Info("handler created successfully", "method", methodInfo.Name)
 	return nil
 }
 
-func (o *OpenAPIProject) insertFunction(content string, functionContent string) strings.Builder {
+func (o *OpenAPIProject) insertFunctionAndModelImport(content string, functionContent string) strings.Builder {
 	copy := strings.Builder{}
 	reader := strings.NewReader(content)
 	scanner := bufio.NewScanner(reader)
@@ -278,6 +294,9 @@ func (o *OpenAPIProject) insertFunction(content string, functionContent string) 
 		line := scanner.Text()
 		if strings.Contains(line, "// WRITE YOUR CODE HERE") {
 			copy.WriteString(functionContent)
+		} else if strings.Contains(line, "package handlers") {
+			copy.WriteString(line + "\n\n")
+			copy.WriteString("import \"" + o.moduleName + "/internal/models\"\n\n")
 		} else {
 			copy.WriteString(line + "\n")
 		}
@@ -424,15 +443,6 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 
 	o.moduleName = strings.TrimSpace(string(output))
 	return nil
-}
-
-func reformatFile(path string) error {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	return formatAndWrite(string(content), path)
 }
 
 func formatAndWrite(content string, path string) error {

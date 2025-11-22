@@ -45,6 +45,7 @@ func (o *OpenAPIProject) WriteProjectInterfaces(m map[string]*ProjectInterface) 
 
 	out.WriteString(HEADER_COMMENT)
 	out.WriteString("package handlers\n\n")
+	out.WriteString("import \"" + o.moduleName + "/internal/models\"\n\n")
 	out.WriteString(o.GenerateInterfacesContent(m))
 
 	return formatAndWrite(out.String(), interfacesPath)

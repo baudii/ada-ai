@@ -184,7 +184,7 @@ func (o *OpenAPIProject) ProcessResponse(
 		return nil, err
 	}
 
-	updatedModels, err := UpdateModels(generatedModels.M, existingModels)
+	updatedModels, err := UpdateModels(generatedModels, existingModels)
 	if err != nil {
 		return nil, err
 	}
@@ -329,13 +329,10 @@ func (o *OpenAPIProject) InsertFieldsToServer(raw *llmResponse) error {
 	return nil
 }
 
-func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (*ProjectModels, error) {
+func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (map[string]*ProjectModel, error) {
 	modelsBlock := GetMdBlock(raw.addedModels, "go")
 	if modelsBlock == "none" {
-		return &ProjectModels{
-			M: make(map[string]*ProjectModel),
-			S: "",
-		}, nil
+		return make(map[string]*ProjectModel), nil
 	}
 	goFile := "package models\n\n" + modelsBlock
 
