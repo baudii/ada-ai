@@ -57,7 +57,12 @@ func (o *OpenAPIProject) GenerateInterfacesContent(m map[string]*ProjectInterfac
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	first := true
 	for _, key := range keys {
+		if !first {
+			out.WriteString("\n")
+		}
+		first = false
 		iface := m[key]
 		if iface.Description != "" {
 			out.WriteString("// " + iface.Description + "\n")
@@ -73,7 +78,7 @@ func (o *OpenAPIProject) GenerateInterfacesContent(m map[string]*ProjectInterfac
 			}
 			out.WriteString("\n")
 		}
-		out.WriteString("}\n\n")
+		out.WriteString("}\n")
 	}
 
 	return out.String()

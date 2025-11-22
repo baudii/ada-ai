@@ -212,8 +212,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 	}
 	reserveCopy := deepcopy.Copy(interfaces.m).(map[string]*ProjectInterface)
 
-	// TODO: Switch _ symbol to proper receiver name when function is finished.
-	_, err = o.ParseExistingModels(mainResource)
+	existingModels, err := o.ParseExistingModels(mainResource)
 	if err != nil {
 		return fmt.Errorf("parse existing models: %w", err)
 	}
@@ -224,35 +223,51 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("send instructions: %w", err)
 		}
 		o.logger.Debug(string(response))
-		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m)
+		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m, existingModels)
 		if err != nil {
 			retryCount++
 			// TODO: add error details to new requests to the LLM.
-			o.logger.Warn("retrying to create handler due to error during response processing", "error", err, "retryCount", retryCount)
+			o.logger.Warn("failed to process response. retrying...", "error", err, "retryCount", retryCount)
 			continue
+		}
+
+		if err = o.WriteHandlerModels(mainResource, llmResponseObj.newModels); err != nil {
+			retryCount++
+			o.logger.Warn("failed to write project models. retrying...", "error", err, "retryCount", retryCount)
+			return fmt.Errorf("write project models: %w", err)
 		}
 
 		if err = o.WriteProjectInterfaces(llmResponseObj.interfacesDescriptions); err != nil {
 			return fmt.Errorf("write project interfaces: %w", err)
 		}
 
+		cmd := exec.CommandContext(ctx, "go", "mod", "tidy")
+		cmd.Dir = o.outputDir
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
+		}
+
 		outWithFunction := o.insertFunction(out.String(), llmResponseObj.functionBody)
 		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
-			// TODO: Leave for later checks. Right now this restore makes no sense since we failed to write the handler.
+			// TODO: Apply rollback if we fail to write the handler file
 			if err := o.WriteProjectInterfaces(reserveCopy); err != nil {
 				return fmt.Errorf("restore project interfaces: %w", err)
 			}
 			retryCount++
-			o.logger.Warn("retrying to create handler due to error during handler creation", "error", err, "retryCount", retryCount)
+			o.logger.Warn("failed to create handler. retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
 
-		o.logger.Info("handler created successfully", "method", methodInfo.Name)
 		break
 	}
 
-	return err
+	// if err := reformatFile(filepath.Join(o.HandlersFolder(), fileName+".go")); err != nil {
+	// 	return fmt.Errorf("reformat file %s: %w", fileName, err)
+	// }
+
+	o.logger.Info("handler created successfully", "method", methodInfo.Name)
+	return nil
 }
 
 func (o *OpenAPIProject) insertFunction(content string, functionContent string) strings.Builder {
@@ -411,8 +426,23 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	return nil
 }
 
+func reformatFile(path string) error {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return formatAndWrite(string(content), path)
+}
+
 func formatAndWrite(content string, path string) error {
-	formatted, err := imports.Process(path, []byte(content), nil)
+	options := &imports.Options{
+		Comments:   true,
+		TabIndent:  true,
+		TabWidth:   8,
+		FormatOnly: false,
+	}
+	formatted, err := imports.Process(path, []byte(content), options)
 	if err != nil {
 		return fmt.Errorf("format file %s: %w", path, err)
 	}

@@ -8,22 +8,23 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 )
 
-type ExistingModel struct {
+type ProjectModel struct {
 	Name        string
 	Description string
 	Fields      []FieldInfo
 }
 
 // ParseExistingModels parses existing model files to extract model definitions using ast package.
-func (o *OpenAPIProject) ParseExistingModels(resourceName string) (map[string]ExistingModel, error) {
+func (o *OpenAPIProject) ParseExistingModels(resourceName string) (map[string]*ProjectModel, error) {
 	modelFilePath := filepath.Join(o.ModelsFolder(), resourceName+".go")
 	if _, err := os.Stat(modelFilePath); os.IsNotExist(err) {
-		return make(map[string]ExistingModel), nil
+		return make(map[string]*ProjectModel), nil
 	}
 
 	data, err := os.ReadFile(modelFilePath)
@@ -31,13 +32,21 @@ func (o *OpenAPIProject) ParseExistingModels(resourceName string) (map[string]Ex
 		return nil, err
 	}
 
+	return o.ExtractModels(modelFilePath, string(data))
+}
+
+// ExtractModels extracts model definitions from the provided Go source code.
+func (o *OpenAPIProject) ExtractModels(path, data string) (map[string]*ProjectModel, error) {
+	if data == "none" {
+		return make(map[string]*ProjectModel), nil
+	}
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, modelFilePath, data, parser.ParseComments)
+	file, err := parser.ParseFile(fset, path, data, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("parse file: %w", err)
 	}
 
-	existingModels := make(map[string]ExistingModel)
+	existingModels := make(map[string]*ProjectModel)
 
 	for _, decl := range file.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
@@ -61,7 +70,7 @@ func (o *OpenAPIProject) ParseExistingModels(resourceName string) (map[string]Ex
 				docCg = genDecl.Doc
 			}
 
-			currentModel := ExistingModel{
+			currentModel := &ProjectModel{
 				Name:        ts.Name.Name,
 				Description: strings.TrimSpace(docCg.Text()),
 				Fields:      []FieldInfo{},
@@ -80,6 +89,50 @@ func (o *OpenAPIProject) ParseExistingModels(resourceName string) (map[string]Ex
 	}
 
 	return existingModels, nil
+}
+
+func (o *OpenAPIProject) GenerateModelsContent(m map[string]*ProjectModel) string {
+	out := &strings.Builder{}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	first := true
+	for _, key := range keys {
+		if !first {
+			out.WriteString("\n")
+		}
+		first = false
+		model := m[key]
+		if model.Description != "" {
+			out.WriteString("// " + model.Description + "\n")
+		}
+		out.WriteString("type " + model.Name + " struct {\n")
+		for _, field := range model.Fields {
+			if field.Doc != "" {
+				out.WriteString("\t// " + field.Doc + "\n")
+			}
+			out.WriteString("\t" + field.Name + " " + field.Type)
+			if field.Tags != "" {
+				out.WriteString(" " + string(field.Tags))
+			}
+			out.WriteString("\n")
+		}
+		out.WriteString("}\n")
+	}
+
+	return out.String()
+}
+
+func (o *OpenAPIProject) WriteHandlerModels(packageName string, m map[string]*ProjectModel) error {
+	modelsPath := filepath.Join(o.ModelsFolder(), packageName+".go")
+	out := strings.Builder{}
+	out.WriteString(HEADER_COMMENT)
+	out.WriteString("package models\n\n")
+	out.WriteString(o.GenerateModelsContent(m))
+	return formatAndWrite(out.String(), modelsPath)
 }
 
 func extractFieldInfo(fset *token.FileSet, field *ast.Field) []FieldInfo {

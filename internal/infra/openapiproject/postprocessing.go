@@ -26,7 +26,7 @@ type llmResponse struct {
 	functionBody           string
 	addedFields            string
 	interfaces             string
-	addedModels            string
+	newModels              map[string]*ProjectModel
 	interfacesDescriptions map[string]*ProjectInterface
 }
 
@@ -157,12 +157,136 @@ func GetMdBlock(body, blockName string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(body), "```"+blockName+"\n"), "```")
 }
 
-func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, oldInterfaces map[string]*ProjectInterface) (*llmResponse, error) {
+func (o *OpenAPIProject) ProcessResponse(
+	ctx context.Context,
+	content []byte,
+	oldInterfaces map[string]*ProjectInterface,
+	existingModels map[string]*ProjectModel,
+) (*llmResponse, error) {
 	raw, err := ReadLLMResponse(string(content))
 	if err != nil {
 		return nil, err
 	}
 
+	updatedInterfaces, err := UpdateInterfaces(raw, oldInterfaces)
+	if err != nil {
+		return nil, err
+	}
+
+	generatedModels, err := o.ExtractGeneratedModels(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedModels, err := UpdateModels(generatedModels, existingModels)
+	if err != nil {
+		return nil, err
+	}
+
+	return &llmResponse{
+		functionBody:           GetMdBlock(raw.functionBody, "go"),
+		addedFields:            GetMdBlock(raw.addedFields, "go"),
+		interfaces:             GetMdBlock(raw.interfaces, "go"),
+		newModels:              updatedModels,
+		interfacesDescriptions: updatedInterfaces,
+	}, nil
+}
+
+func ParseFieldLine(line string) (*FieldInfo, error) {
+	state := 0
+	section := []rune{}
+	fieldInfo := &FieldInfo{}
+	for _, c := range line {
+		switch state {
+		case 0:
+			if c == ' ' {
+				state = 1
+				fieldInfo.Name = string(section)
+				section = []rune{}
+			} else {
+				section = append(section, c)
+			}
+		case 1:
+			if c == ' ' {
+				state = 2
+				fieldInfo.Type = string(section)
+				section = []rune{}
+			} else {
+				section = append(section, c)
+			}
+		case 2:
+			section = append(section, c)
+			if c == '`' {
+				state = 3
+			} else if c == '/' {
+				state = 4
+			} else {
+				break
+			}
+		case 3:
+			section = append(section, c)
+			if c == '`' {
+				state = 4
+				fieldInfo.Tags = reflect.StructTag(string(section))
+				section = []rune{}
+			}
+		case 4:
+			section = append(section, c)
+		}
+	}
+	if len(section) > 0 {
+		if state == 1 {
+			fieldInfo.Type = string(section)
+		} else if state == 4 && len(section) > 0 {
+			fieldInfo.Doc = string(section)
+		} else {
+			return nil, fmt.Errorf("failed to parse field line: %s", line)
+		}
+	}
+	return fieldInfo, nil
+}
+
+func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (map[string]*ProjectModel, error) {
+	modelsBlock := GetMdBlock(raw.addedModels, "go")
+	if modelsBlock == "none" {
+		return make(map[string]*ProjectModel), nil
+	}
+	goFile := "package models\n\n" + modelsBlock
+
+	generatedModels, err := o.ExtractModels("", goFile)
+	if err != nil {
+		return nil, fmt.Errorf("extract models: %w", err)
+	}
+	return generatedModels, nil
+}
+
+func UpdateModels(
+	generatedModels map[string]*ProjectModel,
+	existingModels map[string]*ProjectModel,
+) (map[string]*ProjectModel, error) {
+	for name, genModel := range generatedModels {
+		if existModel, ok := existingModels[name]; ok {
+			fieldMap := make(map[string]FieldInfo)
+			for _, field := range existModel.Fields {
+				fieldMap[field.Name] = field
+			}
+			for _, genField := range genModel.Fields {
+				if _, ok := fieldMap[genField.Name]; !ok {
+					existModel.Fields = append(existModel.Fields, genField)
+				}
+			}
+		} else {
+			existingModels[name] = genModel
+		}
+	}
+
+	return existingModels, nil
+}
+
+func UpdateInterfaces(
+	raw *llmResponseRaw,
+	oldInterfaces map[string]*ProjectInterface,
+) (map[string]*ProjectInterface, error) {
 	newInterfaces := ParseInterfaceDescriptions(raw.interfacesDescription)
 
 	for _, new := range newInterfaces {
@@ -188,12 +312,5 @@ func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, ol
 			oldInterfaces[new.Name] = new
 		}
 	}
-
-	return &llmResponse{
-		functionBody:           GetMdBlock(raw.functionBody, "go"),
-		addedFields:            GetMdBlock(raw.addedFields, "go"),
-		interfaces:             GetMdBlock(raw.interfaces, "go"),
-		addedModels:            GetMdBlock(raw.addedModels, "go"),
-		interfacesDescriptions: oldInterfaces,
-	}, nil
+	return oldInterfaces, nil
 }

@@ -35,7 +35,7 @@ Assume any interface you use a field on `Server`.
 **Output exactly five sections, in order:**
 
 1. `## function` — one Go code block with **only** the handler body.
-2. `## added_fields` — `- FieldName FieldType` per line, or `none`.
+2. `## added_fields` — A complete definition of the field: `- FieldName FieldType [Optional: Tag, Comment]` per line, all space separated or `none`.
 3. `## interfaces` — one Go code block listing all new/extended interfaces, or `none`.
 4. `## added_models` — one Go code block listing all new models, or `none`.
 5. `## interfaces_description` — structured descriptions for interfaces in section 3, or `none`. The structure must follow this format:

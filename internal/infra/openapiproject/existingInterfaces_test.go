@@ -30,6 +30,7 @@ type UserHandler interface {
 	// GetUser retrieves a user by ID
 	GetUser(id string) (User, error)
 }
+
 type Repository interface {
 	Save(data string) error
 }
@@ -189,7 +190,6 @@ type UserHandler interface {
 	// GetUser retrieves a user by ID
 	GetUser(id string) (User, error)
 }
-
 `
 	actual := o.GenerateInterfacesContent(interfaces)
 	assert.Equal(t, expected, actual)

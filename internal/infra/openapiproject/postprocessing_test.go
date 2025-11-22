@@ -10,14 +10,23 @@ import (
 func TestReadLLMResponse(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name                  string
+		name string
+
+		// Represents the sections of the LLM response
 		functionBody          string
-		functionPrefix        string
+		addedFields           string
 		interfaces            string
-		interfacePrefix       string
+		addedModels           string
 		interfacesDescription []string
-		interfaceDescPrefix   string
-		err                   string
+
+		// Titles of each section
+		functionPrefix      string
+		addedFieldsPrefix   string
+		interfacePrefix     string
+		addedModelsPrefix   string
+		interfaceDescPrefix string
+
+		err string
 	}{
 		{
 			name: "valid response",
@@ -34,11 +43,19 @@ if err := json.NewEncoder(w).Encode(product); err != nil {
     http.Error(w, "failed to write response", http.StatusInternalServerError)
     return
 }`,
+			addedFields: `- Price float64 ` + "`json:\"price\"`" + ` // Price of the product
+- Description string ` + "`json:\"description\"`" + ` // Description of the product`,
 			interfaces: `type ProductRepository interface {
     GetProductByID(ctx context.Context, id openapi_types.UUID) (Product, error)
 }
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order Order) (openapi_types.UUID, error)								
+}`,
+			addedModels: `type Product struct {
+	ID          openapi_types.UUID  ` + "`json:\"id\"`" + `
+	Name        string             ` + "`json:\"name\"`" + `
+	Description string             ` + "`json:\"description\"`" + `
+	Price       float64            ` + "`json:\"price\"`" + `
 }`,
 			interfacesDescription: []string{
 				`Interface: ProductRepository
@@ -56,7 +73,9 @@ Methods:
     Signature: CreateOrder(ctx context.Context, order Order) (openapi_types.UUID, error)
     Description: Persists a new order in the underlying storage and returns the UUID of the created order along with any error encountered during the operation.`},
 			functionPrefix:      "## function\n",
+			addedFieldsPrefix:   "## added_fields\n",
 			interfacePrefix:     "## interfaces\n",
+			addedModelsPrefix:   "## added_models\n",
 			interfaceDescPrefix: "## interfaces_description\n",
 		},
 		{
@@ -77,27 +96,44 @@ if err != nil {
 			err:                   "failed to parse body: invalid structure",
 		},
 		{
-			name:                  "none interfaces section",
-			functionBody:          `ctx := r.Context()`,
+			name: "none interfaces section",
+
+			functionBody: `ctx := r.Context()`,
+			addedFields:  `- Address string ` + "`json:\"address\"`" + ` // Address of the user`,
+			addedModels: `type User struct {
+	ID   openapi_types.UUID ` + "`json:\"id\"`" + `
+	Name string            ` + "`json:\"name\"`" + `
+}`,
 			interfaces:            `none`,
-			functionPrefix:        "## function\n",
-			interfacePrefix:       "## interfaces\n",
-			interfaceDescPrefix:   "## interfaces_description\n",
 			interfacesDescription: []string{"none"},
+
+			functionPrefix:      "## function\n",
+			addedFieldsPrefix:   "## added_fields\n",
+			interfacePrefix:     "## interfaces\n",
+			addedModelsPrefix:   "## added_models\n",
+			interfaceDescPrefix: "## interfaces_description\n",
 		},
 	}
 
 	for _, v := range tests {
 		t.Run(v.name, func(t *testing.T) {
 			functionBody := "```go\n" + v.functionBody + "\n```\n"
+			addedFields := "```go\n" + v.addedFields + "\n```\n"
 			interfaces := "```go\n" + v.interfaces + "\n```\n"
+			addedModels := "```go\n" + v.addedModels + "\n```\n"
 			interfacesDesc := "\n```" + strings.Join(v.interfacesDescription, "```\n```") + "\n```\n"
 			body := ""
 			if v.functionPrefix != "" {
 				body += v.functionPrefix + functionBody
 			}
+			if v.addedFieldsPrefix != "" {
+				body += v.addedFieldsPrefix + addedFields
+			}
 			if v.interfacePrefix != "" {
 				body += v.interfacePrefix + interfaces
+			}
+			if v.addedModelsPrefix != "" {
+				body += v.addedModelsPrefix + addedModels
 			}
 			if v.interfaceDescPrefix != "" {
 				if len(v.interfacesDescription) == 0 {
