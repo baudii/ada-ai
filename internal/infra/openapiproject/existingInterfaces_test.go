@@ -88,7 +88,7 @@ type Repository interface {
 type InvalidInterface {
 	DoSomething() error
 }
-			}`,
+}`,
 			err: "parse file",
 		},
 		{
@@ -96,8 +96,7 @@ type InvalidInterface {
 			contents: `package handlers
 type NotAnInterface struct {
 	Field string
-}
-			`,
+}`,
 			expected: map[string]*ProjectInterface{},
 		},
 	}

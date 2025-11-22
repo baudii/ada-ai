@@ -16,19 +16,25 @@ var (
 
 type llmResponseRaw struct {
 	functionBody          string
+	addedFields           string
 	interfaces            string
+	addedModels           string
 	interfacesDescription string
 }
 
 type llmResponse struct {
 	functionBody           string
+	addedFields            string
 	interfaces             string
+	addedModels            string
 	interfacesDescriptions map[string]*ProjectInterface
 }
 
 func ReadLLMResponse(body string) (*llmResponseRaw, error) {
 	functionBody := strings.Builder{}
+	addedFields := strings.Builder{}
 	interfaces := strings.Builder{}
+	addedModels := strings.Builder{}
 	interfacesDescription := strings.Builder{}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(body)))
@@ -44,29 +50,43 @@ func ReadLLMResponse(body string) (*llmResponseRaw, error) {
 				state = 1
 			}
 		case 1:
-			if strings.HasPrefix(line, "## interfaces") {
+			if strings.HasPrefix(line, "## added_fields") {
 				state = 2
 			} else {
 				functionBody.WriteString(line + "\n")
 			}
 		case 2:
-			if strings.HasPrefix(line, "## interfaces_description") {
+			if strings.HasPrefix(line, "## interfaces") {
 				state = 3
+			} else {
+				addedFields.WriteString(line + "\n")
+			}
+		case 3:
+			if strings.HasPrefix(line, "## added_models") {
+				state = 4
 			} else {
 				interfaces.WriteString(line + "\n")
 			}
-		case 3:
+		case 4:
+			if strings.HasPrefix(line, "## interfaces_description") {
+				state = 5
+			} else {
+				addedModels.WriteString(line + "\n")
+			}
+		case 5:
 			interfacesDescription.WriteString(line + "\n")
 		}
 	}
 
-	if state != 3 {
+	if state != 5 {
 		return nil, fmt.Errorf("failed to parse body: invalid structure")
 	}
 
 	return &llmResponseRaw{
 		functionBody:          functionBody.String(),
+		addedFields:           addedFields.String(),
 		interfaces:            interfaces.String(),
+		addedModels:           addedModels.String(),
 		interfacesDescription: interfacesDescription.String(),
 	}, nil
 }
@@ -171,7 +191,9 @@ func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, ol
 
 	return &llmResponse{
 		functionBody:           GetMdBlock(raw.functionBody, "go"),
+		addedFields:            GetMdBlock(raw.addedFields, "go"),
 		interfaces:             GetMdBlock(raw.interfaces, "go"),
+		addedModels:            GetMdBlock(raw.addedModels, "go"),
 		interfacesDescriptions: oldInterfaces,
 	}, nil
 }

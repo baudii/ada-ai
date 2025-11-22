@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -28,19 +27,11 @@ type OpenAPIProject struct {
 	spec        *openapi3.T
 	projectName string
 	specPath    string
-	oapiCfgPath string
 	outputDir   string
 	moduleName  string
 }
 
-const (
-	filler = "handler-generator"
-)
-
-const (
-	OAPI_GENERATED_FILE = "server.gen.go"
-	OAPI_CFG_FILE       = "oapi.cfg.yaml"
-)
+const filler = "handler-generator"
 
 var (
 	commentGroupRegex = regexp.MustCompile(`.*\(([^()\r\n]*)\)`)
@@ -78,10 +69,8 @@ func WithApp(a app.App) option {
 
 // New creates a new OpenAPIProject with the given output directory and options.
 func New(outputDir string, opts ...option) *OpenAPIProject {
-	oapiCfgPath := filepath.Join(outputDir, CONFIGS_FOLDER, OAPI_CFG_FILE)
 	project := &OpenAPIProject{
-		outputDir:   outputDir,
-		oapiCfgPath: oapiCfgPath,
+		outputDir: outputDir,
 	}
 	for _, opt := range opts {
 		opt(project)
@@ -117,35 +106,38 @@ func (o *OpenAPIProject) MaterializeSpec(ctx context.Context, openapi string) er
 		specFile = "openapi.json"
 	}
 
-	specPath := filepath.Join(o.outputDir, SPEC_FOLDER, specFile)
+	specPath := filepath.Join(o.SpecFolder(), specFile)
 	if err := os.WriteFile(specPath, []byte(openapi), 0644); err != nil {
 		return err
 	}
 
-	o.specPath = filepath.Join(o.outputDir, SPEC_FOLDER, specFile)
+	o.specPath = filepath.Join(o.SpecFolder(), specFile)
 	return o.Validate(ctx, openapi)
 }
 
 func (o *OpenAPIProject) PrepareOutputDir() error {
-	if err := os.MkdirAll(filepath.Join(o.outputDir, SPEC_FOLDER), 0755); err != nil {
+	if err := os.MkdirAll(o.SpecFolder(), 0755); err != nil {
 		return err
 	}
 
-	outputConfigsFolder := filepath.Join(o.outputDir, CONFIGS_FOLDER)
+	outputConfigsFolder := o.ConfigsFolder()
 	if err := os.MkdirAll(outputConfigsFolder, 0755); err != nil {
 		return err
 	}
 
-	cfgPath := filepath.Join(outputConfigsFolder, OAPI_CFG_FILE)
+	cfgPath := o.OAPIConfigFilePath()
 	if err := fsutils.CopyFile(filepath.Join(folders.Config, OAPI_CFG_FILE), cfgPath); err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER), 0755); err != nil {
+	if err := os.MkdirAll(o.HandlersFolder(), 0755); err != nil {
 		return err
 	}
 
-	o.oapiCfgPath = cfgPath
+	if err := os.MkdirAll(o.ModelsFolder(), 0755); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -202,13 +194,13 @@ func (o *OpenAPIProject) MaterializeHandler(
 	pkg *packages.Package,
 ) error {
 	var out strings.Builder
-	fileName, err := o.ParseComments(comments)
+	fileName, mainResource, err := o.ParseComments(comments)
 	if err != nil {
 		return err
 	}
-	writeComments(out, comments, methodInfo, pkg)
-	o.writeBody(out, methodInfo, "handlers")
-	err = o.createHandler(out, fileName)
+	writeComments(&out, comments, methodInfo, pkg)
+	o.writeBody(&out, methodInfo, "handlers")
+	err = o.createHandler(&out, fileName)
 	if err != nil {
 		return fmt.Errorf("create handler: %w", err)
 	}
@@ -229,6 +221,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m)
 		if err != nil {
 			retryCount++
+			// TODO: add error details to new requests to the LLM.
 			o.logger.Warn("retrying to create handler due to error during response processing", "error", err, "retryCount", retryCount)
 			continue
 		}
@@ -237,9 +230,10 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("write project interfaces: %w", err)
 		}
 
-		outWithFunction := o.insertFunction(out, llmResponseObj.functionBody)
-		err = o.createHandler(outWithFunction, fileName)
+		outWithFunction := o.insertFunction(out.String(), llmResponseObj.functionBody)
+		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
+			// TODO: Leave for later checks. Right now this restore makes no sense since we failed to write the handler.
 			if err := o.WriteProjectInterfaces(reserveCopy); err != nil {
 				return fmt.Errorf("restore project interfaces: %w", err)
 			}
@@ -255,9 +249,9 @@ func (o *OpenAPIProject) MaterializeHandler(
 	return err
 }
 
-func (o *OpenAPIProject) insertFunction(out strings.Builder, functionContent string) strings.Builder {
+func (o *OpenAPIProject) insertFunction(content string, functionContent string) strings.Builder {
 	copy := strings.Builder{}
-	reader := strings.NewReader(out.String())
+	reader := strings.NewReader(content)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -270,8 +264,9 @@ func (o *OpenAPIProject) insertFunction(out strings.Builder, functionContent str
 	return copy
 }
 
-func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, error) {
+func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, string, error) {
 	var fileName string
+	var mainResource string
 
 	for _, p := range comments.List {
 		matches := commentGroupRegex.FindStringSubmatch(p.Text)
@@ -282,7 +277,7 @@ func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, erro
 				url := matches[1]
 				resources := strings.Split(url, "/")
 				if len(resources) < 1 {
-					return "", fmt.Errorf("failed to process URL: %s", url)
+					return "", "", fmt.Errorf("failed to process URL: %s", url)
 				}
 
 				lastParam := urlParamRegex.FindStringSubmatch(resources[len(resources)-1])
@@ -295,8 +290,12 @@ func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, erro
 						}
 						if !urlParamRegex.MatchString(resources[i]) {
 							out = append(out, resources[i])
+							mainResource = resources[i]
 							break
 						}
+					}
+					if mainResource == "" {
+						return "", "", fmt.Errorf("failed to determine main resource from URL: %s", url)
 					}
 					res := strings.Builder{}
 					for i := len(out) - 1; i >= 0; i-- {
@@ -304,17 +303,17 @@ func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, erro
 					}
 					fileName = strings.ToLower(method + "_" + res.String())
 				} else {
+					mainResource = resources[len(resources)-1]
 					fileName = strings.ToLower(method + "_" + resources[len(resources)-1])
 				}
 			}
 		}
 	}
-	return fileName, nil
+	return fileName, mainResource, nil
 }
 
-func (o *OpenAPIProject) createHandler(out strings.Builder, fileName string) error {
-
-	folderForFile := filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER)
+func (o *OpenAPIProject) createHandler(out *strings.Builder, fileName string) error {
+	folderForFile := o.HandlersFolder()
 
 	if err := os.MkdirAll(folderForFile, 0755); err != nil {
 		return fmt.Errorf("failed to create handler folder %s: %w", folderForFile, err)
@@ -322,18 +321,18 @@ func (o *OpenAPIProject) createHandler(out strings.Builder, fileName string) err
 
 	path := filepath.Join(folderForFile, fileName+".go")
 
-	return formatAndWrite(out, path)
+	return formatAndWrite(out.String(), path)
 }
 
-func (o *OpenAPIProject) writeBody(out strings.Builder, methodInfo MethodInfo, packageName string) {
+func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, packageName string) {
 	out.WriteString("package " + packageName + "\n\n")
 	out.WriteString("import (\n")
 	for alias, path := range methodInfo.Imports {
 		pkgName := path[strings.LastIndex(path, "/")+1:]
 		if alias == pkgName {
-			out.WriteString(fmt.Sprintf("%q\n", path))
+			fmt.Fprintf(out, "%q\n", path)
 		} else {
-			out.WriteString(fmt.Sprintf("%s %q\n", alias, path))
+			fmt.Fprintf(out, "%s %q\n", alias, path)
 		}
 	}
 
@@ -366,18 +365,18 @@ func NewServer(opts ...option) *Server {
 type Server struct{
 }`)
 
-	return formatAndWrite(out, path)
+	return formatAndWrite(out.String(), path)
 }
 
 func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
-	err := os.MkdirAll(filepath.Join(o.outputDir, INTERNAL_FOLDER, API_FOLDER), 0755)
+	err := os.MkdirAll(o.APIFolder(), 0755)
 	if err != nil {
 		return err
 	}
 
 	command := "oapi-codegen"
-	cmd := exec.CommandContext(ctx, command, "-config", o.oapiCfgPath, o.specPath)
-	cmd.Dir = path.Join(o.outputDir, INTERNAL_FOLDER, API_FOLDER)
+	cmd := exec.CommandContext(ctx, command, "-config", o.OAPIConfigFilePath(), o.specPath)
+	cmd.Dir = o.APIFolder()
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
 	}
@@ -406,8 +405,7 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	return nil
 }
 
-func formatAndWrite(out strings.Builder, path string) error {
-	content := out.String()
+func formatAndWrite(content string, path string) error {
 	formatted, err := imports.Process(path, []byte(content), nil)
 	if err != nil {
 		return fmt.Errorf("format file %s: %w", path, err)

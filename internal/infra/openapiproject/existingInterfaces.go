@@ -41,13 +41,13 @@ func NewProjectInterface(name, description string) *ProjectInterface {
 
 func (o *OpenAPIProject) WriteProjectInterfaces(m map[string]*ProjectInterface) error {
 	interfacesPath := o.InterfacesFilePath()
-	content := strings.Builder{}
+	out := strings.Builder{}
 
-	content.WriteString(HEADER_COMMENT)
-	content.WriteString("package handlers\n\n")
-	content.WriteString(o.GenerateInterfacesContent(m))
+	out.WriteString(HEADER_COMMENT)
+	out.WriteString("package handlers\n\n")
+	out.WriteString(o.GenerateInterfacesContent(m))
 
-	return formatAndWrite(content, interfacesPath)
+	return formatAndWrite(out.String(), interfacesPath)
 }
 
 func (o *OpenAPIProject) GenerateInterfacesContent(m map[string]*ProjectInterface) string {
