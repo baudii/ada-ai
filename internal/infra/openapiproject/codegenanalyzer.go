@@ -8,10 +8,12 @@ import (
 	"go/printer"
 	"go/types"
 	"log/slog"
+	"os"
 	"reflect"
 	"strings"
 	"unicode"
 
+	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -57,6 +59,23 @@ func PascalToSnake(s string) string {
 	}
 
 	return string(out)
+}
+
+func Extract[T ast.Expr](path, filter string) (string, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", nil
+	}
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read file: %w", err)
+	}
+
+	res, err := codeanalyzer.ExtractTypesOf[T](string(f), filter)
+	if err != nil {
+		return "", fmt.Errorf("extract type of %T: %w", *new(T), err)
+	}
+
+	return res, nil
 }
 
 func getMethodInfo(method *types.Func, pkg *packages.Package) MethodInfo {
