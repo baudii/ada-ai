@@ -127,7 +127,7 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 			if docCg == nil {
 				docCg = genDecl.Doc
 			}
-			ifaceComment := strings.TrimSpace(codeanalyzer.CommentText(docCg))
+			ifaceComment := strings.TrimSpace(docCg.Text())
 
 			currentInterface := NewProjectInterface(ts.Name.Name, ifaceComment)
 			projectInterfaces.m[currentInterface.Name] = currentInterface
@@ -149,9 +149,9 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 				params := codeanalyzer.FieldListToStrings(fset, ft.Params)
 				returns := codeanalyzer.FieldListToStrings(fset, ft.Results)
 
-				methodComment := strings.TrimSpace(codeanalyzer.CommentText(field.Doc))
+				methodComment := strings.TrimSpace(field.Doc.Text())
 				if methodComment == "" {
-					methodComment = strings.TrimSpace(codeanalyzer.CommentText(field.Comment))
+					methodComment = strings.TrimSpace(field.Comment.Text())
 				}
 
 				for _, name := range field.Names {

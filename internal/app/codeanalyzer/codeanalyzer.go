@@ -8,13 +8,6 @@ import (
 	"strings"
 )
 
-func CommentText(cg *ast.CommentGroup) string {
-	if cg == nil {
-		return ""
-	}
-	return cg.Text()
-}
-
 func NodeToString(fset *token.FileSet, n ast.Node) string {
 	var b bytes.Buffer
 	_ = printer.Fprint(&b, fset, n)

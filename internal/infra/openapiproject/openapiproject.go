@@ -212,6 +212,12 @@ func (o *OpenAPIProject) MaterializeHandler(
 	}
 	reserveCopy := deepcopy.Copy(interfaces.m).(map[string]*ProjectInterface)
 
+	// TODO: Switch _ symbol to proper receiver name when function is finished.
+	_, err = o.ParseExistingModels(mainResource)
+	if err != nil {
+		return fmt.Errorf("parse existing models: %w", err)
+	}
+
 	for retryCount < 3 {
 		response, err := o.app.SendInstructions(ctx, filler, []any{out.String(), interfaces.s})
 		if err != nil {
