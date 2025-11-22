@@ -2,15 +2,15 @@ package openapiproject
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/printer"
 	"go/token"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 )
 
 type ProjectInterfaceMethod struct {
@@ -127,7 +127,7 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 			if docCg == nil {
 				docCg = genDecl.Doc
 			}
-			ifaceComment := strings.TrimSpace(commentText(docCg))
+			ifaceComment := strings.TrimSpace(codeanalyzer.CommentText(docCg))
 
 			currentInterface := NewProjectInterface(ts.Name.Name, ifaceComment)
 			projectInterfaces.m[currentInterface.Name] = currentInterface
@@ -146,12 +146,12 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 					continue
 				}
 
-				params := fieldListToStrings(fset, ft.Params)
-				returns := fieldListToStrings(fset, ft.Results)
+				params := codeanalyzer.FieldListToStrings(fset, ft.Params)
+				returns := codeanalyzer.FieldListToStrings(fset, ft.Results)
 
-				methodComment := strings.TrimSpace(commentText(field.Doc))
+				methodComment := strings.TrimSpace(codeanalyzer.CommentText(field.Doc))
 				if methodComment == "" {
-					methodComment = strings.TrimSpace(commentText(field.Comment))
+					methodComment = strings.TrimSpace(codeanalyzer.CommentText(field.Comment))
 				}
 
 				for _, name := range field.Names {
@@ -206,39 +206,4 @@ func ClearInterfacesContent(interfaces []byte) string {
 	}
 
 	return strings.TrimSpace(out.String())
-}
-
-func commentText(cg *ast.CommentGroup) string {
-	if cg == nil {
-		return ""
-	}
-	return cg.Text()
-}
-
-func fieldListToStrings(fset *token.FileSet, fl *ast.FieldList) []string {
-	if fl == nil || len(fl.List) == 0 {
-		return nil
-	}
-
-	var out []string
-	for _, f := range fl.List {
-		typStr := nodeToString(fset, f.Type)
-
-		if len(f.Names) > 0 {
-			for _, n := range f.Names {
-				out = append(out, strings.TrimSpace(n.Name+" "+typStr))
-			}
-			continue
-		}
-
-		out = append(out, strings.TrimSpace(typStr))
-	}
-
-	return out
-}
-
-func nodeToString(fset *token.FileSet, n ast.Node) string {
-	var b bytes.Buffer
-	_ = printer.Fprint(&b, fset, n)
-	return b.String()
 }
