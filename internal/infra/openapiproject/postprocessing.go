@@ -4,9 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 )
 
 var (
@@ -178,7 +184,7 @@ func (o *OpenAPIProject) ProcessResponse(
 		return nil, err
 	}
 
-	updatedModels, err := UpdateModels(generatedModels, existingModels)
+	updatedModels, err := UpdateModels(generatedModels.M, existingModels)
 	if err != nil {
 		return nil, err
 	}
@@ -216,11 +222,12 @@ func ParseFieldLine(line string) (*FieldInfo, error) {
 			}
 		case 2:
 			section = append(section, c)
-			if c == '`' {
+			switch c {
+			case '`':
 				state = 3
-			} else if c == '/' {
+			case '/':
 				state = 4
-			} else {
+			default:
 				break
 			}
 		case 3:
@@ -246,10 +253,89 @@ func ParseFieldLine(line string) (*FieldInfo, error) {
 	return fieldInfo, nil
 }
 
-func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (map[string]*ProjectModel, error) {
+func (o *OpenAPIProject) InsertFieldsToServer(raw *llmResponse) error {
+	if strings.TrimSpace(raw.addedFields) == "none" {
+		return nil
+	}
+	fieldsSplit := strings.SplitSeq(raw.addedFields, "\n")
+	newFields := []FieldInfo{}
+	for line := range fieldsSplit {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "-")
+		line = strings.TrimSpace(line)
+		line = strings.Join(strings.Split(line, " "), " ")
+		fieldInfo, err := ParseFieldLine(line)
+		if err != nil {
+			return err
+		}
+		newFields = append(newFields, *fieldInfo)
+	}
+
+	serverPath := filepath.Join(o.HandlersFolder(), SERVER_FILE)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, serverPath, nil, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("parse server file: %w", err)
+	}
+
+	for _, decl := range f.Decls {
+		if structDecl, ok := decl.(*ast.GenDecl); ok && structDecl.Tok == token.TYPE {
+			for _, spec := range structDecl.Specs {
+				if typeSpec, ok := spec.(*ast.TypeSpec); ok && typeSpec.Name.Name == "Server" {
+					if structType, ok := typeSpec.Type.(*ast.StructType); ok {
+						for _, newField := range newFields {
+							found := false
+							for _, field := range structType.Fields.List {
+								if field.Names[0].Name == newField.Name {
+									if newField.Type != field.Type.(*ast.Ident).Name {
+										return fmt.Errorf("field %s already exists with different type", newField.Name)
+									}
+									field.Tag = &ast.BasicLit{
+										Kind:  token.STRING,
+										Value: string(newField.Tags),
+									}
+									field.Doc = &ast.CommentGroup{
+										List: []*ast.Comment{{Text: newField.Doc}},
+									}
+									found = true
+								}
+							}
+							if !found {
+								structType.Fields.List = append(structType.Fields.List, &ast.Field{
+									Names: []*ast.Ident{
+										{Name: newField.Name},
+									},
+									Type: &ast.Ident{Name: newField.Type},
+									Tag: &ast.BasicLit{
+										Kind:  token.STRING,
+										Value: string(newField.Tags),
+									},
+									Comment: &ast.CommentGroup{
+										List: []*ast.Comment{{Text: newField.Doc}},
+									},
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if err := formatAndWrite(codeanalyzer.NodeToString(fset, f), serverPath); err != nil {
+		return fmt.Errorf("write updated server file: %w", err)
+	}
+
+	return nil
+}
+
+func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (*ProjectModels, error) {
 	modelsBlock := GetMdBlock(raw.addedModels, "go")
 	if modelsBlock == "none" {
-		return make(map[string]*ProjectModel), nil
+		return &ProjectModels{
+			M: make(map[string]*ProjectModel),
+			S: "",
+		}, nil
 	}
 	goFile := "package models\n\n" + modelsBlock
 

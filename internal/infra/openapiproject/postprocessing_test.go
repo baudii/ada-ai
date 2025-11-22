@@ -1,10 +1,13 @@
 package openapiproject
 
 import (
+	"go/format"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadLLMResponse(t *testing.T) {
@@ -222,6 +225,65 @@ func TestParseMethodSignature(t *testing.T) {
 			assert.Equal(t, v.expectedName, name)
 			assert.Equal(t, v.expectedParams, params)
 			assert.Equal(t, v.expectedReturns, returns)
+		})
+	}
+}
+
+func TestInsertFieldsToServer(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		resp            *llmResponse
+		expectedContent string
+		expectErr       bool
+	}{
+		{
+			name: "insert new fields",
+			resp: &llmResponse{
+				addedFields: "- Price float64 `json:\"price\"` // Price of the product\n" +
+					"- Description string `json:\"description\"` // Description of the product",
+			},
+			expectedContent: `package handlers
+
+type Server struct {
+	ID          openapi_types.UUID ` + "`json:\"id\"`" + `
+	Name        string             ` + "`json:\"name\"`" + `
+	Price       float64            ` + "`json:\"price\"`" + `       // Price of the product
+	Description string             ` + "`json:\"description\"`" + ` // Description of the product
+}
+`,
+			expectErr: false,
+		},
+	}
+	initialContent := `package handlers
+
+type Server struct {
+	ID   openapi_types.UUID ` + "`json:\"id\"`" + `
+	Name string            ` + "`json:\"name\"`" + `
+}
+`
+	for _, v := range tests {
+		t.Run(v.name, func(t *testing.T) {
+			t.Parallel()
+			tmp := t.TempDir()
+			o := New(tmp)
+			err := os.MkdirAll(o.HandlersFolder(), 0755)
+			require.NoError(t, err)
+			serverPath := o.ServerFilePath()
+			err = os.WriteFile(serverPath, []byte(initialContent), 0644)
+			require.NoError(t, err)
+			err = o.InsertFieldsToServer(v.resp)
+			if v.expectErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				serverPath := o.ServerFilePath()
+				content, err := os.ReadFile(serverPath)
+				require.NoError(t, err)
+				content, err = format.Source([]byte(content))
+				require.NoError(t, err)
+				assert.Equal(t, v.expectedContent, string(content))
+			}
 		})
 	}
 }
