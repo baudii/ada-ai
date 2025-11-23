@@ -10,13 +10,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/baudii/ada-ai/internal/app"
+	"github.com/baudii/ada-ai/internal/core/aigen"
 	"github.com/baudii/ada-ai/internal/infra/folders"
 	"github.com/baudii/ada-ai/internal/infra/fsutils"
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/mohae/deepcopy"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/imports"
 )
@@ -206,60 +207,73 @@ func (o *OpenAPIProject) MaterializeHandler(
 	}
 
 	retryCount := 0
-	interfaces, err := o.ParseProjectInterfaces()
-	if err != nil {
-		return fmt.Errorf("parse project interfaces: %w", err)
-	}
-	reserveCopy := deepcopy.Copy(interfaces.m).(map[string]*ProjectInterface)
-
-	existingModels, err := o.ParseExistingModels(mainResource)
-	if err != nil {
-		return fmt.Errorf("parse existing models: %w", err)
-	}
-
-	extractedModels, err := Extract[*ast.StructType](filepath.Join(o.ModelsFolder(), mainResource+".go"), "")
-	if err != nil {
-		return fmt.Errorf("extract models: %w", err)
-	}
-	p := o.InterfacesFilePath()
-	extractedInterfaces, err := Extract[*ast.InterfaceType](p, "")
-	if err != nil {
-		return fmt.Errorf("extract interfaces: %w", err)
-	}
-
-	serverStruct, err := Extract[*ast.StructType](filepath.Join(o.HandlersFolder(), "server.go"), "Server")
-	if err != nil {
-		return fmt.Errorf("extract server struct: %w", err)
-	}
-
+	errors := make(map[string]string, 0)
 	for retryCount < 3 {
+		interfaces, err := o.ParseProjectInterfaces()
+		if err != nil {
+			return fmt.Errorf("parse project interfaces: %w", err)
+		}
+
+		existingModels, err := o.ParseExistingModels(mainResource)
+		if err != nil {
+			return fmt.Errorf("parse existing models: %w", err)
+		}
+
+		extractedModels, err := Extract[*ast.StructType](filepath.Join(o.ModelsFolder(), mainResource+".go"), "")
+		if err != nil {
+			return fmt.Errorf("extract models: %w", err)
+		}
+		p := o.InterfacesFilePath()
+		extractedInterfaces, err := Extract[*ast.InterfaceType](p, "")
+		if err != nil {
+			return fmt.Errorf("extract interfaces: %w", err)
+		}
+
+		serverStruct, err := Extract[*ast.StructType](filepath.Join(o.HandlersFolder(), "server.go"), "Server")
+		if err != nil {
+			return fmt.Errorf("extract server struct: %w", err)
+		}
+
+		unifiedContext := fmt.Sprintf(
+			"// interfaces.go\n%v\n// models.go\n%v\n// server.go\n%v\n",
+			extractedInterfaces, extractedModels, serverStruct)
+
+		errorCtx := ""
+		if len(errors) > 0 {
+			joined := []string{}
+			for _, v := range errors {
+				joined = append(joined, v)
+			}
+			errorCtx = "\n\nIMPORTANT: THIS IS ATTEMPT #" + strconv.Itoa(retryCount) + ". CONSIDER PREVIOUS ERRORS CAREFULLY:\n" + strings.Join(joined, "\n") + "\n"
+		}
+
 		response, err := o.app.SendInstructions(ctx, filler, []any{
 			out.String(),
-			extractedInterfaces,
-			extractedModels,
-			serverStruct,
-		})
+			unifiedContext,
+			errorCtx,
+		}, aigen.WithTemperature(0.2))
 		if err != nil {
 			return fmt.Errorf("send instructions: %w", err)
 		}
 		o.logger.Debug(string(response))
 		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m, existingModels)
 		if err != nil {
+			errors["process_response"] = fmt.Sprintf("- process response error: %v", err)
 			retryCount++
-			// TODO: add error details to new requests to the LLM.
 			o.logger.Warn("failed to process response. retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
+		delete(errors, "process_response")
 
 		if err = o.InsertFieldsToServer(llmResponseObj); err != nil {
+			errors["insert_fields_to_server"] = fmt.Sprintf("- insert fields to server error: %v", err)
 			retryCount++
 			o.logger.Warn("failed to insert new fields to server. retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
+		delete(errors, "insert_fields_to_server")
 
 		if err = o.WriteHandlerModels(mainResource, llmResponseObj.newModels); err != nil {
-			retryCount++
-			o.logger.Warn("failed to write project models. retrying...", "error", err, "retryCount", retryCount)
 			return fmt.Errorf("write project models: %w", err)
 		}
 
@@ -270,12 +284,28 @@ func (o *OpenAPIProject) MaterializeHandler(
 		outWithFunction := o.insertFunctionAndModelImport(out.String(), llmResponseObj.functionBody)
 		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
-			// TODO: Apply rollback if we fail to write the handler file
-			if err := o.WriteProjectInterfaces(reserveCopy); err != nil {
-				return fmt.Errorf("restore project interfaces: %w", err)
-			}
+			errors["create_handler"] = fmt.Sprintf("- create handler error: %v", err)
 			retryCount++
 			o.logger.Warn("failed to create handler. retrying...", "error", err, "retryCount", retryCount)
+			continue
+		}
+		delete(errors, "create_handler")
+
+		cmd := exec.Command("go", "build", "./...")
+		cmd.Dir = o.outputDir
+		if output, err := cmd.CombinedOutput(); err != nil {
+			errors["build"] = fmt.Sprintf("- build error: %v, output: %s", err, string(output))
+			retryCount++
+			o.logger.Warn("failed to build project. retrying...", "error", err, "output", string(output), "retryCount", retryCount)
+			continue
+		}
+
+		cmd = exec.Command("go", "mod", "tidy")
+		cmd.Dir = o.outputDir
+		if output, err := cmd.CombinedOutput(); err != nil {
+			errors["mod_tidy"] = fmt.Sprintf("- mod tidy error: %v, output: %s", err, string(output))
+			retryCount++
+			o.logger.Warn("failed to run go mod tidy. retrying...", "error", err, "output", string(output), "retryCount", retryCount)
 			continue
 		}
 
