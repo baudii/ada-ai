@@ -47,12 +47,12 @@ func (a *App) SendInstructions(ctx context.Context, promptName string, args []an
 }
 
 func (a *App) buildSysAndHumanPrompts(p string, args ...any) (string, string, error) {
-	sys, err := a.generator.BuildPrompt(filepath.Join(p, "system.txt"))
+	sys, err := a.generator.BuildPrompt(filepath.Join(p, "system.md"))
 	if err != nil {
 		return "", "", fmt.Errorf("load system template: %w", err)
 	}
 
-	hum, err := a.generator.BuildPrompt(filepath.Join(p, "human.txt"), args...)
+	hum, err := a.generator.BuildPrompt(filepath.Join(p, "human.md"), args...)
 	if err != nil {
 		return "", "", fmt.Errorf("load human template: %w", err)
 	}
