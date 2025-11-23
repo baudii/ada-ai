@@ -375,6 +375,7 @@ func UpdateInterfaces(
 	for _, new := range newInterfaces {
 		if old, ok := oldInterfaces[new.Name]; ok {
 			for _, newMethod := range new.Methods {
+				found := false
 				for i, oldMethod := range old.Methods {
 					if oldMethod.Name == newMethod.Name {
 						if !reflect.DeepEqual(oldMethod.Params, newMethod.Params) {
@@ -386,9 +387,12 @@ func UpdateInterfaces(
 							return nil, fmt.Errorf("existing method %s in interface %s has different return values", newMethod.Name, new.Name)
 						}
 						old.Methods[i].Description = newMethod.Description
-					} else {
-						old.Methods = append(old.Methods, newMethod)
+						found = true
+						break
 					}
+				}
+				if !found {
+					old.Methods = append(old.Methods, newMethod)
 				}
 			}
 		} else {
