@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/baudii/ada-ai/internal/core/gen"
+	"github.com/baudii/ada-ai/internal/core/aigen"
 )
 
 // Constants that define folder names containing prompts.
@@ -32,7 +32,7 @@ func (a *App) GenerateProject(ctx context.Context, m Materializer) error {
 
 // SendInstructions sends instructions to the AI model using the specified prompt
 // and arguments, returning the generated response as a byte slice.
-func (a *App) SendInstructions(ctx context.Context, promptName string, args []any, opts ...gen.Option) ([]byte, error) {
+func (a *App) SendInstructions(ctx context.Context, promptName string, args []any, opts ...aigen.Option) ([]byte, error) {
 	sys, hum, err := a.buildSysAndHumanPrompts(promptName, args...)
 	if err != nil {
 		return nil, fmt.Errorf("system and human prompts: %w", err)

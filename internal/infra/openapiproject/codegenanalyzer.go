@@ -8,10 +8,12 @@ import (
 	"go/printer"
 	"go/types"
 	"log/slog"
+	"os"
 	"reflect"
 	"strings"
 	"unicode"
 
+	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -57,6 +59,23 @@ func PascalToSnake(s string) string {
 	}
 
 	return string(out)
+}
+
+func Extract[T ast.Expr](path, filter string) (string, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", nil
+	}
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read file: %w", err)
+	}
+
+	res, err := codeanalyzer.ExtractTypesOf[T](string(f), filter)
+	if err != nil {
+		return "", fmt.Errorf("extract type of %T: %w", *new(T), err)
+	}
+
+	return res, nil
 }
 
 func getMethodInfo(method *types.Func, pkg *packages.Package) MethodInfo {
@@ -147,9 +166,9 @@ func makeQualifier(info *types.Info, imports map[string]string) types.Qualifier 
 	}
 }
 
-func writeComments(out strings.Builder, cg *ast.CommentGroup, methodInfo MethodInfo, pkg *packages.Package) {
+func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo MethodInfo, pkg *packages.Package) {
 	out.WriteString(HEADER_COMMENT)
-	fmt.Fprintf(&out, "//\n// Handler for %s method\n", methodInfo.Name)
+	fmt.Fprintf(out, "//\n// Handler for %s method\n", methodInfo.Name)
 
 	if cg != nil {
 		out.WriteString("//\n// DESCRIPTION:\n")
@@ -160,14 +179,14 @@ func writeComments(out strings.Builder, cg *ast.CommentGroup, methodInfo MethodI
 
 	out.WriteString("//\n// PARAMETERS:\n")
 	for _, prm := range methodInfo.Params {
-		out.WriteString(fmt.Sprintf("//   %s %s\n", prm.Name, prm.Type))
+		fmt.Fprintf(out, "//   %s %s\n", prm.Name, prm.Type)
 	}
 
 	for _, prm := range methodInfo.Params {
 		if prm.IsStruct && prm.TypeSpec != nil {
 			ts := prm.TypeSpec
 
-			out.WriteString(fmt.Sprintf("//\n// STRUCT %s DEFINITION:\n", prm.StructName))
+			fmt.Fprintf(out, "//\n// STRUCT %s DEFINITION:\n", prm.StructName)
 
 			var leadingDoc *ast.CommentGroup
 
@@ -199,7 +218,6 @@ func writeComments(out strings.Builder, cg *ast.CommentGroup, methodInfo MethodI
 			}
 		}
 	}
-
 }
 
 func processServerInterfaceMethods(

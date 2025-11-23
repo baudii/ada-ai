@@ -30,6 +30,7 @@ type UserHandler interface {
 	// GetUser retrieves a user by ID
 	GetUser(id string) (User, error)
 }
+
 type Repository interface {
 	Save(data string) error
 }
@@ -88,7 +89,7 @@ type Repository interface {
 type InvalidInterface {
 	DoSomething() error
 }
-			}`,
+}`,
 			err: "parse file",
 		},
 		{
@@ -96,8 +97,7 @@ type InvalidInterface {
 			contents: `package handlers
 type NotAnInterface struct {
 	Field string
-}
-			`,
+}`,
 			expected: map[string]*ProjectInterface{},
 		},
 	}
@@ -190,7 +190,6 @@ type UserHandler interface {
 	// GetUser retrieves a user by ID
 	GetUser(id string) (User, error)
 }
-
 `
 	actual := o.GenerateInterfacesContent(interfaces)
 	assert.Equal(t, expected, actual)

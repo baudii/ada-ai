@@ -17,7 +17,7 @@ import (
 	"github.com/baudii/ada-ai/internal/ui/cli"
 )
 
-var projectName = "oapitest4"
+var projectName = "oapitest5"
 
 func main() {
 	// Parse command-line flags

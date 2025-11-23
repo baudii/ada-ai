@@ -4,9 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/baudii/ada-ai/internal/app/codeanalyzer"
 )
 
 var (
@@ -16,19 +22,25 @@ var (
 
 type llmResponseRaw struct {
 	functionBody          string
+	addedFields           string
 	interfaces            string
+	addedModels           string
 	interfacesDescription string
 }
 
 type llmResponse struct {
 	functionBody           string
+	addedFields            string
 	interfaces             string
+	newModels              map[string]*ProjectModel
 	interfacesDescriptions map[string]*ProjectInterface
 }
 
 func ReadLLMResponse(body string) (*llmResponseRaw, error) {
 	functionBody := strings.Builder{}
+	addedFields := strings.Builder{}
 	interfaces := strings.Builder{}
+	addedModels := strings.Builder{}
 	interfacesDescription := strings.Builder{}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(body)))
@@ -44,29 +56,43 @@ func ReadLLMResponse(body string) (*llmResponseRaw, error) {
 				state = 1
 			}
 		case 1:
-			if strings.HasPrefix(line, "## interfaces") {
+			if strings.HasPrefix(line, "## added_fields") {
 				state = 2
 			} else {
 				functionBody.WriteString(line + "\n")
 			}
 		case 2:
-			if strings.HasPrefix(line, "## interfaces_description") {
+			if strings.HasPrefix(line, "## interfaces") {
 				state = 3
+			} else {
+				addedFields.WriteString(line + "\n")
+			}
+		case 3:
+			if strings.HasPrefix(line, "## added_models") {
+				state = 4
 			} else {
 				interfaces.WriteString(line + "\n")
 			}
-		case 3:
+		case 4:
+			if strings.HasPrefix(line, "## interfaces_description") {
+				state = 5
+			} else {
+				addedModels.WriteString(line + "\n")
+			}
+		case 5:
 			interfacesDescription.WriteString(line + "\n")
 		}
 	}
 
-	if state != 3 {
+	if state != 5 {
 		return nil, fmt.Errorf("failed to parse body: invalid structure")
 	}
 
 	return &llmResponseRaw{
 		functionBody:          functionBody.String(),
+		addedFields:           addedFields.String(),
 		interfaces:            interfaces.String(),
+		addedModels:           addedModels.String(),
 		interfacesDescription: interfacesDescription.String(),
 	}, nil
 }
@@ -137,12 +163,213 @@ func GetMdBlock(body, blockName string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(body), "```"+blockName+"\n"), "```")
 }
 
-func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, oldInterfaces map[string]*ProjectInterface) (*llmResponse, error) {
+func (o *OpenAPIProject) ProcessResponse(
+	ctx context.Context,
+	content []byte,
+	oldInterfaces map[string]*ProjectInterface,
+	existingModels map[string]*ProjectModel,
+) (*llmResponse, error) {
 	raw, err := ReadLLMResponse(string(content))
 	if err != nil {
 		return nil, err
 	}
 
+	updatedInterfaces, err := UpdateInterfaces(raw, oldInterfaces)
+	if err != nil {
+		return nil, err
+	}
+
+	generatedModels, err := o.ExtractGeneratedModels(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedModels, err := UpdateModels(generatedModels, existingModels)
+	if err != nil {
+		return nil, err
+	}
+
+	return &llmResponse{
+		functionBody:           GetMdBlock(raw.functionBody, "go"),
+		addedFields:            GetMdBlock(raw.addedFields, "go"),
+		interfaces:             GetMdBlock(raw.interfaces, "go"),
+		newModels:              updatedModels,
+		interfacesDescriptions: updatedInterfaces,
+	}, nil
+}
+
+func ParseFieldLine(line string) (*FieldInfo, error) {
+	state := 0
+	section := []rune{}
+	fieldInfo := &FieldInfo{}
+	for _, c := range line {
+		switch state {
+		case 0:
+			if c == ' ' {
+				state = 1
+				fieldInfo.Name = string(section)
+				section = []rune{}
+			} else {
+				section = append(section, c)
+			}
+		case 1:
+			if c == ' ' {
+				state = 2
+				fieldInfo.Type = string(section)
+				section = []rune{}
+			} else {
+				section = append(section, c)
+			}
+		case 2:
+			section = append(section, c)
+			switch c {
+			case '`':
+				state = 3
+			case '/':
+				state = 4
+			default:
+				break
+			}
+		case 3:
+			section = append(section, c)
+			if c == '`' {
+				state = 4
+				fieldInfo.Tags = reflect.StructTag(string(section))
+				section = []rune{}
+			}
+		case 4:
+			section = append(section, c)
+		}
+	}
+	if len(section) > 0 {
+		if state == 1 {
+			fieldInfo.Type = string(section)
+		} else if state == 4 && len(section) > 0 {
+			fieldInfo.Doc = string(section)
+		} else {
+			return nil, fmt.Errorf("failed to parse field line: %s", line)
+		}
+	}
+	return fieldInfo, nil
+}
+
+func (o *OpenAPIProject) InsertFieldsToServer(raw *llmResponse) error {
+	if strings.TrimSpace(raw.addedFields) == "none" {
+		return nil
+	}
+	fieldsSplit := strings.SplitSeq(raw.addedFields, "\n")
+	newFields := []FieldInfo{}
+	for line := range fieldsSplit {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "-")
+		line = strings.TrimSpace(line)
+		line = strings.Join(strings.Split(line, " "), " ")
+		fieldInfo, err := ParseFieldLine(line)
+		if err != nil {
+			return err
+		}
+		newFields = append(newFields, *fieldInfo)
+	}
+
+	serverPath := filepath.Join(o.HandlersFolder(), SERVER_FILE)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, serverPath, nil, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("parse server file: %w", err)
+	}
+
+	for _, decl := range f.Decls {
+		if structDecl, ok := decl.(*ast.GenDecl); ok && structDecl.Tok == token.TYPE {
+			for _, spec := range structDecl.Specs {
+				if typeSpec, ok := spec.(*ast.TypeSpec); ok && typeSpec.Name.Name == "Server" {
+					if structType, ok := typeSpec.Type.(*ast.StructType); ok {
+						for _, newField := range newFields {
+							found := false
+							for _, field := range structType.Fields.List {
+								if field.Names[0].Name == newField.Name {
+									if newField.Type != field.Type.(*ast.Ident).Name {
+										return fmt.Errorf("field %s already exists with different type", newField.Name)
+									}
+									field.Tag = &ast.BasicLit{
+										Kind:  token.STRING,
+										Value: string(newField.Tags),
+									}
+									field.Doc = &ast.CommentGroup{
+										List: []*ast.Comment{{Text: newField.Doc}},
+									}
+									found = true
+								}
+							}
+							if !found {
+								structType.Fields.List = append(structType.Fields.List, &ast.Field{
+									Names: []*ast.Ident{
+										{Name: newField.Name},
+									},
+									Type: &ast.Ident{Name: newField.Type},
+									Tag: &ast.BasicLit{
+										Kind:  token.STRING,
+										Value: string(newField.Tags),
+									},
+									Comment: &ast.CommentGroup{
+										List: []*ast.Comment{{Text: newField.Doc}},
+									},
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if err := formatAndWrite(codeanalyzer.NodeToString(fset, f), serverPath); err != nil {
+		return fmt.Errorf("write updated server file: %w", err)
+	}
+
+	return nil
+}
+
+func (o *OpenAPIProject) ExtractGeneratedModels(raw *llmResponseRaw) (map[string]*ProjectModel, error) {
+	modelsBlock := GetMdBlock(raw.addedModels, "go")
+	if modelsBlock == "none" {
+		return make(map[string]*ProjectModel), nil
+	}
+	goFile := "package models\n\n" + modelsBlock
+
+	generatedModels, err := o.ExtractModels("", goFile)
+	if err != nil {
+		return nil, fmt.Errorf("extract models: %w", err)
+	}
+	return generatedModels, nil
+}
+
+func UpdateModels(
+	generatedModels map[string]*ProjectModel,
+	existingModels map[string]*ProjectModel,
+) (map[string]*ProjectModel, error) {
+	for name, genModel := range generatedModels {
+		if existModel, ok := existingModels[name]; ok {
+			fieldMap := make(map[string]FieldInfo)
+			for _, field := range existModel.Fields {
+				fieldMap[field.Name] = field
+			}
+			for _, genField := range genModel.Fields {
+				if _, ok := fieldMap[genField.Name]; !ok {
+					existModel.Fields = append(existModel.Fields, genField)
+				}
+			}
+		} else {
+			existingModels[name] = genModel
+		}
+	}
+
+	return existingModels, nil
+}
+
+func UpdateInterfaces(
+	raw *llmResponseRaw,
+	oldInterfaces map[string]*ProjectInterface,
+) (map[string]*ProjectInterface, error) {
 	newInterfaces := ParseInterfaceDescriptions(raw.interfacesDescription)
 
 	for _, new := range newInterfaces {
@@ -168,10 +395,5 @@ func (o *OpenAPIProject) ProcessResponse(ctx context.Context, content []byte, ol
 			oldInterfaces[new.Name] = new
 		}
 	}
-
-	return &llmResponse{
-		functionBody:           GetMdBlock(raw.functionBody, "go"),
-		interfaces:             GetMdBlock(raw.interfaces, "go"),
-		interfacesDescriptions: oldInterfaces,
-	}, nil
+	return oldInterfaces, nil
 }

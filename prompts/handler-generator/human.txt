@@ -1,100 +1,44 @@
-You will receive:
+You will receive two blocks:
 
-1. A Go file contents that contains a comment that describes the file, and go code including: package, imports, a handler function with a placeholder comment.
-The file will be wrapped like this:
-
+1. A Go handler file containing a handler function with a placeholder comment and all the context you need as Go comment blocks:
 --- HANDLER_FILE_START ---
-<full Go file with handler and placeholder>
+   <go file>
 --- HANDLER_FILE_END ---
 
-2. An "Existing interfaces context" section, which contains Go code with previously defined interfaces and their methods, including comments describing each interface and method.
-This context represents dependencies that already exist in the project and may be reused or extended.
-The context will be wrapped like this:
-
+2. Existing interfaces context (may be `none`):
 --- EXISTING_INTERFACES_START ---
-<Go code with existing interfaces and comments, or 'none'>
+   <interfaces>
 --- EXISTING_INTERFACES_END ---
 
-Your task:
+**Task:** Replace the placeholder in a handler file by generating **only the handler function body**.
 
-* Generate ONLY the body of the handler function (the code that replaces the placeholder comment).
-* Do NOT output the function signature.
-* Do NOT output unrelated code.
-* Focus only on the logic required inside the handler.
+* Don’t output the function signature or any unrelated code.
+* Write valid, idiomatic Go (imports handled elsewhere).
 
-When the handler needs to call data storage, business logic, external systems, or any other dependency, you must decide how to use interfaces based on the "Existing interfaces context":
+**Dependencies / interfaces:**
+When the handler needs storage/business/external calls, choose 1 of 3 options based on context:
 
-You must choose one of the following:
+1. Use an existing interface + method, or
+2. Extend an existing interface with new method(s), or
+3. Create a new interface if nothing fits.
 
-1. Use an existing interface and an existing method from the context.
-2. Use an existing interface from the context but add a NEW method to it.
-3. Define a completely NEW interface if nothing appropriate exists.
+Assume any interface you use a field on `Server`.
 
-Assume that any interface you use is (or will be) available as a field on the `Server` struct (e.g., repositories, services, providers, clients, etc.).
+**If you add anything new (Server fields, interfaces, methods, or models):**
 
-If you introduce a new interface or add new methods to an existing interface, you must:
+* List new `Server` fields in `## added_fields`.
+* Put full definitions of **new or extended** interfaces in `## interfaces` (don’t repeat unchanged ones).
+* Put full definitions of any new models in `## added_models`.
+* Prefix new models with `models.` inside the handler function body. DON'T PREFIX inside the `## added_models` section.
+* Describe every interface you output in `## interfaces_description` using the required structured format.
 
-* Provide the full interface definition in the `## interfaces` section.
-* Provide a structured description in the `## interfaces_description` section.
+**Output exactly five sections, in order:**
 
-Do NOT repeat unchanged interfaces from the context in the `## interfaces` section. Only include:
-
-* completely new interfaces, or
-* existing interfaces that you are extending with new methods.
-
-Your output must contain EXACTLY three sections, in this order:
-
-1. ## function
-2. ## interfaces
-3. ## interfaces_description
-
-### Section: ## function
-
-This section must contain a Go code block with ONLY the body of the handler function, without the function signature.
-
-Example structure (placeholder):
-
-```go
-ctx := r.Context()
-
-addresses, err := s.AddressRepository.GetAddresses(ctx)
-if err != nil {
-    http.Error(w, "failed to load addresses", http.StatusInternalServerError)
-    return
-}
-
-w.Header().Set("Content-Type", "application/json")
-if err := json.NewEncoder(w).Encode(addresses); err != nil {
-    http.Error(w, "failed to write response", http.StatusInternalServerError)
-    return
-}
-```
-
-### Section: ## interfaces
-
-If you introduced any new interfaces or extended existing ones with new methods, list EACH such interface here in a single Go code block, with the full up-to-date interface definition.
-
-Example:
-
-```go
-type AddressRepository interface {
-    GetAddresses(ctx context.Context) ([]Address, error)
-    CreateAddress(ctx context.Context, addr Address) error
-}
-```
-
-If you did NOT introduce or change any interfaces, output exactly:
-
-```
-none
-```
-
-### Section: ## interfaces_description
-
-Provide a structured, machine-readable description for EVERY interface that appears in the `## interfaces` section.
-
-For each interface, use the following format:
-
+1. `## function` — one Go code block with **only** the handler body.
+2. `## added_fields` — A complete definition of the field: `- FieldName FieldType [Optional: Tag, Comment]` per line, all space separated or `none`.
+3. `## interfaces` — one Go code block listing all new/extended interfaces, or `none`.
+4. `## added_models` — one Go code block listing all new models, or `none`.
+5. `## interfaces_description` — structured descriptions for interfaces in section 3, or `none`. The structure must follow this format:
 ```
 Interface: <Name>
 Description: <description of what this interface represents and why it is needed>
@@ -104,24 +48,6 @@ Methods:
     Signature: <full Go method signature>
     Description: <what the method does and why it is needed>
 ```
-
-If you did NOT introduce or change any interfaces (i.e., `## interfaces` is `none`), then output exactly:
-
-```
-none
-```
-
-### Rules
-
-* Output ONLY the three required sections in the exact order:
-
-  * ## function
-  * ## interfaces
-  * ## interfaces_description
-* Never include the function signature in `## function` — only the body.
-* All code must be valid, idiomatic Go. Imports will be handled separately.
-* Use the "Existing interfaces context" to avoid redefining interfaces that already exist.
-* Prefer reusing and extending existing interfaces over creating new ones when it makes sense.
 
 --- HANDLER_FILE_START ---
 %v
