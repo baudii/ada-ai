@@ -1,14 +1,14 @@
 You will receive two blocks:
 
-1. A Go handler file containing a handler function with a placeholder comment and all the context you need as Go comment blocks:
+1. A Go handler file containing a handler function with a placeholder comment and all the context about this handler that you'll need as Go comment blocks:
 --- HANDLER_FILE_START ---
    <go file>
 --- HANDLER_FILE_END ---
 
-2. Existing interfaces context (may be `none`):
---- EXISTING_INTERFACES_START ---
-   <interfaces>
---- EXISTING_INTERFACES_END ---
+2. Existing context (may be `none`) about interfaces, models, and the Server struct:
+--- EXISTING_CONTEXT_START ---
+   <context>
+--- EXISTING_CONTEXT_END ---
 
 **Task:** Replace the placeholder in a handler file by generating **only the handler function body**.
 
@@ -16,13 +16,13 @@ You will receive two blocks:
 * Write valid, idiomatic Go (imports handled elsewhere).
 
 **Dependencies / interfaces:**
-When the handler needs storage/business/external calls, choose 1 of 3 options based on context:
-
+When the handler needs storage/business/external calls, choose between:
 1. Use an existing interface + method, or
 2. Extend an existing interface with new method(s), or
 3. Create a new interface if nothing fits.
 
-Assume any interface you use a field on `Server`.
+* Assume any interface you use as a field of `Server`.
+* Prefer existing interfaces/models. Only extend/create new ones if no existing method fits. Do not create duplicates.
 
 **If you add anything new (Server fields, interfaces, methods, or models):**
 
@@ -34,10 +34,10 @@ Assume any interface you use a field on `Server`.
 
 **Output exactly five sections, in order:**
 
-1. `## function` — one Go code block with **only** the handler body.
+1. `## function` — one Go code block with **only** the body of the function without signature and open/close brackets, wrapped as a markdown go code block.
 2. `## added_fields` — A complete definition of the field: `- FieldName FieldType [Optional: Tag, Comment]` per line, all space separated or `none`.
-3. `## interfaces` — one Go code block listing all new/extended interfaces, or `none`.
-4. `## added_models` — one Go code block listing all new models, or `none`.
+3. `## interfaces` — one Go code block listing all new/extended interfaces including definition and all methods, or `none`.
+4. `## added_models` — one Go code block listing all new models, including definition and all fields, or `none`.
 5. `## interfaces_description` — structured descriptions for interfaces in section 3, or `none`. The structure must follow this format:
 ```
 Interface: <Name>
@@ -53,6 +53,6 @@ Methods:
 %v
 --- HANDLER_FILE_END ---
 
---- EXISTING_INTERFACES_START ---
+--- EXISTING_CONTEXT_START ---
 %v
---- EXISTING_INTERFACES_END ---
+--- EXISTING_CONTEXT_END ---
