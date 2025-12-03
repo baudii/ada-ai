@@ -105,7 +105,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("send instructions: %w", err)
 		}
 		o.logger.Debug(string(response))
-		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces.m, existingModels)
+		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces, existingModels)
 		if err != nil {
 			errors["process_response"] = fmt.Sprintf("- process response error: %v", err)
 			retryCount++

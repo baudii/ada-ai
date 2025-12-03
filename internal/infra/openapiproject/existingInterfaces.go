@@ -26,11 +26,6 @@ type ProjectInterface struct {
 	Methods     []ProjectInterfaceMethod
 }
 
-type ProjectInterfaces struct {
-	m map[string]*ProjectInterface
-	s string
-}
-
 func NewProjectInterface(name, description string) *ProjectInterface {
 	return &ProjectInterface{
 		Name:        name,
@@ -85,13 +80,10 @@ func (o *OpenAPIProject) GenerateInterfacesContent(m map[string]*ProjectInterfac
 	return out.String()
 }
 
-func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
+func (o *OpenAPIProject) ParseProjectInterfaces() (map[string]*ProjectInterface, error) {
 	outInterfaces := o.InterfacesFilePath()
 	if _, err := os.Stat(outInterfaces); os.IsNotExist(err) {
-		return &ProjectInterfaces{
-			m: make(map[string]*ProjectInterface),
-			s: "",
-		}, nil
+		return make(map[string]*ProjectInterface), nil
 	}
 
 	srcBytes, err := os.ReadFile(outInterfaces)
@@ -99,19 +91,13 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
 
-	interfacesContent := ClearInterfacesContent(srcBytes)
-
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, outInterfaces, srcBytes, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("parse file: %w", err)
 	}
 
-	projectInterfaces := &ProjectInterfaces{
-		m: make(map[string]*ProjectInterface),
-		s: interfacesContent,
-	}
-
+	projectInterfaces := make(map[string]*ProjectInterface)
 	for _, decl := range file.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.TYPE {
@@ -136,7 +122,7 @@ func (o *OpenAPIProject) ParseProjectInterfaces() (*ProjectInterfaces, error) {
 			ifaceComment := strings.TrimSpace(docCg.Text())
 
 			currentInterface := NewProjectInterface(ts.Name.Name, ifaceComment)
-			projectInterfaces.m[currentInterface.Name] = currentInterface
+			projectInterfaces[currentInterface.Name] = currentInterface
 
 			if iface.Methods == nil {
 				continue
