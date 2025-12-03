@@ -143,11 +143,15 @@ func extractFieldInfo(fset *token.FileSet, field *ast.Field) []FieldInfo {
 	}
 	var fields []FieldInfo
 	for _, f := range field.Names {
+		tag := ""
+		if field.Tag != nil {
+			tag = field.Tag.Value
+		}
 		fields = append(fields, FieldInfo{
 			Name: f.Name,
 			Type: typeStr,
 			Doc:  fieldComment,
-			Tags: reflect.StructTag(field.Tag.Value),
+			Tags: reflect.StructTag(tag),
 		})
 	}
 	return fields
