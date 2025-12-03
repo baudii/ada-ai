@@ -72,8 +72,8 @@ func (o *OpenAPIProject) MaterializeHandler(
 		if err != nil {
 			return fmt.Errorf("extract models: %w", err)
 		}
-		p := o.InterfacesFilePath()
-		extractedInterfaces, err := Extract[*ast.InterfaceType](p, "")
+
+		extractedInterfaces, err := Extract[*ast.InterfaceType](o.InterfacesFilePath(), "")
 		if err != nil {
 			return fmt.Errorf("extract interfaces: %w", err)
 		}

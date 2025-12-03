@@ -373,6 +373,9 @@ func UpdateInterfaces(
 	newInterfaces := ParseInterfaceDescriptions(raw.interfacesDescription)
 
 	for _, new := range newInterfaces {
+		if !strings.HasSuffix(new.Name, "Service") {
+			return nil, fmt.Errorf("interface %q does not have 'Service' suffix", new.Name)
+		}
 		if old, ok := oldInterfaces[new.Name]; ok {
 			for _, newMethod := range new.Methods {
 				found := false

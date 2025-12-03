@@ -21,6 +21,7 @@ When the handler needs an external call for `data` or `business logic` you shoul
 2. Extend an existing interface with new method(s), or
 3. Create a new interface if nothing fits.
 
+* Name of the interface *MUST* have suffix `Service` (e.g. OrderService).
 * Assume an interface instance to be a field of a `Server` struct.
 * Prefer existing interfaces/models. Only extend/create new ones if no existing method fits. Do not create duplicates.
 
