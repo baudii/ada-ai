@@ -1,9 +1,0 @@
-### **CONTEXT**
-
-This JSON describes the project itself:
-%v
-
-This JSON describes the project from the technical point of view:
-%v
-
----

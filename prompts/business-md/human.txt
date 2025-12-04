@@ -1,7 +1,0 @@
-### **CONTEXT**
-
-**Project name:**
-%v
-
-**Short summary:**
-%v

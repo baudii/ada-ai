@@ -1,8 +1,0 @@
-### **CONTEXT**
-
-App should be developed using %v language.
-
-The following JSON structure describes the "business" part of the project:
-%v
-
----
