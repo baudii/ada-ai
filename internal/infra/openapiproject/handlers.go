@@ -18,22 +18,11 @@ import (
 // MaterializeHandlers reads the generated server code and extracts method information
 // from the ServerInterface.
 func (o *OpenAPIProject) MaterializeHandlers(ctx context.Context) error {
-	cfg := &packages.Config{
-		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
-		Dir:  o.outputDir,
-	}
-
-	pkgs, err := packages.Load(cfg, fmt.Sprintf("%s/%s/%s", o.moduleName, INTERNAL_FOLDER, API_FOLDER))
-	if err != nil {
-		return fmt.Errorf("load package: %w", err)
-	}
-
 	if err := o.createServerFile(); err != nil {
 		return err
 	}
 
-	processServerInterfaceMethods(ctx, o.logger, pkgs, o.MaterializeHandler)
-	return nil
+	return o.processServerInterfaceMethods(ctx, o.MaterializeHandler)
 }
 
 // MaterializeHandler generates a handler file for the given method of the ServerInterface.

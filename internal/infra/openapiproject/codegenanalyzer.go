@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/types"
-	"log/slog"
 	"os"
 	"reflect"
 	"strings"
@@ -220,12 +219,20 @@ func writeComments(out *strings.Builder, cg *ast.CommentGroup, methodInfo Method
 	}
 }
 
-func processServerInterfaceMethods(
+func (o *OpenAPIProject) processServerInterfaceMethods(
 	ctx context.Context,
-	logger *slog.Logger,
-	pkgs []*packages.Package,
 	callback func(context.Context, MethodInfo, *ast.CommentGroup, *packages.Package) error,
-) {
+) error {
+	cfg := &packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
+		Dir:  o.outputDir,
+	}
+
+	pkgs, err := packages.Load(cfg, fmt.Sprintf("%s/%s/%s", o.moduleName, INTERNAL_FOLDER, API_FOLDER))
+	if err != nil {
+		return fmt.Errorf("load package: %w", err)
+	}
+
 	for _, pkg := range pkgs {
 		scope := pkg.Types.Scope()
 
@@ -251,7 +258,7 @@ func processServerInterfaceMethods(
 										methodInfo := getMethodInfo(method, pkg)
 										err := callback(ctx, methodInfo, f.Doc, pkg)
 										if err != nil {
-											logger.Error("failed to materialize handler", "method", method.Name(), "error", err)
+											o.logger.Error("failed to materialize handler", "method", method.Name(), "error", err)
 										}
 									}
 								}
@@ -262,6 +269,7 @@ func processServerInterfaceMethods(
 			}
 		}
 	}
+	return nil
 }
 
 func findLeadingComment(ts *ast.TypeSpec, file *ast.File) *ast.CommentGroup {
