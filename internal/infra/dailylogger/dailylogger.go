@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/baudii/ada-ai/internal/infra/dailylogger/dailywriter"
+	"github.com/baudii/ada-ai/internal/infra/dailylogger/separatehandler"
 	"github.com/baudii/ada-ai/internal/infra/dailylogger/simplehandler"
 )
 
@@ -32,10 +33,31 @@ func DefaultDailyLogger(cfg *LogConfig, opts ...dailywriter.Option) (*slog.Logge
 		return nil, err
 	}
 	return slog.New(
-		simplehandler.NewSimpleHandler(
+		simplehandler.New(
 			io.MultiWriter(os.Stdout, dw),
 			simplehandler.WithLevel(level(cfg.Level)),
 			simplehandler.WithLocation(loc(cfg.Timezone)),
+		),
+	), nil
+}
+
+// DefaultSeparateDailyLogger creates a slog.Logger with separate handlers
+// for different log levels based on the provided dilog.LogConfig and additional options.
+// It writes to the file starting from debug level, and to stdout from info level.
+func DefaultSeparateDailyLogger(cfg *LogConfig, opts ...dailywriter.Option) (*slog.Logger, error) {
+	opts = append(opts,
+		dailywriter.WithPrefix(cfg.Prefix),
+		dailywriter.WithLocation(loc(cfg.Timezone)),
+	)
+
+	dw, err := dailywriter.New(cfg.Path, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return slog.New(
+		separatehandler.New(
+			separatehandler.WithLevelWriters(slog.LevelDebug, dw, slog.LevelInfo, os.Stdout),
+			separatehandler.WithLocation(loc(cfg.Timezone)),
 		),
 	), nil
 }

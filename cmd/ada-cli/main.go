@@ -29,7 +29,7 @@ func main() {
 	// Set up logging
 	cfgPath := filepath.Join(folders.Config, "dilog.json")
 	cfg := dailylogger.LoadLogConfigOrDefault(cfgPath)
-	logger := cli.Must(dailylogger.DefaultDailyLogger(&cfg))
+	logger := cli.Must(dailylogger.DefaultSeparateDailyLogger(&cfg))
 	logger.Info("initialized logger", "config", cfgPath)
 
 	// Create and run the application
