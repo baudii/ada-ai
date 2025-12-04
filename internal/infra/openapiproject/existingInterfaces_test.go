@@ -119,9 +119,9 @@ type NotAnInterface struct {
 			}
 
 			assert.NoError(t, err)
-			assert.Len(t, interfaces.m, len(v.expected))
+			assert.Len(t, interfaces, len(v.expected))
 			for name, expectedInterface := range v.expected {
-				actualInterface, exists := interfaces.m[name]
+				actualInterface, exists := interfaces[name]
 				assert.True(t, exists, "interface %s should exist", name)
 				assert.Equal(t, *expectedInterface, *actualInterface)
 			}

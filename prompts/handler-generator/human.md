@@ -16,12 +16,13 @@ You will receive two blocks:
 * Write valid, idiomatic Go (imports handled elsewhere).
 
 **Dependencies / interfaces:**
-When the handler needs storage/business/external calls, choose between:
+When the handler needs an external call for `data` or `business logic` you should perform this call using an interface of a current resource's service. Choose 1:
 1. Use an existing interface + method, or
 2. Extend an existing interface with new method(s), or
 3. Create a new interface if nothing fits.
 
-* Assume any interface you use as a field of `Server`.
+* Name of the interface *MUST* have suffix `Service` (e.g. OrderService).
+* Assume an interface instance to be a field of a `Server` struct.
 * Prefer existing interfaces/models. Only extend/create new ones if no existing method fits. Do not create duplicates.
 
 **If you add anything new (Server fields, interfaces, methods, or models):**
