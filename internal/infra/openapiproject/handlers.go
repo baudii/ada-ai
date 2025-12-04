@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"go/ast"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/baudii/ada-ai/internal/core/aigen"
-	"golang.org/x/tools/go/packages"
 )
 
 // MaterializeHandlers reads the generated server code and extracts method information
 // from the ServerInterface.
 func (o *OpenAPIProject) MaterializeHandlers(ctx context.Context) error {
-	if err := o.createServerFile(); err != nil {
+	if err := o.ensureServerFile(); err != nil {
 		return err
 	}
 
@@ -26,18 +24,13 @@ func (o *OpenAPIProject) MaterializeHandlers(ctx context.Context) error {
 }
 
 // MaterializeHandler generates a handler file for the given method of the ServerInterface.
-func (o *OpenAPIProject) MaterializeHandler(
-	ctx context.Context,
-	methodInfo MethodInfo,
-	comments *ast.CommentGroup,
-	pkg *packages.Package,
-) error {
+func (o *OpenAPIProject) MaterializeHandler(ctx context.Context, methodInfo MethodInfo) error {
 	var out strings.Builder
-	fileName, mainResource, err := o.ParseComments(comments)
+	fileName, mainResource, err := o.ParseComments(methodInfo.Docs)
 	if err != nil {
 		return err
 	}
-	writeComments(&out, comments, methodInfo, pkg)
+
 	o.writeBody(&out, methodInfo, "handlers")
 	err = o.createHandler(&out, fileName)
 	if err != nil {
@@ -80,7 +73,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 		if len(errors) > 0 {
 			joined := []string{}
 			for _, v := range errors {
-				joined = append(joined, v)
+				joined = append(joined, " - "+v)
 			}
 			errorCtx = "\n\nIMPORTANT: THIS IS ATTEMPT #" + strconv.Itoa(retryCount) + ". CONSIDER PREVIOUS ERRORS CAREFULLY:\n" + strings.Join(joined, "\n") + "\n"
 		}
@@ -94,9 +87,10 @@ func (o *OpenAPIProject) MaterializeHandler(
 			return fmt.Errorf("send instructions: %w", err)
 		}
 		o.logger.Debug(string(response))
+
 		llmResponseObj, err := o.ProcessResponse(ctx, response, interfaces, existingModels)
 		if err != nil {
-			errors["process_response"] = fmt.Sprintf("- process response error: %v", err)
+			errors["process_response"] = fmt.Sprintf("process response error: %v", err)
 			retryCount++
 			o.logger.Warn("failed to process response. retrying...", "error", err, "retryCount", retryCount)
 			continue
@@ -104,7 +98,7 @@ func (o *OpenAPIProject) MaterializeHandler(
 		delete(errors, "process_response")
 
 		if err = o.InsertFieldsToServer(llmResponseObj); err != nil {
-			errors["insert_fields_to_server"] = fmt.Sprintf("- insert fields to server error: %v", err)
+			errors["insert_fields_to_server"] = fmt.Sprintf("insert fields to server error: %v", err)
 			retryCount++
 			o.logger.Warn("failed to insert new fields to server. retrying...", "error", err, "retryCount", retryCount)
 			continue
@@ -122,28 +116,17 @@ func (o *OpenAPIProject) MaterializeHandler(
 		outWithFunction := o.insertFunctionAndModelImport(out.String(), llmResponseObj.functionBody)
 		err = o.createHandler(&outWithFunction, fileName)
 		if err != nil {
-			errors["create_handler"] = fmt.Sprintf("- create handler error: %v", err)
+			errors["create_handler"] = fmt.Sprintf("create handler error: %v", err)
 			retryCount++
 			o.logger.Warn("failed to create handler. retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
 		delete(errors, "create_handler")
 
-		cmd := exec.Command("go", "build", "./...")
-		cmd.Dir = o.outputDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			errors["build"] = fmt.Sprintf("- build error: %v, output: %s", err, string(output))
+		if err := o.EnsureWorking(); err != nil {
+			errors["build"] = err.Error()
 			retryCount++
-			o.logger.Warn("failed to build project. retrying...", "error", err, "output", string(output), "retryCount", retryCount)
-			continue
-		}
-
-		cmd = exec.Command("go", "mod", "tidy")
-		cmd.Dir = o.outputDir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			errors["mod_tidy"] = fmt.Sprintf("- mod tidy error: %v, output: %s", err, string(output))
-			retryCount++
-			o.logger.Warn("failed to run go mod tidy. retrying...", "error", err, "output", string(output), "retryCount", retryCount)
+			o.logger.Warn("failed to ensure working state: retrying...", "error", err, "retryCount", retryCount)
 			continue
 		}
 
@@ -184,7 +167,12 @@ func (o *OpenAPIProject) createHandler(out *strings.Builder, fileName string) er
 	return formatAndWrite(out.String(), path)
 }
 
-func (o *OpenAPIProject) createServerFile() error {
+func (o *OpenAPIProject) ensureServerFile() error {
+	s, err := os.Stat(o.ServerFilePath())
+	if err == nil && !s.IsDir() {
+		return nil
+	}
+
 	path := o.ServerFilePath()
 	out := strings.Builder{}
 	out.WriteString(HEADER_COMMENT)
@@ -209,7 +197,9 @@ type Server struct{
 }
 
 func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, packageName string) {
+	out.WriteString(HEADER_COMMENT)
 	out.WriteString("package " + packageName + "\n\n")
+
 	out.WriteString("import (\n")
 	for alias, path := range methodInfo.Imports {
 		pkgName := path[strings.LastIndex(path, "/")+1:]
@@ -219,8 +209,9 @@ func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, 
 			fmt.Fprintf(out, "%s %q\n", alias, path)
 		}
 	}
-
 	out.WriteString(")\n\n")
+
+	writeHandlerGoDoc(out, methodInfo)
 	out.WriteString("func (s *Server) " + methodInfo.Name + "(")
 	out.WriteString(strings.Join(FormatParameters(methodInfo.Params), ", "))
 	out.WriteString(") {\n")
@@ -228,12 +219,12 @@ func (o *OpenAPIProject) writeBody(out *strings.Builder, methodInfo MethodInfo, 
 	out.WriteString("}\n")
 }
 
-func (o *OpenAPIProject) ParseComments(comments *ast.CommentGroup) (string, string, error) {
+func (o *OpenAPIProject) ParseComments(docs []string) (string, string, error) {
 	var fileName string
 	var mainResource string
 
-	for _, p := range comments.List {
-		matches := commentGroupRegex.FindStringSubmatch(p.Text)
+	for _, doc := range docs {
+		matches := commentGroupRegex.FindStringSubmatch(doc)
 		if len(matches) > 1 {
 			matches = whiteSpaceRegex.Split(matches[1], -1)
 			if len(matches) > 0 {

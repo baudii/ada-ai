@@ -111,8 +111,8 @@ func (o *OpenAPIProject) GenerateModelsContent(m map[string]*ProjectModel) strin
 		}
 		out.WriteString("type " + model.Name + " struct {\n")
 		for _, field := range model.Fields {
-			if field.Doc != "" {
-				out.WriteString("\t// " + field.Doc + "\n")
+			for _, doc := range field.Docs {
+				out.WriteString(doc + "\n")
 			}
 			out.WriteString("\t" + field.Name + " " + field.Type)
 			if field.Tags != "" {
@@ -137,22 +137,37 @@ func (o *OpenAPIProject) WriteHandlerModels(packageName string, m map[string]*Pr
 
 func extractFieldInfo(fset *token.FileSet, field *ast.Field) []FieldInfo {
 	typeStr := codeanalyzer.NodeToString(fset, field.Type)
-	fieldComment := strings.TrimSpace(field.Doc.Text())
-	if fieldComment == "" {
-		fieldComment = strings.TrimSpace(field.Comment.Text())
-	}
 	var fields []FieldInfo
-	for _, f := range field.Names {
-		tag := ""
-		if field.Tag != nil {
-			tag = field.Tag.Value
+
+	// Doing it once because names share the same type, tags, docs, comments
+	docs := []string{}
+	if field.Doc != nil {
+		for _, c := range field.Doc.List {
+			docs = append(docs, strings.TrimSpace(c.Text))
 		}
-		fields = append(fields, FieldInfo{
-			Name: f.Name,
-			Type: typeStr,
-			Doc:  fieldComment,
-			Tags: reflect.StructTag(tag),
-		})
 	}
+
+	comments := []string{}
+	if field.Comment != nil {
+		for _, c := range field.Comment.List {
+			comments = append(comments, strings.TrimSpace(c.Text))
+		}
+	}
+
+	for _, f := range field.Names {
+		fieldInfo := FieldInfo{
+			Name:     f.Name,
+			Type:     typeStr,
+			Docs:     docs,
+			Comments: comments,
+		}
+
+		if field.Tag != nil {
+			fieldInfo.Tags = reflect.StructTag(field.Tag.Value)
+		}
+
+		fields = append(fields, fieldInfo)
+	}
+
 	return fields
 }

@@ -245,7 +245,7 @@ func ParseFieldLine(line string) (*FieldInfo, error) {
 		if state == 1 {
 			fieldInfo.Type = string(section)
 		} else if state == 4 && len(section) > 0 {
-			fieldInfo.Doc = string(section)
+			fieldInfo.Docs = append(fieldInfo.Docs, string(section))
 		} else {
 			return nil, fmt.Errorf("failed to parse field line: %s", line)
 		}
@@ -295,7 +295,7 @@ func (o *OpenAPIProject) InsertFieldsToServer(raw *llmResponse) error {
 										Value: string(newField.Tags),
 									}
 									field.Doc = &ast.CommentGroup{
-										List: []*ast.Comment{{Text: newField.Doc}},
+										List: []*ast.Comment{{Text: strings.Join(newField.Docs, "\n")}},
 									}
 									found = true
 								}
@@ -311,7 +311,7 @@ func (o *OpenAPIProject) InsertFieldsToServer(raw *llmResponse) error {
 										Value: string(newField.Tags),
 									},
 									Comment: &ast.CommentGroup{
-										List: []*ast.Comment{{Text: newField.Doc}},
+										List: []*ast.Comment{{Text: strings.Join(newField.Docs, "\n")}},
 									},
 								})
 							}

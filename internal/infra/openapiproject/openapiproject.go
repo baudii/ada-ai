@@ -51,12 +51,14 @@ func WithProjectName(name string) option {
 	}
 }
 
+// WithSpec sets the OpenAPI specification file path for the OpenAPIProject.
 func WithSpec(specFile string) option {
 	return func(p *OpenAPIProject) {
 		p.specPath = filepath.Join(p.outputDir, SPEC_FOLDER, specFile)
 	}
 }
 
+// WithApp sets the application context for the OpenAPIProject.
 func WithApp(a app.App) option {
 	return func(p *OpenAPIProject) {
 		p.app = &a
@@ -95,6 +97,7 @@ func (o *OpenAPIProject) Materialize(ctx context.Context, openapi string) error 
 	return nil
 }
 
+// MaterializeSpec writes the OpenAPI specification to the spec folder and validates it.
 func (o *OpenAPIProject) MaterializeSpec(ctx context.Context, openapi string) error {
 	json := strings.HasPrefix(strings.TrimSpace(openapi), "{")
 	specFile := "openapi.yaml"
@@ -111,6 +114,7 @@ func (o *OpenAPIProject) MaterializeSpec(ctx context.Context, openapi string) er
 	return o.Validate(ctx, openapi)
 }
 
+// PrepareOutputDir creates the necessary directories and copies config files.
 func (o *OpenAPIProject) PrepareOutputDir() error {
 	if err := os.MkdirAll(o.SpecFolder(), 0755); err != nil {
 		return err
@@ -187,6 +191,7 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %q in %s: %w output: %s", cmd.String(), cmd.Dir, err, output)
 	}
+
 	cmd = exec.Command("go", "list", "-m")
 	cmd.Dir = o.outputDir
 	output, err := cmd.CombinedOutput()
@@ -195,6 +200,21 @@ func (o *OpenAPIProject) runOAPICodegen(ctx context.Context) error {
 	}
 
 	o.moduleName = strings.TrimSpace(string(output))
+	return nil
+}
+
+func (o *OpenAPIProject) EnsureWorking() error {
+	cmd := exec.Command("go", "build", "./...")
+	cmd.Dir = o.outputDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("build error: %w output: %s", err, string(output))
+	}
+
+	cmd = exec.Command("go", "mod", "tidy")
+	cmd.Dir = o.outputDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("mod tidy error: %w output: %s", err, string(output))
+	}
 	return nil
 }
 
