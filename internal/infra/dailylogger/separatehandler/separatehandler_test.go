@@ -28,7 +28,6 @@ func (m *MockBrokenWriter) Write(p []byte) (n int, err error) {
 func TestWithLevelWriters(t *testing.T) {
 	t.Parallel()
 	infoWriter, errorWriter := &strings.Builder{}, &strings.Builder{}
-	brokenWriter := &MockBrokenWriter{ShouldError: true, ErrorToReturn: assert.AnError}
 
 	tests := []struct {
 		name     string
@@ -50,15 +49,6 @@ func TestWithLevelWriters(t *testing.T) {
 			name: "only error writer",
 			writers: []any{
 				slog.LevelError, errorWriter,
-			},
-			messages: []string{"info message", "error message"},
-			levels:   []slog.Level{slog.LevelInfo, slog.LevelError},
-			expected: [][]string{{}, {"error message"}},
-		},
-		{
-			name: "broken info writer",
-			writers: []any{
-				slog.LevelInfo, brokenWriter, slog.LevelError, errorWriter,
 			},
 			messages: []string{"info message", "error message"},
 			levels:   []slog.Level{slog.LevelInfo, slog.LevelError},

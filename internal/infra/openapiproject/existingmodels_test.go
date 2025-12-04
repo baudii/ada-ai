@@ -26,7 +26,7 @@ const something = 42
 type User struct {
 	// ID is the user identifier
 	ID int ` + "`json:\"id\"`" + `
-	Name string ` + "`json:\"name\"`" + `
+	Name string ` + "`json:\"name\"`" + ` // User's name
 }`,
 			expected: map[string]*openapiproject.ProjectModel{
 				"User": {
@@ -34,15 +34,18 @@ type User struct {
 					Description: "",
 					Fields: []openapiproject.FieldInfo{
 						{
-							Name: "ID",
-							Type: "int",
-							Docs: []string{"// ID is the user identifier"},
-							Tags: "`json:\"id\"`",
+							Name:     "ID",
+							Type:     "int",
+							Docs:     []string{"// ID is the user identifier"},
+							Tags:     "`json:\"id\"`",
+							Comments: []string{},
 						},
 						{
-							Name: "Name",
-							Type: "string",
-							Tags: "`json:\"name\"`",
+							Name:     "Name",
+							Type:     "string",
+							Tags:     "`json:\"name\"`",
+							Comments: []string{"// User's name"},
+							Docs:     []string{},
 						},
 					},
 				},
@@ -61,16 +64,18 @@ type Point struct {
 					Description: "",
 					Fields: []openapiproject.FieldInfo{
 						{
-							Name: "X",
-							Type: "int",
-							Docs: []string{"// X and Y coordinates"},
-							Tags: "`json:\"x\" json:\"y\"`",
+							Name:     "X",
+							Type:     "int",
+							Docs:     []string{"// X and Y coordinates"},
+							Comments: []string{},
+							Tags:     "`json:\"x\" json:\"y\"`",
 						},
 						{
-							Name: "Y",
-							Type: "int",
-							Docs: []string{"// X and Y coordinates"},
-							Tags: "`json:\"x\" json:\"y\"`",
+							Name:     "Y",
+							Type:     "int",
+							Docs:     []string{"// X and Y coordinates"},
+							Comments: []string{},
+							Tags:     "`json:\"x\" json:\"y\"`",
 						},
 					},
 				},
@@ -139,16 +144,18 @@ func TestGenerateModelsContent(t *testing.T) {
 			Description: "User represents a system user.",
 			Fields: []openapiproject.FieldInfo{
 				{
-					Name: "ID",
-					Type: "openapi_types.UUID",
-					Tags: "`json:\"id\"`",
-					Docs: []string{"// ID is the unique identifier for the user."},
+					Name:     "ID",
+					Type:     "openapi_types.UUID",
+					Tags:     "`json:\"id\"`",
+					Docs:     []string{"// ID is the unique identifier for the user."},
+					Comments: []string{},
 				},
 				{
-					Name: "Name",
-					Type: "string",
-					Tags: "`json:\"name\"`",
-					Docs: []string{"// Name is the name of the user."},
+					Name:     "Name",
+					Type:     "string",
+					Tags:     "`json:\"name\"`",
+					Docs:     []string{"// Name is the name of the user."},
+					Comments: []string{},
 				},
 			},
 		},
@@ -157,22 +164,25 @@ func TestGenerateModelsContent(t *testing.T) {
 			Description: "Product represents an item for sale.",
 			Fields: []openapiproject.FieldInfo{
 				{
-					Name: "SKU",
-					Type: "string",
-					Tags: "`json:\"sku\"`",
-					Docs: []string{"// SKU is the stock keeping unit."},
+					Name:     "SKU",
+					Type:     "string",
+					Tags:     "`json:\"sku\"`",
+					Docs:     []string{"// SKU is the stock keeping unit."},
+					Comments: []string{"// additional comment"},
 				},
 				{
-					Name: "Name",
-					Type: "string",
-					Tags: "`json:\"name\"`",
-					Docs: []string{"// Name is the name of the product."},
+					Name:     "Name",
+					Type:     "string",
+					Tags:     "`json:\"name\"`",
+					Docs:     []string{"// Name is the name of the product."},
+					Comments: []string{},
 				},
 				{
-					Name: "Price",
-					Type: "float64",
-					Tags: "`json:\"price\"`",
-					Docs: []string{"// Price is the cost of the product."},
+					Name:     "Price",
+					Type:     "float64",
+					Tags:     "`json:\"price\"`",
+					Docs:     []string{"// Price is the cost of the product."},
+					Comments: []string{},
 				},
 			},
 		},
@@ -180,7 +190,7 @@ func TestGenerateModelsContent(t *testing.T) {
 	expected := `// Product represents an item for sale.
 type Product struct {
 	// SKU is the stock keeping unit.
-	SKU string ` + "`json:\"sku\"`" + `
+	SKU string ` + "`json:\"sku\"`" + `// additional comment
 	// Name is the name of the product.
 	Name string ` + "`json:\"name\"`" + `
 	// Price is the cost of the product.

@@ -112,7 +112,7 @@ func (o *OpenAPIProject) GenerateModelsContent(m map[string]*ProjectModel) strin
 		out.WriteString("type " + model.Name + " struct {\n")
 		for _, field := range model.Fields {
 			for _, doc := range field.Docs {
-				out.WriteString(doc + "\n")
+				out.WriteString("\t" + doc + "\n")
 			}
 			out.WriteString("\t" + field.Name + " " + field.Type)
 			if field.Tags != "" {
