@@ -10,6 +10,7 @@ const (
 	SPEC_FOLDER     = "spec"
 	HANDLERS_FOLDER = "handlers"
 	MODELS_FOLDER   = "models"
+	USECASE_FOLDER  = "usecase"
 )
 
 const (
@@ -37,6 +38,10 @@ func (o *OpenAPIProject) ConfigsFolder() string {
 
 func (o *OpenAPIProject) HandlersFolder() string {
 	return filepath.Join(o.outputDir, INTERNAL_FOLDER, HANDLERS_FOLDER)
+}
+
+func (o *OpenAPIProject) UseCaseFolder() string {
+	return filepath.Join(o.outputDir, INTERNAL_FOLDER, USECASE_FOLDER)
 }
 
 func (o *OpenAPIProject) ModelsFolder() string {
