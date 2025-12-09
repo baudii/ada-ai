@@ -37,8 +37,7 @@ func (o *OpenAPIProject) MaterializeFromInterface(iface *ProjectInterface) error
 	}
 	defer h.Close()
 
-	s := InitialUseCaseContent(iface)
-	_, err = h.WriteString(s.String())
+	_, err = h.WriteString(InitialUseCaseContent(iface).String())
 	if err != nil {
 		return fmt.Errorf("write initial usecase content: %w", err)
 	}
